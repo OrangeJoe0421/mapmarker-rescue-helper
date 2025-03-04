@@ -120,7 +120,8 @@ const LeafletMapMarkers = () => {
     selectService,
     selectMarker,
     routes,
-    clearRoutes
+    clearRoutes,
+    updateCustomMarker
   } = useMapStore();
 
   // Prepare tiles with proper attribution
@@ -184,14 +185,22 @@ const LeafletMapMarkers = () => {
           </Marker>
         ))}
         
-        {/* Custom Markers */}
+        {/* Custom Markers - Now Draggable */}
         {customMarkers.map((marker) => (
           <Marker 
             key={marker.id} 
             position={[marker.latitude, marker.longitude]} 
             icon={marker.id === selectedMarker?.id ? selectedIcon : customMarkerIcon}
+            draggable={true}
             eventHandlers={{
               click: () => selectMarker(marker),
+              dragend: (e) => {
+                const latLng = e.target.getLatLng();
+                updateCustomMarker(marker.id, {
+                  latitude: latLng.lat,
+                  longitude: latLng.lng
+                });
+              }
             }}
           >
             <Popup>
