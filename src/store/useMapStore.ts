@@ -55,7 +55,7 @@ const DEFAULT_ZOOM = 12;
 
 export const useMapStore = create<MapState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       userLocation: null,
       emergencyServices: [],
       customMarkers: [],
@@ -125,12 +125,16 @@ export const useMapStore = create<MapState>()(
       },
 
       toggleAddingMarker: () => {
-        set((state) => ({ 
-          addingMarker: !state.addingMarker 
-        }));
-        toast.info(state => state.addingMarker ? 
-          'Click on the map to place a marker' : 
-          'Marker placement mode canceled');
+        set((state) => {
+          const newAddingMarker = !state.addingMarker;
+          // Show the appropriate toast message based on the new state
+          if (newAddingMarker) {
+            toast.info('Click on the map to place a marker');
+          } else {
+            toast.info('Marker placement mode canceled');
+          }
+          return { addingMarker: newAddingMarker };
+        });
       },
 
       setMapCenter: (center) => {
