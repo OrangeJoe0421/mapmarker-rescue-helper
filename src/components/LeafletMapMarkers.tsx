@@ -1,9 +1,11 @@
 
 import { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, ZoomControl, Polyline } from 'react-leaflet';
 import { useMapStore } from '@/store/useMapStore';
-import { Icon, DivIcon } from 'leaflet';
+import { Icon } from 'leaflet';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import { RouteIcon } from 'lucide-react';
 
 // Create custom marker icons
 const createIcon = (color: string, size: [number, number] = [30, 30], className = '') => {
@@ -77,6 +79,35 @@ const MapClickHandler = () => {
   return null;
 };
 
+// Custom popup content with route options
+const CustomMarkerPopup = ({ marker }: { marker: any }) => {
+  const { userLocation, calculateRoute } = useMapStore();
+  
+  const handleCalculateRoute = () => {
+    calculateRoute(marker.id, true);
+  };
+  
+  return (
+    <div className="p-1 space-y-2">
+      <h3 className="font-medium">{marker.name}</h3>
+      <p className="text-sm text-muted-foreground">
+        {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
+      </p>
+      {userLocation && (
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="w-full"
+          onClick={handleCalculateRoute}
+        >
+          <RouteIcon className="mr-2 h-4 w-4" />
+          Route to Location
+        </Button>
+      )}
+    </div>
+  );
+};
+
 const LeafletMapMarkers = () => {
   const { 
     userLocation, 
@@ -88,6 +119,8 @@ const LeafletMapMarkers = () => {
     mapZoom,
     selectService,
     selectMarker,
+    routes,
+    clearRoutes
   } = useMapStore();
 
   // Prepare tiles with proper attribution
@@ -162,16 +195,51 @@ const LeafletMapMarkers = () => {
             }}
           >
             <Popup>
-              <div className="p-1">
-                <h3 className="font-medium">{marker.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {marker.latitude.toFixed(6)}, {marker.longitude.toFixed(6)}
-                </p>
-              </div>
+              <CustomMarkerPopup marker={marker} />
             </Popup>
           </Marker>
         ))}
+        
+        {/* Routes */}
+        {routes.map((route) => (
+          <Polyline
+            key={route.id}
+            positions={route.points.map(point => [point.latitude, point.longitude])}
+            color="#9333ea"
+            weight={4}
+            opacity={0.8}
+            dashArray="10, 10"
+          >
+            <Popup>
+              <div className="p-1">
+                <h3 className="font-medium">Route</h3>
+                <p className="text-sm text-muted-foreground">
+                  Distance: {route.distance.toFixed(2)} km
+                </p>
+                {route.duration && (
+                  <p className="text-sm text-muted-foreground">
+                    Est. Duration: {Math.round(route.duration)} min
+                  </p>
+                )}
+              </div>
+            </Popup>
+          </Polyline>
+        ))}
       </MapContainer>
+      
+      {/* Route Controls */}
+      {routes.length > 0 && (
+        <div className="absolute right-4 bottom-16 z-10">
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={clearRoutes}
+            className="shadow-md"
+          >
+            Clear Routes
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
