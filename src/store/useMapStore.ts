@@ -8,6 +8,11 @@ export interface UserLocation {
   longitude: number;
 }
 
+export interface Verification {
+  hasEmergencyRoom: boolean;
+  verifiedAt: Date | null;
+}
+
 export interface EmergencyService {
   id: string;
   name: string;
@@ -15,6 +20,7 @@ export interface EmergencyService {
   latitude: number;
   longitude: number;
   road_distance?: number;
+  verification?: Verification;
 }
 
 export interface CustomMarker {
@@ -65,6 +71,7 @@ interface MapState {
   clearAll: () => void;
   calculateRoute: (fromId: string, toUserLocation: boolean) => Promise<void>;
   clearRoutes: () => void;
+  verifyEmergencyRoom: (serviceId: string, hasEmergencyRoom: boolean) => void;
 }
 
 const DEFAULT_CENTER: [number, number] = [34.0522, -118.2437]; // Los Angeles
@@ -162,6 +169,42 @@ export const useMapStore = create<MapState>()(
 
       setMapZoom: (zoom) => {
         set({ mapZoom: zoom });
+      },
+
+      verifyEmergencyRoom: (serviceId, hasEmergencyRoom) => {
+        set((state) => {
+          const updatedServices = state.emergencyServices.map(service => {
+            if (service.id === serviceId) {
+              return {
+                ...service,
+                verification: {
+                  hasEmergencyRoom,
+                  verifiedAt: new Date()
+                }
+              };
+            }
+            return service;
+          });
+
+          // Also update the selected service if it's the one being verified
+          let updatedSelectedService = state.selectedService;
+          if (state.selectedService?.id === serviceId) {
+            updatedSelectedService = {
+              ...state.selectedService,
+              verification: {
+                hasEmergencyRoom,
+                verifiedAt: new Date()
+              }
+            };
+          }
+
+          toast.success(`Verification updated for ${updatedServices.find(s => s.id === serviceId)?.name}`);
+          
+          return {
+            emergencyServices: updatedServices,
+            selectedService: updatedSelectedService
+          };
+        });
       },
 
       calculateRoute: async (fromId, toUserLocation) => {

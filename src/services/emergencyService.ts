@@ -24,7 +24,9 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
         longitude,
         service.latitude,
         service.longitude
-      )
+      ),
+      // Initialize verification as undefined
+      verification: undefined
     }));
     
     // Sort by distance
