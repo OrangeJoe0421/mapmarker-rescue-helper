@@ -162,9 +162,11 @@ export async function fetchRoutePath(
         const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
         const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
         
+        console.log("Fetching route path:", url);
         const response = await fetch(url);
         
         if (!response.ok) {
+          console.error(`OSRM API error: ${response.status} ${response.statusText}`);
           throw new Error(`OSRM API error: ${response.status}`);
         }
         
@@ -190,7 +192,20 @@ export async function fetchRoutePath(
         });
       } catch (error) {
         console.error("Error fetching route path:", error);
-        resolve(null);
+        
+        // Create a fallback route with just start and end points
+        console.log("Using fallback route calculation");
+        const fallbackPoints: [number, number][] = [
+          [startLat, startLon],
+          [endLat, endLon]
+        ];
+        
+        const distance = calculateHaversineDistance(startLat, startLon, endLat, endLon);
+        resolve({
+          points: fallbackPoints,
+          distance: distance,
+          duration: distance / 50 * 60 // Rough estimate: 50 km/h average speed
+        });
       }
     });
   });

@@ -17,10 +17,9 @@ const EmergencyServiceMarkers: React.FC<EmergencyServiceMarkersProps> = ({
   selectService, 
   calculateRoute 
 }) => {
-  // Function to handle marker click
+  // Function to handle marker click - no longer calculates route automatically
   const handleMarkerClick = (service: EmergencyService) => {
     selectService(service);
-    calculateRoute(service.id, true);
   };
 
   return (
