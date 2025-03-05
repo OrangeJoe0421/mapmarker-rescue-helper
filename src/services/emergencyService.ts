@@ -20,7 +20,11 @@ async function processQueue() {
   while (requestQueue.length > 0) {
     const request = requestQueue.shift();
     if (request) {
-      await request();
+      try {
+        await request();
+      } catch (error) {
+        console.error("Error processing queued request:", error);
+      }
       // Wait 1.2 seconds between requests to stay under the rate limit
       await new Promise(resolve => setTimeout(resolve, 1200));
     }
@@ -37,6 +41,8 @@ function queueRequest(request: () => Promise<void>) {
 
 export async function fetchNearestEmergencyServices(latitude: number, longitude: number): Promise<EmergencyService[]> {
   try {
+    console.log(`Fetching services near [${latitude}, ${longitude}]`);
+    
     // Get EMS data from our sample database
     const allServices = getAllEmsData();
     
@@ -189,4 +195,3 @@ export async function fetchRoutePath(
     });
   });
 }
-

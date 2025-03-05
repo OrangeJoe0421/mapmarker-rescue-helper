@@ -24,11 +24,22 @@ export const createLocationSlice: StateCreator<LocationState> = (set, get) => ({
   mapZoom: DEFAULT_ZOOM,
 
   setUserLocation: (location) => {
+    // Check for valid location data before setting
+    if (typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
+      console.error('Invalid location data:', location);
+      toast.error('Invalid location data provided');
+      return;
+    }
+
+    console.log('Setting user location:', location);
+    
     set({ 
       userLocation: location,
       mapCenter: [location.latitude, location.longitude], 
       mapZoom: 13 
     });
+    
+    toast.success('Location set successfully');
   },
 
   updateUserLocationMetadata: (metadata) => {
