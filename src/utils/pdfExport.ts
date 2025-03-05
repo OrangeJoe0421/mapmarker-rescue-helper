@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmergencyService, CustomMarker, Route, UserLocation } from '@/types/mapTypes';
@@ -26,9 +25,9 @@ export const exportToPdf = async (data: ExportData) => {
   
   let yPosition = 30;
   
-  // Add user location section
+  // Add project location section (renamed from user location)
   doc.setFontSize(16);
-  doc.text('User Location', 14, yPosition);
+  doc.text('Project Location', 14, yPosition);
   yPosition += 8;
   
   if (userLocation) {
@@ -63,11 +62,11 @@ export const exportToPdf = async (data: ExportData) => {
     yPosition = (doc as any).lastAutoTable.finalY + 10;
   } else {
     doc.setFontSize(12);
-    doc.text('No user location set', 14, yPosition);
+    doc.text('No project location set', 14, yPosition);
     yPosition += 10;
   }
   
-  // Add emergency services section with enhanced details
+  // Add emergency services section (basic table only - detailed section removed)
   doc.setFontSize(16);
   doc.text('Emergency Services', 14, yPosition);
   yPosition += 8;
@@ -77,12 +76,15 @@ export const exportToPdf = async (data: ExportData) => {
       service.name,
       service.type,
       service.road_distance ? `${service.road_distance.toFixed(2)} km` : 'N/A',
-      service.verification?.hasEmergencyRoom ? 'Yes' : 'No'
+      service.verification?.hasEmergencyRoom ? 'Yes' : 'No',
+      service.phone || 'N/A',
+      service.address || 'N/A',
+      service.hours || 'N/A'
     ]);
     
     autoTable(doc, {
       startY: yPosition,
-      head: [['Name', 'Type', 'Distance', 'ER Available']],
+      head: [['Name', 'Type', 'Distance', 'ER Available', 'Phone', 'Address', 'Hours']],
       body: emergencyServicesData,
       theme: 'grid',
       headStyles: { fillColor: [192, 57, 43], textColor: 255 },
@@ -90,43 +92,6 @@ export const exportToPdf = async (data: ExportData) => {
     });
     
     yPosition = (doc as any).lastAutoTable.finalY + 10;
-    
-    // Add detailed services information
-    doc.setFontSize(14);
-    doc.text('Emergency Services Details', 14, yPosition);
-    yPosition += 8;
-    
-    for (const service of emergencyServices) {
-      // Check if we need a new page
-      if (yPosition > 230) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      const detailsData = [
-        ['Name', service.name],
-        ['Type', service.type],
-        ['Address', service.address || 'N/A'],
-        ['Phone', service.phone || 'N/A'],
-        ['Hours', service.hours || 'N/A'],
-        ['ER Available', service.verification?.hasEmergencyRoom ? 'Yes' : 'No']
-      ];
-      
-      if (service.road_distance) {
-        detailsData.push(['Distance from User', `${service.road_distance.toFixed(2)} km`]);
-      }
-      
-      autoTable(doc, {
-        startY: yPosition,
-        head: [[`Service Details: ${service.name}`]],
-        body: detailsData,
-        theme: 'grid',
-        headStyles: { fillColor: [231, 76, 60], textColor: 255 },
-        margin: { left: 14, right: 14 }
-      });
-      
-      yPosition = (doc as any).lastAutoTable.finalY + 10;
-    }
   } else {
     doc.setFontSize(12);
     doc.text('No emergency services found', 14, yPosition);
@@ -139,100 +104,7 @@ export const exportToPdf = async (data: ExportData) => {
     yPosition = 20;
   }
   
-  // Add custom markers section
-  doc.setFontSize(16);
-  doc.text('Custom Markers', 14, yPosition);
-  yPosition += 8;
-  
-  if (customMarkers.length > 0) {
-    // Create rows for the main marker data
-    const customMarkersData = customMarkers.map(marker => {
-      const row = [
-        marker.name,
-        marker.latitude.toFixed(6),
-        marker.longitude.toFixed(6),
-        new Date(marker.createdAt).toLocaleString()
-      ];
-      
-      return row;
-    });
-    
-    // Create the main table
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Name', 'Latitude', 'Longitude', 'Created At']],
-      body: customMarkersData,
-      theme: 'grid',
-      headStyles: { fillColor: [39, 174, 96], textColor: 255 },
-      margin: { left: 14, right: 14 }
-    });
-    
-    yPosition = (doc as any).lastAutoTable.finalY + 10;
-    
-    // Add metadata tables for markers that have metadata
-    const markersWithMetadata = customMarkers.filter(
-      marker => marker.metadata && Object.keys(marker.metadata).length > 0
-    );
-    
-    if (markersWithMetadata.length > 0) {
-      doc.setFontSize(14);
-      doc.text('Marker Metadata', 14, yPosition);
-      yPosition += 8;
-      
-      for (const marker of markersWithMetadata) {
-        if (!marker.metadata) continue;
-        
-        const metadataRows = [];
-        
-        if (marker.metadata.projectNumber) {
-          metadataRows.push(['Project Number', marker.metadata.projectNumber]);
-        }
-        
-        if (marker.metadata.region) {
-          metadataRows.push(['Region', marker.metadata.region]);
-        }
-        
-        if (marker.metadata.projectType) {
-          metadataRows.push(['Project Type', marker.metadata.projectType]);
-        }
-        
-        if (metadataRows.length > 0) {
-          // Check if we need a new page
-          if (yPosition > 230) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          
-          doc.setFontSize(12);
-          doc.text(`Metadata for: ${marker.name}`, 14, yPosition);
-          yPosition += 6;
-          
-          autoTable(doc, {
-            startY: yPosition,
-            head: [['Field', 'Value']],
-            body: metadataRows,
-            theme: 'grid',
-            headStyles: { fillColor: [46, 204, 113], textColor: 255 },
-            margin: { left: 14, right: 14 }
-          });
-          
-          yPosition = (doc as any).lastAutoTable.finalY + 10;
-        }
-      }
-    }
-  } else {
-    doc.setFontSize(12);
-    doc.text('No custom markers added', 14, yPosition);
-    yPosition += 10;
-  }
-  
-  // Check if we need a new page
-  if (yPosition > 230) {
-    doc.addPage();
-    yPosition = 20;
-  }
-  
-  // Add enhanced routes section with detailed routing information
+  // Add routes section (keeping this section, as it contains routing information)
   doc.setFontSize(16);
   doc.text('Routes', 14, yPosition);
   yPosition += 8;
@@ -250,7 +122,7 @@ export const exportToPdf = async (data: ExportData) => {
       const fromLabel = fromMarker ? fromMarker.name : 'Unknown';
       const toLabel = route.toId ? 
         customMarkers.find(m => m.id === route.toId)?.name || 'Unknown' : 
-        'User Location';
+        'Project Location'; // Changed from 'User Location'
       
       return [
         fromLabel,
@@ -287,7 +159,7 @@ export const exportToPdf = async (data: ExportData) => {
       }
       
       let toEntity: any = null;
-      let toName = 'User Location';
+      let toName = 'Project Location'; // Changed from 'User Location'
       
       if (route.toId) {
         toEntity = customMarkers.find(m => m.id === route.toId);
@@ -347,7 +219,7 @@ export const exportToPdf = async (data: ExportData) => {
     doc.text('No routes calculated', 14, yPosition);
   }
   
-  // Capture map image and add to PDF
+  // Capture map image and add to PDF (updated to ensure route lines are visible)
   try {
     const mapElement = document.querySelector('.leaflet-container') as HTMLElement;
     if (mapElement) {
@@ -355,13 +227,29 @@ export const exportToPdf = async (data: ExportData) => {
       doc.addPage();
       
       doc.setFontSize(16);
-      doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
+      doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
       
-      // Use html2canvas to capture the map as an image
+      // Wait a small moment to ensure all map elements are rendered
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Use html2canvas to capture the map as an image with routes
       const canvas = await html2canvas(mapElement, {
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
+        scale: 2, // Higher resolution
+        logging: true,
+        onclone: (document, element) => {
+          // This ensures that all map layers (including routes) are visible in the cloned document
+          const routes = element.querySelectorAll('.leaflet-overlay-pane');
+          routes.forEach(route => {
+            if (route instanceof HTMLElement) {
+              route.style.display = 'block';
+              route.style.visibility = 'visible';
+              route.style.opacity = '1';
+            }
+          });
+        }
       });
       
       // Calculate dimensions to fit on the page while maintaining aspect ratio

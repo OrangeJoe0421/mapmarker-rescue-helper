@@ -50,7 +50,7 @@ const CustomMarkers: React.FC<CustomMarkersProps> = ({
             </p>
             <div className="flex mt-2 gap-2">
               <Button size="sm" onClick={() => calculateRoute(marker.id, true)}>
-                Route to User
+                Route to Project
               </Button>
             </div>
           </Popup>

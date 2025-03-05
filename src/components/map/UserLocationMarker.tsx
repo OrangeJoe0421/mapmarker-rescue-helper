@@ -30,7 +30,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ userLocation })
     >
       <Popup>
         <div className="user-location-popup">
-          <h3 className="font-bold">Your Location</h3>
+          <h3 className="font-bold">Project Location</h3>
           <p className="text-xs mt-1">
             {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
           </p>
