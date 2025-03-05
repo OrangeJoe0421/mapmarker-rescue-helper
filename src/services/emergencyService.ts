@@ -7,6 +7,34 @@ import { calculateHaversineDistance } from '../utils/mapUtils';
 // OSRM API for routing (open source routing machine)
 const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
 
+// Queue for managing API requests to prevent rate limiting
+const requestQueue: (() => Promise<void>)[] = [];
+let isProcessingQueue = false;
+
+// Process the queue with rate limiting (one request per second)
+async function processQueue() {
+  if (isProcessingQueue || requestQueue.length === 0) return;
+  
+  isProcessingQueue = true;
+  
+  while (requestQueue.length > 0) {
+    const request = requestQueue.shift();
+    if (request) {
+      await request();
+      // Wait 1.2 seconds between requests to stay under the rate limit
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+  }
+  
+  isProcessingQueue = false;
+}
+
+// Add a request to the queue and start processing if needed
+function queueRequest(request: () => Promise<void>) {
+  requestQueue.push(request);
+  processQueue();
+}
+
 export async function fetchNearestEmergencyServices(latitude: number, longitude: number): Promise<EmergencyService[]> {
   try {
     // Get EMS data from our sample database
@@ -19,7 +47,7 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
     const services = nearbyServices.length > 0 ? nearbyServices : allServices;
     
     // Calculate straight-line distance from user location
-    const servicesWithDistance = await Promise.all(services.map(async (service) => {
+    const servicesWithDistance = services.map(service => {
       // Calculate straight-line distance
       const airDistance = calculateHaversineDistance(
         latitude,
@@ -28,27 +56,14 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
         service.longitude
       );
       
-      // Try to get road distance
-      let roadDistance: number | null = null;
-      try {
-        roadDistance = await fetchRouteDistance(
-          latitude,
-          longitude,
-          service.latitude,
-          service.longitude
-        );
-      } catch (error) {
-        console.warn(`Could not calculate road distance for ${service.name}:`, error);
-      }
-      
       return {
         ...service,
-        // Use road distance if available, otherwise use air distance
-        road_distance: roadDistance !== null ? roadDistance : airDistance * 1.3,
+        // Use estimated road distance (air distance * 1.3) initially
+        road_distance: airDistance * 1.3,
       };
-    }));
+    });
     
-    // Sort by road distance
+    // Sort initially by air distance
     const sortedServices = servicesWithDistance.sort((a, b) => 
       (a.road_distance || Infinity) - (b.road_distance || Infinity)
     );
@@ -62,6 +77,27 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
       if (closestOfType) {
         closestByType.push(closestOfType);
       }
+    });
+    
+    // Now queue up road distance calculations (don't wait for them)
+    closestByType.forEach(service => {
+      queueRequest(async () => {
+        try {
+          const roadDistance = await fetchRouteDistance(
+            latitude,
+            longitude,
+            service.latitude,
+            service.longitude
+          );
+          
+          if (roadDistance !== null) {
+            // Update the service with the road distance
+            service.road_distance = roadDistance;
+          }
+        } catch (error) {
+          console.warn(`Could not calculate road distance for ${service.name}:`, error);
+        }
+      });
     });
     
     return closestByType;
@@ -113,39 +149,44 @@ export async function fetchRoutePath(
   endLat: number,
   endLon: number
 ): Promise<{ points: [number, number][]; distance: number; duration: number } | null> {
-  try {
-    // Format coordinates for OSRM API
-    const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
-    const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`OSRM API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-      throw new Error('No route found');
-    }
-    
-    const route = data.routes[0];
-    const geometry = route.geometry;
-    
-    // Extract coordinates from GeoJSON
-    const points = geometry.coordinates.map((coord: [number, number]) => {
-      // OSRM returns [lng, lat], but we need [lat, lng] for leaflet
-      return [coord[1], coord[0]] as [number, number];
+  return new Promise((resolve) => {
+    queueRequest(async () => {
+      try {
+        // Format coordinates for OSRM API
+        const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
+        const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`OSRM API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+          throw new Error('No route found');
+        }
+        
+        const route = data.routes[0];
+        const geometry = route.geometry;
+        
+        // Extract coordinates from GeoJSON
+        const points = geometry.coordinates.map((coord: [number, number]) => {
+          // OSRM returns [lng, lat], but we need [lat, lng] for leaflet
+          return [coord[1], coord[0]] as [number, number];
+        });
+        
+        resolve({
+          points,
+          distance: route.distance / 1000, // convert meters to kilometers
+          duration: route.duration / 60, // convert seconds to minutes
+        });
+      } catch (error) {
+        console.error("Error fetching route path:", error);
+        resolve(null);
+      }
     });
-    
-    return {
-      points,
-      distance: route.distance / 1000, // convert meters to kilometers
-      duration: route.duration / 60, // convert seconds to minutes
-    };
-  } catch (error) {
-    console.error("Error fetching route path:", error);
-    return null;
-  }
+  });
 }
+
