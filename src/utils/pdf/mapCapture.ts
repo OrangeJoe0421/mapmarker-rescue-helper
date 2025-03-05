@@ -15,24 +15,49 @@ export const captureMapForPdf = async (
       doc.setFontSize(16);
       doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
       
-      // Wait a small moment to ensure all map elements are rendered
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait longer to ensure all map elements, especially routes, are fully rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Use html2canvas to capture the map as an image with routes
+      // Make sure route lines are visible before capture
+      const routeElements = document.querySelectorAll('.leaflet-overlay-pane path');
+      routeElements.forEach(route => {
+        if (route instanceof SVGElement) {
+          route.style.stroke = '#3B82F6';
+          route.style.strokeWidth = '4px';
+          route.style.strokeOpacity = '0.9';
+          route.style.display = 'block';
+          route.style.visibility = 'visible';
+        }
+      });
+      
+      // Use html2canvas with improved settings for route visibility
       const canvas = await html2canvas(mapElement, {
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
         scale: 2, // Higher resolution
-        logging: true,
-        onclone: (document, element) => {
-          // This ensures that all map layers (including routes) are visible in the cloned document
-          const routes = element.querySelectorAll('.leaflet-overlay-pane');
-          routes.forEach(route => {
-            if (route instanceof HTMLElement) {
-              route.style.display = 'block';
-              route.style.visibility = 'visible';
-              route.style.opacity = '1';
+        logging: false,
+        onclone: (document, clonedElement) => {
+          // Make sure the overlay pane containing routes is visible
+          const overlayPanes = clonedElement.querySelectorAll('.leaflet-overlay-pane');
+          overlayPanes.forEach(pane => {
+            if (pane instanceof HTMLElement) {
+              pane.style.display = 'block';
+              pane.style.visibility = 'visible';
+              pane.style.opacity = '1';
+              pane.style.zIndex = '650'; // Ensure it's above other layers
+            }
+          });
+          
+          // Specifically target SVG paths (route lines)
+          const routePaths = clonedElement.querySelectorAll('.leaflet-overlay-pane path');
+          routePaths.forEach(path => {
+            if (path instanceof SVGElement) {
+              path.style.stroke = '#3B82F6';
+              path.style.strokeWidth = '4px';
+              path.style.strokeOpacity = '0.9';
+              path.style.display = 'block';
+              path.style.visibility = 'visible';
             }
           });
         }

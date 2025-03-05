@@ -16,7 +16,11 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
           positions={route.points.map(point => [point.latitude, point.longitude])}
           color="#3B82F6"
           weight={4}
-          opacity={0.7}
+          opacity={0.9}
+          className="route-line"
+          pathOptions={{
+            className: 'route-path',
+          }}
         />
       ))}
     </>

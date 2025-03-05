@@ -13,17 +13,27 @@ const ExportButton = () => {
   const handleExport = async () => {
     try {
       setExporting(true);
-      await exportToPdf({
-        userLocation,
-        emergencyServices,
-        customMarkers,
-        routes
-      });
-      toast.success('Report exported successfully!');
+      
+      // Ensure map is fully rendered with routes before exporting
+      setTimeout(async () => {
+        try {
+          await exportToPdf({
+            userLocation,
+            emergencyServices,
+            customMarkers,
+            routes
+          });
+          toast.success('Report exported successfully!');
+        } catch (error) {
+          console.error('Error exporting PDF:', error);
+          toast.error('Failed to export report. Please try again.');
+        } finally {
+          setExporting(false);
+        }
+      }, 500); // Add a delay to ensure routes are rendered
     } catch (error) {
-      console.error('Error exporting PDF:', error);
-      toast.error('Failed to export report. Please try again.');
-    } finally {
+      console.error('Error during export preparation:', error);
+      toast.error('Failed to prepare report. Please try again.');
       setExporting(false);
     }
   };
