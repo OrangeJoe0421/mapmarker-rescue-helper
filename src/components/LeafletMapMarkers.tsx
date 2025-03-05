@@ -1,19 +1,48 @@
-import React from 'react';
-import { Marker, Popup, useMap, Polyline } from 'react-leaflet';
+
+import React, { useEffect } from 'react';
+import { MapContainer, Marker, Popup, useMap, Polyline, TileLayer } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Button } from './ui/button';
 import { useMapStore } from '../store/useMapStore';
 import EmergencyRoomVerification from './EmergencyRoomVerification';
 
-const LeafletMapMarkers = () => {
+// This component needs to be inside the MapContainer to use the map context
+const MapEvents = () => {
   const map = useMap();
+  const { addingMarker, addCustomMarker } = useMapStore();
+  
+  useEffect(() => {
+    if (!addingMarker) return;
+    
+    const handleMapClick = (e: any) => {
+      const { lat, lng } = e.latlng;
+      if (!addingMarker) return;
+      
+      addCustomMarker({
+        name: 'New Marker',
+        latitude: lat,
+        longitude: lng,
+        color: '#3B82F6',
+      });
+    };
+    
+    map.on('click', handleMapClick);
+    return () => {
+      map.off('click', handleMapClick);
+    };
+  }, [map, addingMarker, addCustomMarker]);
+  
+  return null;
+};
+
+// Markers component that will be used inside MapContainer
+const MapMarkers = () => {
   const {
     userLocation,
     emergencyServices,
     customMarkers,
     selectService,
     selectMarker,
-    addCustomMarker,
     updateCustomMarker,
     calculateRoute,
     routes
@@ -37,28 +66,6 @@ const LeafletMapMarkers = () => {
     iconSize: [30, 30],
     iconAnchor: [15, 30],
   });
-
-  // Handle map click for adding custom markers
-  const handleMapClick = (e: any) => {
-    const { addingMarker } = useMapStore.getState();
-    if (!addingMarker) return;
-
-    const { lat, lng } = e.latlng;
-    addCustomMarker({
-      name: 'New Marker',
-      latitude: lat,
-      longitude: lng,
-      color: '#3B82F6',
-    });
-  };
-
-  // Add map click listener
-  React.useEffect(() => {
-    map.on('click', handleMapClick);
-    return () => {
-      map.off('click', handleMapClick);
-    };
-  }, [map]);
 
   return (
     <>
@@ -147,6 +154,29 @@ const LeafletMapMarkers = () => {
         />
       ))}
     </>
+  );
+};
+
+// Main component that renders the map container and all markers
+const LeafletMapMarkers = () => {
+  const { mapCenter, mapZoom } = useMapStore();
+  
+  return (
+    <div className="h-[600px] w-full rounded-lg overflow-hidden border shadow-md">
+      <MapContainer 
+        center={mapCenter} 
+        zoom={mapZoom} 
+        style={{ height: '100%', width: '100%' }}
+        zoomControl={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapEvents />
+        <MapMarkers />
+      </MapContainer>
+    </div>
   );
 };
 
