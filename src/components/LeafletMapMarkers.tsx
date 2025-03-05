@@ -58,33 +58,38 @@ const MapMarkers = () => {
       </svg>
     `),
     iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
+    // Fix: adjust the iconAnchor to properly position the marker
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
     className: 'pulse-animation',
   });
 
   const hospitalIcon = new Icon({
     iconUrl: '/hospital-marker.svg',
     iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
   });
 
   const emsIcon = new Icon({
     iconUrl: '/ems-marker.svg',
     iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
   });
 
   const fireIcon = new Icon({
     iconUrl: '/fire-marker.svg',
     iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
   });
 
   const lawIcon = new Icon({
     iconUrl: '/law-marker.svg',
     iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
   });
 
   const customIcon = new Icon({
@@ -95,8 +100,9 @@ const MapMarkers = () => {
       </svg>
     `),
     iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
+    // Fix: adjust the iconAnchor to properly position the marker
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
   });
   
   // Function to determine icon based on service type
