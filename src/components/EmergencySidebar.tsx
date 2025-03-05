@@ -20,10 +20,13 @@ import {
   ArrowRight,
   Building2,
   AlertCircle,
-  FileText
+  FileText,
+  Hash,
+  Globe
 } from 'lucide-react';
 import MarkerMetadataForm from './MarkerMetadataForm';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import LocationMetadataForm from './LocationMetadataForm';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 const EmergencySidebar = () => {
   const [latitude, setLatitude] = useState<string>("");
@@ -31,6 +34,7 @@ const EmergencySidebar = () => {
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("search");
   const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
+  const [isEditingLocationMetadata, setIsEditingLocationMetadata] = useState<boolean>(false);
   
   const { 
     userLocation,
@@ -310,7 +314,7 @@ const EmergencySidebar = () => {
                 </div>
               )}
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -319,8 +323,72 @@ const EmergencySidebar = () => {
               >
                 Back to Search
               </Button>
+              
+              {userLocation && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setIsEditingLocationMetadata(true)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Edit Location Metadata
+                </Button>
+              )}
             </CardFooter>
           </Card>
+          
+          {userLocation?.metadata && Object.keys(userLocation.metadata).length > 0 && (
+            <Card className="glass-card mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  <span>Location Metadata</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {userLocation.metadata.projectNumber && (
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        <span className="font-medium">Project Number:</span> {userLocation.metadata.projectNumber}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {userLocation.metadata.region && (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        <span className="font-medium">Region:</span> {userLocation.metadata.region}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {userLocation.metadata.projectType && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        <span className="font-medium">Project Type:</span> {userLocation.metadata.projectType}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setIsEditingLocationMetadata(true)}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Metadata
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
         </TabsContent>
         
         {/* Markers Tab */}
@@ -465,15 +533,24 @@ const EmergencySidebar = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Metadata editing dialog */}
+      {/* Metadata editing dialog for markers */}
       <Dialog open={!!editingMarkerId} onOpenChange={(open) => !open && setEditingMarkerId(null)}>
         <DialogContent className="sm:max-w-md">
+          <DialogTitle>Edit Marker Metadata</DialogTitle>
           {markerBeingEdited && (
             <MarkerMetadataForm 
               marker={markerBeingEdited} 
               onClose={() => setEditingMarkerId(null)} 
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Metadata editing dialog for location */}
+      <Dialog open={isEditingLocationMetadata} onOpenChange={setIsEditingLocationMetadata}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>Edit Location Metadata</DialogTitle>
+          <LocationMetadataForm onClose={() => setIsEditingLocationMetadata(false)} />
         </DialogContent>
       </Dialog>
     </div>

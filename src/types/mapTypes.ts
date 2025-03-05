@@ -2,6 +2,7 @@
 export interface UserLocation {
   latitude: number;
   longitude: number;
+  metadata?: MarkerMetadata;
 }
 
 export interface Verification {

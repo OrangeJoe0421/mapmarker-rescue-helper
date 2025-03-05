@@ -1,7 +1,7 @@
 
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
-import { UserLocation } from '@/types/mapTypes';
+import { UserLocation, MarkerMetadata } from '@/types/mapTypes';
 
 export interface LocationState {
   userLocation: UserLocation | null;
@@ -10,6 +10,7 @@ export interface LocationState {
   
   // Actions
   setUserLocation: (location: UserLocation) => void;
+  updateUserLocationMetadata: (metadata: MarkerMetadata) => void;
   setMapCenter: (center: [number, number]) => void;
   setMapZoom: (zoom: number) => void;
 }
@@ -17,7 +18,7 @@ export interface LocationState {
 export const DEFAULT_CENTER: [number, number] = [34.0522, -118.2437]; // Los Angeles
 export const DEFAULT_ZOOM = 12;
 
-export const createLocationSlice: StateCreator<LocationState> = (set) => ({
+export const createLocationSlice: StateCreator<LocationState> = (set, get) => ({
   userLocation: null,
   mapCenter: DEFAULT_CENTER,
   mapZoom: DEFAULT_ZOOM,
@@ -28,6 +29,38 @@ export const createLocationSlice: StateCreator<LocationState> = (set) => ({
       mapCenter: [location.latitude, location.longitude], 
       mapZoom: 13 
     });
+  },
+
+  updateUserLocationMetadata: (metadata) => {
+    const { userLocation } = get();
+    if (!userLocation) {
+      toast.error('No location selected');
+      return;
+    }
+
+    // Filter out empty metadata fields
+    const filteredMetadata: MarkerMetadata = {};
+    
+    if (metadata.projectNumber?.trim()) {
+      filteredMetadata.projectNumber = metadata.projectNumber.trim();
+    }
+    
+    if (metadata.region?.trim()) {
+      filteredMetadata.region = metadata.region.trim();
+    }
+    
+    if (metadata.projectType?.trim()) {
+      filteredMetadata.projectType = metadata.projectType.trim();
+    }
+
+    set({
+      userLocation: {
+        ...userLocation,
+        metadata: Object.keys(filteredMetadata).length > 0 ? filteredMetadata : undefined
+      }
+    });
+
+    toast.success('Location metadata updated');
   },
 
   setMapCenter: (center) => {
