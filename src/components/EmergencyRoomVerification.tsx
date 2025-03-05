@@ -18,6 +18,11 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
     verifyEmergencyRoom(service.id, checked);
   };
 
+  // Only render for Hospital service types
+  if (!service.type.toLowerCase().includes('hospital')) {
+    return null;
+  }
+
   return (
     <Card className="mt-2 bg-muted/50">
       <CardContent className="p-3">
