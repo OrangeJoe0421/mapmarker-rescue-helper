@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { userIcon } from './MapIcons';
 import { UserLocation } from '../../types/mapTypes';
@@ -9,14 +9,22 @@ interface UserLocationMarkerProps {
 }
 
 const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ userLocation }) => {
+  useEffect(() => {
+    console.log('Rendering UserLocationMarker with location:', userLocation);
+  }, [userLocation]);
+
+  // Make sure we have valid location data
   if (!userLocation || typeof userLocation.latitude !== 'number' || typeof userLocation.longitude !== 'number') {
     console.error('Invalid user location data:', userLocation);
     return null;
   }
 
+  // Create the position array for the marker
+  const position: [number, number] = [userLocation.latitude, userLocation.longitude];
+
   return (
     <Marker
-      position={[userLocation.latitude, userLocation.longitude]}
+      position={position}
       icon={userIcon}
       zIndexOffset={1000} // Ensure user marker is on top of other markers
     >

@@ -1,18 +1,15 @@
-
 import { Icon } from 'leaflet';
 
-// User location icon
+// Simplified user location icon - using a basic SVG circle
 export const userIcon = new Icon({
   iconUrl: 'data:image/svg+xml;base64,' + btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#38a169" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="8" r="5" />
-      <path d="M20 21a8 8 0 1 0-16 0" />
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" fill="#38a169" stroke="#ffffff" stroke-width="2" />
     </svg>
   `),
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -18],
-  className: 'pulse-animation',
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -12],
 });
 
 // Hospital icon

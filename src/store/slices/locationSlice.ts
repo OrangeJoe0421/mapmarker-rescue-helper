@@ -31,10 +31,17 @@ export const createLocationSlice: StateCreator<LocationState> = (set, get) => ({
       return;
     }
 
-    console.log('Setting user location:', location);
+    console.info('Setting user location:', location);
+    
+    // Create a valid UserLocation object
+    const userLocation: UserLocation = {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      metadata: location.metadata
+    };
     
     set({ 
-      userLocation: location,
+      userLocation,
       mapCenter: [location.latitude, location.longitude], 
       mapZoom: 13 
     });
