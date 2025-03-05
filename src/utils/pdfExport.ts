@@ -1,7 +1,7 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmergencyService, CustomMarker, Route, UserLocation } from '@/types/mapTypes';
+import html2canvas from 'html2canvas';
 
 export interface ExportData {
   userLocation: UserLocation | null;
@@ -10,7 +10,7 @@ export interface ExportData {
   routes: Route[];
 }
 
-export const exportToPdf = (data: ExportData) => {
+export const exportToPdf = async (data: ExportData) => {
   const { userLocation, emergencyServices, customMarkers, routes } = data;
   
   // Create a new PDF document
@@ -31,10 +31,24 @@ export const exportToPdf = (data: ExportData) => {
   yPosition += 8;
   
   if (userLocation) {
+    // Create location data, including metadata if available
     const userLocationData = [
       ['Latitude', userLocation.latitude.toFixed(6)],
       ['Longitude', userLocation.longitude.toFixed(6)]
     ];
+    
+    // Add metadata fields if they exist
+    if (userLocation.metadata) {
+      if (userLocation.metadata.projectNumber) {
+        userLocationData.push(['Project Number', userLocation.metadata.projectNumber]);
+      }
+      if (userLocation.metadata.region) {
+        userLocationData.push(['Region', userLocation.metadata.region]);
+      }
+      if (userLocation.metadata.projectType) {
+        userLocationData.push(['Project Type', userLocation.metadata.projectType]);
+      }
+    }
     
     autoTable(doc, {
       startY: yPosition,
@@ -212,6 +226,41 @@ export const exportToPdf = (data: ExportData) => {
   } else {
     doc.setFontSize(12);
     doc.text('No routes calculated', 14, yPosition);
+  }
+  
+  // Capture map image and add to PDF
+  try {
+    const mapElement = document.querySelector('.leaflet-container') as HTMLElement;
+    if (mapElement) {
+      // Add a new page for the map
+      doc.addPage();
+      
+      doc.setFontSize(16);
+      doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
+      
+      // Use html2canvas to capture the map as an image
+      const canvas = await html2canvas(mapElement, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+      });
+      
+      // Calculate dimensions to fit on the page while maintaining aspect ratio
+      const imgWidth = pageWidth - 20; // Margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Add the map image to the PDF
+      const imgData = canvas.toDataURL('image/png');
+      doc.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
+    }
+  } catch (error) {
+    console.error('Error capturing map:', error);
+    // Add a page with an error message if map capture fails
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text('Error generating map image', pageWidth / 2, 40, { align: 'center' });
   }
   
   // Add footer
