@@ -49,9 +49,22 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
     }));
     
     // Sort by road distance
-    return servicesWithDistance.sort((a, b) => 
+    const sortedServices = servicesWithDistance.sort((a, b) => 
       (a.road_distance || Infinity) - (b.road_distance || Infinity)
     );
+
+    // Filter to only include the closest service of each type
+    const serviceTypes = new Set(sortedServices.map(service => service.type));
+    const closestByType: EmergencyService[] = [];
+    
+    serviceTypes.forEach(type => {
+      const closestOfType = sortedServices.find(service => service.type === type);
+      if (closestOfType) {
+        closestByType.push(closestOfType);
+      }
+    });
+    
+    return closestByType;
   } catch (error) {
     console.error("Error fetching emergency services:", error);
     toast.error("Failed to fetch emergency services. Please try again.");
