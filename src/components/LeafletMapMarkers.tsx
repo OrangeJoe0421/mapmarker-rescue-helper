@@ -73,8 +73,8 @@ const MapMarkers = () => {
     iconAnchor: [15, 30],
   });
 
-  const clinicIcon = new Icon({
-    iconUrl: '/clinic-marker.svg', 
+  const lawIcon = new Icon({
+    iconUrl: '/law-marker.svg',
     iconSize: [30, 30],
     iconAnchor: [15, 30],
   });
@@ -91,7 +91,7 @@ const MapMarkers = () => {
     if (type.includes('hospital')) return hospitalIcon;
     if (type.includes('ems') || type.includes('ambulance')) return emsIcon;
     if (type.includes('fire')) return fireIcon;
-    if (type.includes('clinic') || type.includes('urgent care')) return clinicIcon;
+    if (type.includes('law') || type.includes('police')) return lawIcon;
     return hospitalIcon; // Default to hospital icon
   };
 

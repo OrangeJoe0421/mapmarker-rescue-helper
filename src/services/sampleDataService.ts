@@ -1,69 +1,159 @@
 
 import { EmergencyService } from '../types/mapTypes';
 
-// Sample EMS data with more realistic information
+// Sample EMS data for Los Angeles area with realistic coordinates
 const sampleEmsData: EmergencyService[] = [
+  // Hospitals
   {
     id: "hosp-001",
-    name: "Memorial General Hospital",
+    name: "Cedars-Sinai Medical Center",
     type: "Hospital",
-    latitude: 37.7749,
-    longitude: -122.4194,
-    verification: undefined
+    latitude: 34.0750,
+    longitude: -118.3803,
+    verification: {
+      hasEmergencyRoom: true,
+      verifiedAt: new Date("2023-11-15T09:24:00")
+    }
   },
   {
     id: "hosp-002",
-    name: "St. Mary's Medical Center",
+    name: "Ronald Reagan UCLA Medical Center",
     type: "Hospital",
-    latitude: 37.7833,
-    longitude: -122.4167,
-    verification: undefined
-  },
-  {
-    id: "ems-001",
-    name: "Downtown EMS Station",
-    type: "EMS Station",
-    latitude: 37.7833,
-    longitude: -122.4294,
-    verification: undefined
-  },
-  {
-    id: "clin-001",
-    name: "Bayside Urgent Care",
-    type: "Urgent Care",
-    latitude: 37.7925,
-    longitude: -122.4148,
-    verification: undefined
-  },
-  {
-    id: "fire-001",
-    name: "Station 1 Fire Department",
-    type: "Fire Station",
-    latitude: 37.7749,
-    longitude: -122.4300,
-    verification: undefined
+    latitude: 34.0665,
+    longitude: -118.4443,
+    verification: {
+      hasEmergencyRoom: true,
+      verifiedAt: new Date("2023-10-20T14:30:00")
+    }
   },
   {
     id: "hosp-003",
-    name: "University Medical Center",
+    name: "LAC+USC Medical Center",
     type: "Hospital",
-    latitude: 37.7694,
-    longitude: -122.4270,
+    latitude: 34.0582,
+    longitude: -118.2097,
     verification: {
       hasEmergencyRoom: true,
-      verifiedAt: new Date("2023-05-15T09:24:00")
+      verifiedAt: new Date("2023-12-05T11:15:00")
     }
   },
   {
-    id: "clin-002",
-    name: "Marina Health Clinic",
-    type: "Clinic",
-    latitude: 37.8036,
-    longitude: -122.4368,
-    verification: {
-      hasEmergencyRoom: false,
-      verifiedAt: new Date("2023-06-20T14:30:00")
-    }
+    id: "hosp-004",
+    name: "Hollywood Presbyterian Medical Center",
+    type: "Hospital",
+    latitude: 34.0905,
+    longitude: -118.3102,
+    verification: undefined
+  },
+  {
+    id: "hosp-005",
+    name: "Kaiser Permanente Los Angeles Medical Center",
+    type: "Hospital",
+    latitude: 34.0730,
+    longitude: -118.2942,
+    verification: undefined
+  },
+  
+  // EMS Stations
+  {
+    id: "ems-001",
+    name: "Los Angeles Fire Department Station 27",
+    type: "EMS Station",
+    latitude: 34.0983,
+    longitude: -118.3258,
+    verification: undefined
+  },
+  {
+    id: "ems-002",
+    name: "LAFD Ambulance Station 11",
+    type: "EMS Station",
+    latitude: 34.0455,
+    longitude: -118.2520,
+    verification: undefined
+  },
+  {
+    id: "ems-003",
+    name: "Emergency Medical Service Center - Downtown",
+    type: "EMS Station",
+    latitude: 34.0407,
+    longitude: -118.2468,
+    verification: undefined
+  },
+  
+  // Fire Stations
+  {
+    id: "fire-001",
+    name: "LAFD Station 3 - Downtown",
+    type: "Fire Station",
+    latitude: 34.0560,
+    longitude: -118.2548,
+    verification: undefined
+  },
+  {
+    id: "fire-002",
+    name: "LAFD Station 9 - Skid Row",
+    type: "Fire Station",
+    latitude: 34.0434,
+    longitude: -118.2400,
+    verification: undefined
+  },
+  {
+    id: "fire-003",
+    name: "LAFD Station 27 - Hollywood",
+    type: "Fire Station",
+    latitude: 34.0983,
+    longitude: -118.3258,
+    verification: undefined
+  },
+  {
+    id: "fire-004",
+    name: "LAFD Station 82 - Hollywood Hills",
+    type: "Fire Station",
+    latitude: 34.1155,
+    longitude: -118.3666,
+    verification: undefined
+  },
+  
+  // Law Enforcement
+  {
+    id: "law-001",
+    name: "LAPD Hollywood Division",
+    type: "Law Enforcement",
+    latitude: 34.0986,
+    longitude: -118.3324,
+    verification: undefined
+  },
+  {
+    id: "law-002",
+    name: "LAPD Central Division",
+    type: "Law Enforcement",
+    latitude: 34.0510,
+    longitude: -118.2468,
+    verification: undefined
+  },
+  {
+    id: "law-003",
+    name: "LAPD West LA Division",
+    type: "Law Enforcement",
+    latitude: 34.0406,
+    longitude: -118.4292,
+    verification: undefined
+  },
+  {
+    id: "law-004",
+    name: "LAPD Wilshire Division",
+    type: "Law Enforcement",
+    latitude: 34.0715,
+    longitude: -118.3315,
+    verification: undefined
+  },
+  {
+    id: "law-005",
+    name: "LAPD Olympic Division",
+    type: "Law Enforcement",
+    latitude: 34.0572,
+    longitude: -118.2922,
+    verification: undefined
   }
 ];
 
