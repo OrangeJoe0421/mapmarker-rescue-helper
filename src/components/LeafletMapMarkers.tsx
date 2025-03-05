@@ -61,11 +61,39 @@ const MapMarkers = () => {
     iconAnchor: [15, 30],
   });
 
+  const emsIcon = new Icon({
+    iconUrl: '/ems-marker.svg',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+
+  const fireIcon = new Icon({
+    iconUrl: '/fire-marker.svg',
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+
+  const clinicIcon = new Icon({
+    iconUrl: '/clinic-marker.svg', 
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+  });
+
   const customIcon = new Icon({
     iconUrl: '/custom-marker.svg',
     iconSize: [30, 30],
     iconAnchor: [15, 30],
   });
+  
+  // Function to determine icon based on service type
+  const getServiceIcon = (service: any) => {
+    const type = service.type.toLowerCase();
+    if (type.includes('hospital')) return hospitalIcon;
+    if (type.includes('ems') || type.includes('ambulance')) return emsIcon;
+    if (type.includes('fire')) return fireIcon;
+    if (type.includes('clinic') || type.includes('urgent care')) return clinicIcon;
+    return hospitalIcon; // Default to hospital icon
+  };
 
   return (
     <>
@@ -77,6 +105,19 @@ const MapMarkers = () => {
         >
           <Popup>
             <h3 className="font-bold">Your Location</h3>
+            {userLocation.metadata && (
+              <div className="mt-1 text-xs">
+                {userLocation.metadata.projectNumber && (
+                  <p>Project: {userLocation.metadata.projectNumber}</p>
+                )}
+                {userLocation.metadata.region && (
+                  <p>Region: {userLocation.metadata.region}</p>
+                )}
+                {userLocation.metadata.projectType && (
+                  <p>Type: {userLocation.metadata.projectType}</p>
+                )}
+              </div>
+            )}
           </Popup>
         </Marker>
       )}
@@ -86,7 +127,7 @@ const MapMarkers = () => {
         <Marker
           key={service.id}
           position={[service.latitude, service.longitude]}
-          icon={hospitalIcon}
+          icon={getServiceIcon(service)}
           eventHandlers={{
             click: () => selectService(service),
           }}

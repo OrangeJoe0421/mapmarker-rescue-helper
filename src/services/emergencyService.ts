@@ -1,36 +1,55 @@
 
 import { toast } from 'sonner';
-import { EmergencyService } from '../store/useMapStore';
+import { EmergencyService } from '../types/mapTypes';
+import { getAllEmsData, getEmsDataWithinRadius } from './sampleDataService';
+import { calculateHaversineDistance } from '../utils/mapUtils';
 
-const API_BASE_URL = "https://mocki.io/v1/d1f16339-9915-4722-aa6a-0aacd4e08091"; // Mock API endpoint
+// OSRM API for routing (open source routing machine)
+const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
 
 export async function fetchNearestEmergencyServices(latitude: number, longitude: number): Promise<EmergencyService[]> {
   try {
-    // For demonstration, we'll use a mock API that returns simulated data
-    // In a real application, you would call your actual backend API
-    const response = await fetch(`${API_BASE_URL}`);
+    // Get EMS data from our sample database
+    const allServices = getAllEmsData();
     
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
+    // Filter services within 20km radius for more relevant results
+    const nearbyServices = getEmsDataWithinRadius(latitude, longitude, 20);
     
-    const data = await response.json();
+    // If no nearby services, return all services
+    const services = nearbyServices.length > 0 ? nearbyServices : allServices;
     
-    // Simulate calculating distance from user location
-    const services = data.map((service: any) => ({
-      ...service,
-      road_distance: calculateHaversineDistance(
+    // Calculate straight-line distance from user location
+    const servicesWithDistance = await Promise.all(services.map(async (service) => {
+      // Calculate straight-line distance
+      const airDistance = calculateHaversineDistance(
         latitude,
         longitude,
         service.latitude,
         service.longitude
-      ),
-      // Initialize verification as undefined
-      verification: undefined
+      );
+      
+      // Try to get road distance
+      let roadDistance: number | null = null;
+      try {
+        roadDistance = await fetchRouteDistance(
+          latitude,
+          longitude,
+          service.latitude,
+          service.longitude
+        );
+      } catch (error) {
+        console.warn(`Could not calculate road distance for ${service.name}:`, error);
+      }
+      
+      return {
+        ...service,
+        // Use road distance if available, otherwise use air distance
+        road_distance: roadDistance !== null ? roadDistance : airDistance * 1.3,
+      };
     }));
     
-    // Sort by distance
-    return services.sort((a: EmergencyService, b: EmergencyService) => 
+    // Sort by road distance
+    return servicesWithDistance.sort((a, b) => 
       (a.road_distance || Infinity) - (b.road_distance || Infinity)
     );
   } catch (error) {
@@ -40,30 +59,7 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
   }
 }
 
-// Calculate the Haversine distance between two points
-function calculateHaversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distance = R * c; // Distance in km
-  return parseFloat(distance.toFixed(2));
-}
-
-function deg2rad(deg: number): number {
-  return deg * (Math.PI / 180);
-}
-
-// In a real application, you would implement actual routing API integration here
+// Use OSRM API to get actual road distance
 export async function fetchRouteDistance(
   startLat: number,
   startLon: number,
@@ -71,14 +67,72 @@ export async function fetchRouteDistance(
   endLon: number
 ): Promise<number | null> {
   try {
-    // For a real implementation, you would call OSRM, Google Maps, or another routing API
-    // For example with OSRM:
-    // const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=false`);
+    // Format coordinates for OSRM API
+    const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
+    const url = `${OSRM_API_URL}${coordinates}?overview=full`;
     
-    // For now, we'll just return the Haversine distance with a multiplier to simulate road distance
-    return calculateHaversineDistance(startLat, startLon, endLat, endLon) * 1.3;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`OSRM API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+      throw new Error('No route found');
+    }
+    
+    // Get distance in kilometers (OSRM returns meters)
+    const distanceKm = data.routes[0].distance / 1000;
+    return parseFloat(distanceKm.toFixed(2));
   } catch (error) {
     console.error("Error calculating route distance:", error);
+    // Fall back to Haversine distance with a road factor
+    return calculateHaversineDistance(startLat, startLon, endLat, endLon) * 1.3;
+  }
+}
+
+// Function to fetch a route with all waypoints 
+export async function fetchRoutePath(
+  startLat: number,
+  startLon: number,
+  endLat: number,
+  endLon: number
+): Promise<{ points: [number, number][]; distance: number; duration: number } | null> {
+  try {
+    // Format coordinates for OSRM API
+    const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
+    const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`OSRM API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+      throw new Error('No route found');
+    }
+    
+    const route = data.routes[0];
+    const geometry = route.geometry;
+    
+    // Extract coordinates from GeoJSON
+    const points = geometry.coordinates.map((coord: [number, number]) => {
+      // OSRM returns [lng, lat], but we need [lat, lng] for leaflet
+      return [coord[1], coord[0]] as [number, number];
+    });
+    
+    return {
+      points,
+      distance: route.distance / 1000, // convert meters to kilometers
+      duration: route.duration / 60, // convert seconds to minutes
+    };
+  } catch (error) {
+    console.error("Error fetching route path:", error);
     return null;
   }
 }

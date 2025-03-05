@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
+import { fetchRoutePath } from '@/services/emergencyService';
 
 export interface RoutesState {
   routes: Route[];
@@ -16,6 +17,7 @@ export const createRoutesSlice: StateCreator<
   RoutesState & { 
     userLocation?: any; 
     customMarkers?: any[];
+    emergencyServices?: any[];
   }
 > = (set, get) => ({
   routes: [],
@@ -29,7 +31,14 @@ export const createRoutesSlice: StateCreator<
       return;
     }
     
-    const sourceMarker = state.customMarkers?.find(marker => marker.id === fromId);
+    // Find the source - it could be either a custom marker or an emergency service
+    let sourceMarker = state.customMarkers?.find(marker => marker.id === fromId);
+    
+    if (!sourceMarker) {
+      // If not found in custom markers, check emergency services
+      sourceMarker = state.emergencyServices?.find(service => service.id === fromId);
+    }
+    
     if (!sourceMarker) {
       toast.error('Source marker not found');
       return;
@@ -45,11 +54,57 @@ export const createRoutesSlice: StateCreator<
     toast.info('Calculating route...');
 
     try {
-      // In a real app, here we would make an API call to a routing service
-      // For now, we'll simulate a route with a straight line
+      // Get start and end coordinates
+      const startCoords = {
+        latitude: sourceMarker.latitude,
+        longitude: sourceMarker.longitude
+      };
+      
+      const endCoords = toUserLocation 
+        ? { latitude: state.userLocation!.latitude, longitude: state.userLocation!.longitude }
+        : { latitude: 0, longitude: 0 }; // Will be replaced with actual destination
+      
+      // Call the enhanced routing service to get a real route
+      const routeData = await fetchRoutePath(
+        startCoords.latitude,
+        startCoords.longitude,
+        endCoords.latitude,
+        endCoords.longitude
+      );
+      
+      if (!routeData) {
+        throw new Error("Could not calculate route");
+      }
+      
+      // Create route points from the fetched route
+      const routePoints: RoutePoint[] = routeData.points.map(point => ({
+        latitude: point[0],
+        longitude: point[1]
+      }));
+      
+      // Create a unique ID for the route
       const routeId = `route-${Date.now()}`;
       
-      // Create simulated route points (just a direct line for demo)
+      // Create the route object
+      const newRoute: Route = {
+        id: routeId,
+        points: routePoints,
+        fromId: sourceMarker.id,
+        toId: toUserLocation ? null : "destination-id",
+        distance: routeData.distance,
+        duration: routeData.duration
+      };
+      
+      // Add the route to state
+      set((state) => ({
+        routes: [...state.routes, newRoute]
+      }));
+      
+      toast.success(`Route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration)} min)`);
+    } catch (error) {
+      console.error("Error calculating route:", error);
+      
+      // Fallback to simple straight line if API fails
       const startPoint: RoutePoint = {
         latitude: sourceMarker.latitude,
         longitude: sourceMarker.longitude
@@ -57,10 +112,9 @@ export const createRoutesSlice: StateCreator<
       
       const endPoint: RoutePoint = toUserLocation 
         ? { latitude: state.userLocation!.latitude, longitude: state.userLocation!.longitude }
-        : { latitude: 0, longitude: 0 }; // Will be replaced with actual destination
+        : { latitude: 0, longitude: 0 };
       
       // Create a simple route with just start and end points
-      // In a real app, this would be replaced with actual waypoints from routing API
       const routePoints = [startPoint];
       
       // Add some intermediate points for visualization
@@ -82,11 +136,12 @@ export const createRoutesSlice: StateCreator<
         endPoint.longitude
       );
       
+      const routeId = `route-${Date.now()}`;
       const newRoute: Route = {
         id: routeId,
         points: routePoints,
         fromId: sourceMarker.id,
-        toId: toUserLocation ? null : "destination-id", // In our demo, always null for user location
+        toId: toUserLocation ? null : "destination-id",
         distance: distance,
         duration: distance / 50 * 60 // Rough estimate: 50 km/h average speed
       };
@@ -96,10 +151,7 @@ export const createRoutesSlice: StateCreator<
         routes: [...state.routes, newRoute]
       }));
       
-      toast.success(`Route calculated: ${distance.toFixed(2)} km`);
-    } catch (error) {
-      console.error("Error calculating route:", error);
-      toast.error("Failed to calculate route");
+      toast.warning(`Using simplified route (API failed): ${distance.toFixed(2)} km`);
     }
   },
   
