@@ -93,13 +93,19 @@ export const exportToPdf = (data: ExportData) => {
   yPosition += 8;
   
   if (customMarkers.length > 0) {
-    const customMarkersData = customMarkers.map(marker => [
-      marker.name,
-      marker.latitude.toFixed(6),
-      marker.longitude.toFixed(6),
-      new Date(marker.createdAt).toLocaleString()
-    ]);
+    // Create rows for the main marker data
+    const customMarkersData = customMarkers.map(marker => {
+      const row = [
+        marker.name,
+        marker.latitude.toFixed(6),
+        marker.longitude.toFixed(6),
+        new Date(marker.createdAt).toLocaleString()
+      ];
+      
+      return row;
+    });
     
+    // Create the main table
     autoTable(doc, {
       startY: yPosition,
       head: [['Name', 'Latitude', 'Longitude', 'Created At']],
@@ -110,6 +116,58 @@ export const exportToPdf = (data: ExportData) => {
     });
     
     yPosition = (doc as any).lastAutoTable.finalY + 10;
+    
+    // Add metadata tables for markers that have metadata
+    const markersWithMetadata = customMarkers.filter(
+      marker => marker.metadata && Object.keys(marker.metadata).length > 0
+    );
+    
+    if (markersWithMetadata.length > 0) {
+      doc.setFontSize(14);
+      doc.text('Marker Metadata', 14, yPosition);
+      yPosition += 8;
+      
+      for (const marker of markersWithMetadata) {
+        if (!marker.metadata) continue;
+        
+        const metadataRows = [];
+        
+        if (marker.metadata.projectNumber) {
+          metadataRows.push(['Project Number', marker.metadata.projectNumber]);
+        }
+        
+        if (marker.metadata.region) {
+          metadataRows.push(['Region', marker.metadata.region]);
+        }
+        
+        if (marker.metadata.projectType) {
+          metadataRows.push(['Project Type', marker.metadata.projectType]);
+        }
+        
+        if (metadataRows.length > 0) {
+          // Check if we need a new page
+          if (yPosition > 230) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          doc.setFontSize(12);
+          doc.text(`Metadata for: ${marker.name}`, 14, yPosition);
+          yPosition += 6;
+          
+          autoTable(doc, {
+            startY: yPosition,
+            head: [['Field', 'Value']],
+            body: metadataRows,
+            theme: 'grid',
+            headStyles: { fillColor: [46, 204, 113], textColor: 255 },
+            margin: { left: 14, right: 14 }
+          });
+          
+          yPosition = (doc as any).lastAutoTable.finalY + 10;
+        }
+      }
+    }
   } else {
     doc.setFontSize(12);
     doc.text('No custom markers added', 14, yPosition);

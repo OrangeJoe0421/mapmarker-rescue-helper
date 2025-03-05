@@ -19,14 +19,18 @@ import {
   Crosshair,
   ArrowRight,
   Building2,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
+import MarkerMetadataForm from './MarkerMetadataForm';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const EmergencySidebar = () => {
   const [latitude, setLatitude] = useState<string>("");
   const [longitude, setLongitude] = useState<string>("");
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("search");
+  const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
   
   const { 
     userLocation,
@@ -44,6 +48,10 @@ const EmergencySidebar = () => {
     selectMarker,
     clearAll
   } = useMapStore();
+
+  // Find the marker being edited
+  const markerBeingEdited = editingMarkerId ? 
+    customMarkers.find(marker => marker.id === editingMarkerId) : null;
 
   const handleSearch = async () => {
     if (!latitude || !longitude) {
@@ -343,14 +351,49 @@ const EmergencySidebar = () => {
                         `}
                         onClick={() => selectMarker(marker)}
                       >
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-start">
                           <div>
                             <h4 className="font-medium">{marker.name}</h4>
                             <p className="text-xs text-muted-foreground mt-1">
                               {marker.latitude.toFixed(5)}, {marker.longitude.toFixed(5)}
                             </p>
+                            
+                            {/* Show metadata if available */}
+                            {marker.metadata && Object.keys(marker.metadata).length > 0 && (
+                              <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
+                                {marker.metadata.projectNumber && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <Hash className="h-3 w-3" />
+                                    <span>{marker.metadata.projectNumber}</span>
+                                  </div>
+                                )}
+                                {marker.metadata.region && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <Globe className="h-3 w-3" />
+                                    <span>{marker.metadata.region}</span>
+                                  </div>
+                                )}
+                                {marker.metadata.projectType && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{marker.metadata.projectType}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingMarkerId(marker.id);
+                              }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -421,6 +464,18 @@ const EmergencySidebar = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Metadata editing dialog */}
+      <Dialog open={!!editingMarkerId} onOpenChange={(open) => !open && setEditingMarkerId(null)}>
+        <DialogContent className="sm:max-w-md">
+          {markerBeingEdited && (
+            <MarkerMetadataForm 
+              marker={markerBeingEdited} 
+              onClose={() => setEditingMarkerId(null)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

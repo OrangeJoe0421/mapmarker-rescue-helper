@@ -19,6 +19,12 @@ export interface EmergencyService {
   verification?: Verification;
 }
 
+export interface MarkerMetadata {
+  projectNumber?: string;
+  region?: string;
+  projectType?: string;
+}
+
 export interface CustomMarker {
   id: string;
   name: string;
@@ -26,6 +32,7 @@ export interface CustomMarker {
   longitude: number;
   color?: string;
   createdAt: Date;
+  metadata?: MarkerMetadata;
 }
 
 export interface RoutePoint {
