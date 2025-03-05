@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { FileDown } from 'lucide-react';
 import { useMapStore } from '../store/useMapStore';
-import { exportToPdf } from '../utils/pdfExport';
+import { exportToPdf } from '../utils/pdf';
 import { toast } from 'sonner';
 
 const ExportButton = () => {
