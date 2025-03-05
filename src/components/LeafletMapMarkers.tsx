@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { MapContainer, Marker, Popup, useMap, Polyline, TileLayer } from 'react-leaflet';
 import { Icon } from 'leaflet';
@@ -95,6 +94,13 @@ const MapMarkers = () => {
     return hospitalIcon; // Default to hospital icon
   };
 
+  // Function to handle marker click
+  const handleMarkerClick = (id: string) => {
+    if (userLocation) {
+      calculateRoute(id, true);
+    }
+  };
+
   return (
     <>
       {/* User location marker */}
@@ -129,7 +135,10 @@ const MapMarkers = () => {
           position={[service.latitude, service.longitude]}
           icon={getServiceIcon(service)}
           eventHandlers={{
-            click: () => selectService(service),
+            click: () => {
+              selectService(service);
+              handleMarkerClick(service.id);
+            },
           }}
         >
           <Popup>
@@ -159,7 +168,10 @@ const MapMarkers = () => {
           icon={customIcon}
           draggable={true}
           eventHandlers={{
-            click: () => selectMarker(marker),
+            click: () => {
+              selectMarker(marker);
+              handleMarkerClick(marker.id);
+            },
             dragend: (e) => {
               const { lat, lng } = e.target.getLatLng();
               updateCustomMarker(marker.id, {

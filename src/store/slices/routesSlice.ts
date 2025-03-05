@@ -27,7 +27,7 @@ export const createRoutesSlice: StateCreator<
     
     // Validate necessary data
     if (toUserLocation && !state.userLocation) {
-      toast.error('Please set a user location first');
+      toast.error('Please set a user location first by searching for coordinates');
       return;
     }
     
@@ -50,6 +50,11 @@ export const createRoutesSlice: StateCreator<
       toast.error('Destination not set');
       return;
     }
+
+    // Clear any existing routes with this source to avoid clutter
+    set(state => ({
+      routes: state.routes.filter(route => route.fromId !== fromId)
+    }));
 
     toast.info('Calculating route...');
 
