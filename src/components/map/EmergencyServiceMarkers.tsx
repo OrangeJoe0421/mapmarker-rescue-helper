@@ -40,6 +40,18 @@ const EmergencyServiceMarkers: React.FC<EmergencyServiceMarkersProps> = ({
               <p className="text-xs mt-1">{service.road_distance.toFixed(2)} km away</p>
             )}
             
+            {service.address && (
+              <p className="text-xs mt-1">{service.address}</p>
+            )}
+            
+            {service.phone && (
+              <p className="text-xs mt-1">Phone: {service.phone}</p>
+            )}
+            
+            {service.hours && (
+              <p className="text-xs mt-1">Hours: {service.hours}</p>
+            )}
+            
             {/* Add the verification component */}
             <EmergencyRoomVerification service={service} />
             

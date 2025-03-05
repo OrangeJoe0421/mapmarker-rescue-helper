@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmergencyService, CustomMarker, Route, UserLocation } from '@/types/mapTypes';
@@ -66,7 +67,7 @@ export const exportToPdf = async (data: ExportData) => {
     yPosition += 10;
   }
   
-  // Add emergency services section
+  // Add emergency services section with enhanced details
   doc.setFontSize(16);
   doc.text('Emergency Services', 14, yPosition);
   yPosition += 8;
@@ -89,6 +90,43 @@ export const exportToPdf = async (data: ExportData) => {
     });
     
     yPosition = (doc as any).lastAutoTable.finalY + 10;
+    
+    // Add detailed services information
+    doc.setFontSize(14);
+    doc.text('Emergency Services Details', 14, yPosition);
+    yPosition += 8;
+    
+    for (const service of emergencyServices) {
+      // Check if we need a new page
+      if (yPosition > 230) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      const detailsData = [
+        ['Name', service.name],
+        ['Type', service.type],
+        ['Address', service.address || 'N/A'],
+        ['Phone', service.phone || 'N/A'],
+        ['Hours', service.hours || 'N/A'],
+        ['ER Available', service.verification?.hasEmergencyRoom ? 'Yes' : 'No']
+      ];
+      
+      if (service.road_distance) {
+        detailsData.push(['Distance from User', `${service.road_distance.toFixed(2)} km`]);
+      }
+      
+      autoTable(doc, {
+        startY: yPosition,
+        head: [[`Service Details: ${service.name}`]],
+        body: detailsData,
+        theme: 'grid',
+        headStyles: { fillColor: [231, 76, 60], textColor: 255 },
+        margin: { left: 14, right: 14 }
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+    }
   } else {
     doc.setFontSize(12);
     doc.text('No emergency services found', 14, yPosition);
@@ -194,14 +232,21 @@ export const exportToPdf = async (data: ExportData) => {
     yPosition = 20;
   }
   
-  // Add routes section
+  // Add enhanced routes section with detailed routing information
   doc.setFontSize(16);
   doc.text('Routes', 14, yPosition);
   yPosition += 8;
   
   if (routes.length > 0) {
+    // Basic routes summary table
     const routesData = routes.map(route => {
-      const fromMarker = customMarkers.find(m => m.id === route.fromId);
+      // Find the source marker (could be emergency service or custom marker)
+      let fromMarker: any = customMarkers.find(m => m.id === route.fromId);
+      
+      if (!fromMarker) {
+        fromMarker = emergencyServices.find(s => s.id === route.fromId);
+      }
+      
       const fromLabel = fromMarker ? fromMarker.name : 'Unknown';
       const toLabel = route.toId ? 
         customMarkers.find(m => m.id === route.toId)?.name || 'Unknown' : 
@@ -223,6 +268,80 @@ export const exportToPdf = async (data: ExportData) => {
       headStyles: { fillColor: [142, 68, 173], textColor: 255 },
       margin: { left: 14, right: 14 }
     });
+    
+    yPosition = (doc as any).lastAutoTable.finalY + 10;
+    
+    // Add detailed route information on a new page
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.text('Detailed Route Information', pageWidth / 2, 15, { align: 'center' });
+    yPosition = 30;
+    
+    for (let i = 0; i < routes.length; i++) {
+      const route = routes[i];
+      
+      // Find from and to information
+      let fromEntity: any = customMarkers.find(m => m.id === route.fromId);
+      if (!fromEntity) {
+        fromEntity = emergencyServices.find(s => s.id === route.fromId);
+      }
+      
+      let toEntity: any = null;
+      let toName = 'User Location';
+      
+      if (route.toId) {
+        toEntity = customMarkers.find(m => m.id === route.toId);
+        if (toEntity) {
+          toName = toEntity.name;
+        }
+      } else if (userLocation) {
+        toEntity = userLocation;
+      }
+      
+      const fromName = fromEntity ? fromEntity.name : 'Unknown';
+      
+      doc.setFontSize(14);
+      doc.text(`Route ${i + 1}: ${fromName} to ${toName}`, 14, yPosition);
+      yPosition += 8;
+      
+      // Route summary
+      const routeDetails = [
+        ['Starting Point', fromName],
+        ['Destination', toName],
+        ['Total Distance', `${route.distance.toFixed(2)} km`],
+        ['Estimated Duration', route.duration ? `${Math.ceil(route.duration)} min` : 'N/A'],
+        ['Average Speed', `${(route.distance / (route.duration ? route.duration / 60 : 0.5)).toFixed(1)} km/h`],
+      ];
+      
+      if (fromEntity) {
+        if (fromEntity.address) {
+          routeDetails.push(['Starting Address', fromEntity.address]);
+        }
+        if (fromEntity.phone) {
+          routeDetails.push(['Starting Point Contact', fromEntity.phone]);
+        }
+      }
+      
+      if (toEntity && 'address' in toEntity) {
+        routeDetails.push(['Destination Address', toEntity.address]);
+      }
+      
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Property', 'Value']],
+        body: routeDetails,
+        theme: 'grid',
+        headStyles: { fillColor: [155, 89, 182], textColor: 255 },
+        margin: { left: 14, right: 14 }
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+      
+      if (i < routes.length - 1 && yPosition > 200) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    }
   } else {
     doc.setFontSize(12);
     doc.text('No routes calculated', 14, yPosition);

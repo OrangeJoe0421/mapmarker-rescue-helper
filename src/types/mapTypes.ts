@@ -1,4 +1,3 @@
-
 export interface UserLocation {
   latitude: number;
   longitude: number;
@@ -16,6 +15,9 @@ export interface EmergencyService {
   type: string;
   latitude: number;
   longitude: number;
+  address?: string;
+  phone?: string;
+  hours?: string;
   road_distance?: number;
   verification?: Verification;
 }

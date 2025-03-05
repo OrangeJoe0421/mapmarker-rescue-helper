@@ -1,4 +1,3 @@
-
 import { EmergencyService } from '../types/mapTypes';
 
 // Sample EMS data for Los Angeles area with realistic coordinates
@@ -10,6 +9,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Hospital",
     latitude: 34.0750,
     longitude: -118.3803,
+    address: "8700 Beverly Blvd, Los Angeles, CA 90048",
+    phone: "(310) 423-3277",
+    hours: "24/7 Emergency Services",
     verification: {
       hasEmergencyRoom: true,
       verifiedAt: new Date("2023-11-15T09:24:00")
@@ -21,6 +23,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Hospital",
     latitude: 34.0665,
     longitude: -118.4443,
+    address: "757 Westwood Plaza, Los Angeles, CA 90095",
+    phone: "(310) 825-9111",
+    hours: "24/7 Emergency Services",
     verification: {
       hasEmergencyRoom: true,
       verifiedAt: new Date("2023-10-20T14:30:00")
@@ -32,6 +37,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Hospital",
     latitude: 34.0582,
     longitude: -118.2097,
+    address: "2051 Marengo St, Los Angeles, CA 90033",
+    phone: "(323) 409-1000",
+    hours: "24/7 Emergency Services",
     verification: {
       hasEmergencyRoom: true,
       verifiedAt: new Date("2023-12-05T11:15:00")
@@ -43,6 +51,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Hospital",
     latitude: 34.0905,
     longitude: -118.3102,
+    address: "1300 N Vermont Ave, Los Angeles, CA 90027",
+    phone: "(213) 413-3000",
+    hours: "24/7 Emergency Services",
     verification: undefined
   },
   {
@@ -51,6 +62,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Hospital",
     latitude: 34.0730,
     longitude: -118.2942,
+    address: "4867 Sunset Blvd, Los Angeles, CA 90027",
+    phone: "(323) 783-4011",
+    hours: "24/7 Emergency Services",
     verification: undefined
   },
   
@@ -61,6 +75,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "EMS Station",
     latitude: 34.0983,
     longitude: -118.3258,
+    address: "1327 N Cole Ave, Los Angeles, CA 90028",
+    phone: "(213) 485-6227",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -69,6 +86,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "EMS Station",
     latitude: 34.0455,
     longitude: -118.2520,
+    address: "1819 W 7th St, Los Angeles, CA 90057",
+    phone: "(213) 485-6211",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -77,6 +97,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "EMS Station",
     latitude: 34.0407,
     longitude: -118.2468,
+    address: "510 S Main St, Los Angeles, CA 90013",
+    phone: "(213) 485-6003",
+    hours: "24/7 Operations",
     verification: undefined
   },
   
@@ -87,6 +110,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Fire Station",
     latitude: 34.0560,
     longitude: -118.2548,
+    address: "108 N Fremont Ave, Los Angeles, CA 90012",
+    phone: "(213) 485-6203",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -95,6 +121,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Fire Station",
     latitude: 34.0434,
     longitude: -118.2400,
+    address: "430 E 7th St, Los Angeles, CA 90014",
+    phone: "(213) 485-6209",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -103,6 +132,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Fire Station",
     latitude: 34.0983,
     longitude: -118.3258,
+    address: "1327 N Cole Ave, Los Angeles, CA 90028",
+    phone: "(213) 485-6227",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -111,6 +143,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Fire Station",
     latitude: 34.1155,
     longitude: -118.3666,
+    address: "1800 N Bronson Ave, Los Angeles, CA 90028",
+    phone: "(213) 485-6282",
+    hours: "24/7 Operations",
     verification: undefined
   },
   
@@ -121,6 +156,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Law Enforcement",
     latitude: 34.0986,
     longitude: -118.3324,
+    address: "1358 N Wilcox Ave, Los Angeles, CA 90028",
+    phone: "(213) 972-2971",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -129,6 +167,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Law Enforcement",
     latitude: 34.0510,
     longitude: -118.2468,
+    address: "251 E 6th St, Los Angeles, CA 90014",
+    phone: "(213) 486-6606",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -137,6 +178,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Law Enforcement",
     latitude: 34.0406,
     longitude: -118.4292,
+    address: "1663 Butler Ave, Los Angeles, CA 90025",
+    phone: "(310) 444-0701",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -145,6 +189,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Law Enforcement",
     latitude: 34.0715,
     longitude: -118.3315,
+    address: "4861 Venice Blvd, Los Angeles, CA 90019",
+    phone: "(213) 473-0476",
+    hours: "24/7 Operations",
     verification: undefined
   },
   {
@@ -153,6 +200,9 @@ const sampleEmsData: EmergencyService[] = [
     type: "Law Enforcement",
     latitude: 34.0572,
     longitude: -118.2922,
+    address: "1130 S Vermont Ave, Los Angeles, CA 90006",
+    phone: "(213) 382-9102",
+    hours: "24/7 Operations",
     verification: undefined
   }
 ];
