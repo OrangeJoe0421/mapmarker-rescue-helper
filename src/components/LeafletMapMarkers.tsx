@@ -1,6 +1,8 @@
+
 import React, { useEffect } from 'react';
 import { MapContainer, Marker, Popup, useMap, Polyline, TileLayer } from 'react-leaflet';
 import { Icon } from 'leaflet';
+import { MapPin, UserCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useMapStore } from '../store/useMapStore';
 import EmergencyRoomVerification from './EmergencyRoomVerification';
@@ -49,9 +51,16 @@ const MapMarkers = () => {
 
   // Define icons for different marker types
   const userIcon = new Icon({
-    iconUrl: '/user-marker.svg',
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#38a169" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="5" />
+        <path d="M20 21a8 8 0 1 0-16 0" />
+      </svg>
+    `),
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -36],
+    className: 'pulse-animation',
   });
 
   const hospitalIcon = new Icon({
@@ -79,9 +88,15 @@ const MapMarkers = () => {
   });
 
   const customIcon = new Icon({
-    iconUrl: '/custom-marker.svg',
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
+    iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#3B82F6" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+        <circle cx="12" cy="10" r="3" />
+      </svg>
+    `),
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -36],
   });
   
   // Function to determine icon based on service type
