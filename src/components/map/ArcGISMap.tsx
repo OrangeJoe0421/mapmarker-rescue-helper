@@ -87,9 +87,17 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
         // Check if we have graphics in the hit test result
         if (response.results.length > 0) {
           // Get the first graphic from the result
-          const graphic = response.results.filter(result => {
-            return result.graphic.layer === graphicsLayer;
-          })[0]?.graphic;
+          const graphicResults = response.results.filter(result => {
+            // Type assertion to access the graphic property safely
+            const hitResult = result as any;
+            return hitResult.graphic && hitResult.graphic.layer === graphicsLayer;
+          });
+          
+          if (graphicResults.length === 0) return;
+          
+          // Use type assertion to access the graphic
+          const hitResult = graphicResults[0] as any;
+          const graphic = hitResult.graphic;
           
           if (!graphic || !graphic.attributes) return;
           
@@ -111,14 +119,15 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
             // Clear existing actions
             view.popup.actions.removeAll();
             
-            // Add new route action
-            view.popup.actions.add({
+            // Create a proper ActionButton instance
+            const routeAction = {
               title: "Route to Project Location",
               id: "route-to-project",
-              className: "esri-icon-directions",
-              type: "button",
-              visible: true,
-            });
+              className: "esri-icon-directions"
+            };
+            
+            // Add the action to the popup
+            view.popup.actions.add(routeAction as any);
             
             // Set up click handler for the action
             view.popup.on("trigger-action", (event) => {
