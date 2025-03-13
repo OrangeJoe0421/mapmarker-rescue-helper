@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
@@ -12,9 +11,8 @@ import * as route from '@arcgis/core/rest/route';
 import { useMapStore } from '../../store/useMapStore';
 import '@arcgis/core/assets/esri/themes/light/main.css';
 
-// Configure ArcGIS API key - you'll need to get a free developer API key
-// Visit https://developers.arcgis.com/ to sign up and create a key
-const API_KEY = "REPLACE_WITH_YOUR_API_KEY"; // This will be a free developer API key
+// ArcGIS API key
+const API_KEY = "AAPTxy8BH1VEsoebNVZXo8HurCbu3PSv3KJX_DDuDrGaWyOyZnym1CFeYHigp3dhVT4zBgjJbDsJUCe7vqw1hQGldb_lzf_oL_0CpilyHp1uyF0r1yQ1IHIpP72F5YK8UvUPS4oZ94EIsi3fAf4_GaRAZ6mr_hhxSP08zDf8Cpv4DHJWtKSgFW-osce6JCuJ650apzqq7Ajb0SYralTMuDtL6bUXyLBiVIaUAlqznUoV1dQ.AT1_aTQtmsBa";
 
 interface ArcGISMapProps {
   className?: string;
@@ -75,6 +73,12 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     // Configure the routing service URL - not using setDefaultRouteServiceUrl as it doesn't exist
     // We'll use the URL directly in any route operations
     const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+    
+    // Set the API key for the services
+    // This is necessary for routing, geocoding, and other services
+    (window as any).esriConfig = {
+      apiKey: API_KEY
+    };
     
     // Clean up function
     return () => {
