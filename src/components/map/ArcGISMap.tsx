@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
@@ -32,7 +33,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     userLocation, 
     emergencyServices, 
     customMarkers,
-    routes 
+    routes,
+    calculateRoute 
   } = useMapStore();
   
   // Initialize map
@@ -70,15 +72,43 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     
     viewRef.current = view;
     
-    // Configure the routing service URL - not using setDefaultRouteServiceUrl as it doesn't exist
-    // We'll use the URL directly in any route operations
+    // Configure the routing service URL
     const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
     
     // Set the API key for the services
-    // This is necessary for routing, geocoding, and other services
     (window as any).esriConfig = {
       apiKey: API_KEY
     };
+    
+    // Setup click handlers for markers for routing functionality
+    view.on("click", (event) => {
+      if (!event.graphic) return;
+      
+      // Get the clicked graphic's ID
+      const id = event.graphic.attributes?.id;
+      if (!id) return;
+      
+      // Check if it's a service or custom marker
+      const isService = event.graphic.attributes?.type === 'service';
+      const isCustom = event.graphic.attributes?.type === 'custom';
+      
+      // If it's a service or custom marker, show popup with route option
+      if ((isService || isCustom) && userLocation) {
+        view.popup.open({
+          features: [event.graphic],
+          location: event.mapPoint
+        });
+        
+        view.popup.actions.add({
+          title: "Route to Project Location",
+          id: "route-to-project",
+          className: "esri-icon-directions",
+          callback: () => {
+            calculateRoute(id, true);
+          }
+        });
+      }
+    });
     
     // Clean up function
     return () => {
@@ -116,7 +146,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       });
       
       const markerSymbol = {
-        type: "simple-marker" as const,
+        type: "simple-marker" as "simple-marker",
         color: [56, 168, 0], // RGB for green
         outline: {
           color: [255, 255, 255], // White
@@ -169,7 +199,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       }
       
       const markerSymbol = {
-        type: "simple-marker" as const,
+        type: "simple-marker" as "simple-marker",
         color: color,
         outline: {
           color: [255, 255, 255], // White
@@ -196,7 +226,13 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
                 { fieldName: "serviceType", label: "Type" }
               ]
             }
-          ]
+          ],
+          actions: [{
+            title: "Route to Project Location",
+            id: "route-to-project",
+            className: "esri-icon-directions",
+            visible: userLocation !== null
+          }]
         }
       });
       
@@ -211,7 +247,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       });
       
       const markerSymbol = {
-        type: "simple-marker" as const,
+        type: "simple-marker" as "simple-marker",
         color: marker.color || [59, 130, 246], // Use marker color or default blue
         outline: {
           color: [255, 255, 255], // White
@@ -237,7 +273,13 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
                 { fieldName: "name", label: "Name" }
               ]
             }
-          ]
+          ],
+          actions: [{
+            title: "Route to Project Location",
+            id: "route-to-project",
+            className: "esri-icon-directions",
+            visible: userLocation !== null
+          }]
         }
       });
       
@@ -261,7 +303,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       });
       
       const routeSymbol = {
-        type: "simple-line" as const,
+        type: "simple-line" as "simple-line",
         color: [59, 130, 246], // Blue
         width: 4
       };

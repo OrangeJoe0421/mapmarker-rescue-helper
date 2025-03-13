@@ -34,6 +34,10 @@ const MapContainer = () => {
         <MapIcon className="mr-1 h-4 w-4" />
         {useArcGIS ? 'Use OSM' : 'Use ArcGIS'}
       </Button>
+      
+      <div className="absolute bottom-3 left-3 z-[1000] bg-white/80 px-2 py-1 rounded text-xs">
+        {useArcGIS ? 'ArcGIS: Click markers to see route options' : 'OpenStreetMap: Click markers to see route options'}
+      </div>
     </div>
   );
 };
