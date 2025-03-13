@@ -82,32 +82,54 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     
     // Setup click handlers for markers for routing functionality
     view.on("click", (event) => {
-      if (!event.graphic) return;
-      
-      // Get the clicked graphic's ID
-      const id = event.graphic.attributes?.id;
-      if (!id) return;
-      
-      // Check if it's a service or custom marker
-      const isService = event.graphic.attributes?.type === 'service';
-      const isCustom = event.graphic.attributes?.type === 'custom';
-      
-      // If it's a service or custom marker, show popup with route option
-      if ((isService || isCustom) && userLocation) {
-        view.popup.open({
-          features: [event.graphic],
-          location: event.mapPoint
-        });
-        
-        view.popup.actions.add({
-          title: "Route to Project Location",
-          id: "route-to-project",
-          className: "esri-icon-directions",
-          callback: () => {
-            calculateRoute(id, true);
+      // Use hitTest to find if a graphic was clicked
+      view.hitTest(event).then(response => {
+        // Check if we have graphics in the hit test result
+        if (response.results.length > 0) {
+          // Get the first graphic from the result
+          const graphic = response.results.filter(result => {
+            return result.graphic.layer === graphicsLayer;
+          })[0]?.graphic;
+          
+          if (!graphic || !graphic.attributes) return;
+          
+          // Get the clicked graphic's ID
+          const id = graphic.attributes.id;
+          if (!id) return;
+          
+          // Check if it's a service or custom marker
+          const isService = graphic.attributes.type === 'service';
+          const isCustom = graphic.attributes.type === 'custom';
+          
+          // If it's a service or custom marker, show popup with route option
+          if ((isService || isCustom) && userLocation) {
+            view.popup.open({
+              features: [graphic],
+              location: event.mapPoint
+            });
+            
+            // Clear existing actions
+            view.popup.actions.removeAll();
+            
+            // Add new route action
+            view.popup.actions.add({
+              title: "Route to Project Location",
+              id: "route-to-project",
+              className: "esri-icon-directions",
+              type: "button",
+              visible: true,
+            });
+            
+            // Set up click handler for the action
+            view.popup.on("trigger-action", (event) => {
+              if (event.action.id === "route-to-project") {
+                calculateRoute(id, true);
+                view.popup.close();
+              }
+            });
           }
-        });
-      }
+        }
+      });
     });
     
     // Clean up function
@@ -226,13 +248,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
                 { fieldName: "serviceType", label: "Type" }
               ]
             }
-          ],
-          actions: [{
-            title: "Route to Project Location",
-            id: "route-to-project",
-            className: "esri-icon-directions",
-            visible: userLocation !== null
-          }]
+          ]
         }
       });
       
@@ -273,13 +289,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
                 { fieldName: "name", label: "Name" }
               ]
             }
-          ],
-          actions: [{
-            title: "Route to Project Location",
-            id: "route-to-project",
-            className: "esri-icon-directions",
-            visible: userLocation !== null
-          }]
+          ]
         }
       });
       
