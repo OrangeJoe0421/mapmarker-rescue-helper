@@ -26,6 +26,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   const viewRef = useRef<MapView | null>(null);
   const graphicsLayerRef = useRef<GraphicsLayer | null>(null);
   const routeLayerRef = useRef<GraphicsLayer | null>(null);
+  const clickHandleRef = useRef<__esri.Handle | null>(null);
   
   const { 
     mapCenter, 
@@ -71,8 +72,9 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     
     viewRef.current = view;
     
-    // Configure the routing service with the API key
-    route.setDefaultRouteServiceUrl("https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World");
+    // Configure the routing service URL - not using setDefaultRouteServiceUrl as it doesn't exist
+    // We'll use the URL directly in any route operations
+    const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
     
     // Clean up function
     return () => {
@@ -110,7 +112,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       });
       
       const markerSymbol = {
-        type: "simple-marker",
+        type: "simple-marker" as const,
         color: [56, 168, 0], // RGB for green
         outline: {
           color: [255, 255, 255], // White
@@ -163,7 +165,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       }
       
       const markerSymbol = {
-        type: "simple-marker",
+        type: "simple-marker" as const,
         color: color,
         outline: {
           color: [255, 255, 255], // White
@@ -205,7 +207,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       });
       
       const markerSymbol = {
-        type: "simple-marker",
+        type: "simple-marker" as const,
         color: marker.color || [59, 130, 246], // Use marker color or default blue
         outline: {
           color: [255, 255, 255], // White
@@ -255,7 +257,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       });
       
       const routeSymbol = {
-        type: "simple-line",
+        type: "simple-line" as const,
         color: [59, 130, 246], // Blue
         width: 4
       };
@@ -293,8 +295,9 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     const { addingMarker, addCustomMarker } = useMapStore.getState();
     
     // Clean up previous click handler
-    if (viewRef.current.clickEventHandles?.length > 0) {
-      viewRef.current.clickEventHandles.forEach(handle => handle.remove());
+    if (clickHandleRef.current) {
+      clickHandleRef.current.remove();
+      clickHandleRef.current = null;
     }
     
     // Add new click handler if in adding marker mode
@@ -311,8 +314,13 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
         });
       });
       
+      clickHandleRef.current = clickHandler;
+      
       return () => {
-        clickHandler.remove();
+        if (clickHandleRef.current) {
+          clickHandleRef.current.remove();
+          clickHandleRef.current = null;
+        }
       };
     }
   }, [useMapStore.getState().addingMarker]);
