@@ -1,7 +1,7 @@
 
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
-import LeafletMapMarkers from '@/components/LeafletMapMarkers';
+import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
 import ExportButton from '@/components/ExportButton';
 import { useToast } from '@/components/ui/use-toast';
@@ -55,7 +55,7 @@ const Index = () => {
             <EmergencySidebar />
           </div>
           <div className="md:col-span-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <LeafletMapMarkers />
+            <MapContainer />
           </div>
         </div>
       </div>
