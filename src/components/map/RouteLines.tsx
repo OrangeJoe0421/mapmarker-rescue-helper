@@ -34,9 +34,11 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
               if (routeRef && routeRef.getElement()) {
                 const el = routeRef.getElement();
                 if (el) {
-                  el.style.stroke = '#FF3B30';
-                  el.style.strokeWidth = '6px';
-                  el.style.opacity = '1';
+                  // Type assertion to ensure the element is treated as HTMLElement
+                  const htmlElement = el as HTMLElement;
+                  htmlElement.style.stroke = '#FF3B30';
+                  htmlElement.style.strokeWidth = '6px';
+                  htmlElement.style.opacity = '1';
                 }
               }
             });
@@ -62,13 +64,17 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
               // Apply additional attributes that help with capture
               if (el.getElement()) {
                 const pathElement = el.getElement();
-                pathElement?.setAttribute('data-route-line', 'true');
-                pathElement?.setAttribute('class', (pathElement.getAttribute('class') || '') + ' route-line');
-                
-                // Apply inline styles for better visibility during capture
-                pathElement.style.stroke = '#FF3B30';  // Bright red
-                pathElement.style.strokeWidth = '6px'; // Thicker lines
-                pathElement.style.opacity = '1';       // Full opacity
+                if (pathElement) {
+                  pathElement.setAttribute('data-route-line', 'true');
+                  pathElement.setAttribute('class', (pathElement.getAttribute('class') || '') + ' route-line');
+                  
+                  // Type assertion to ensure the element is treated as HTMLElement
+                  const htmlElement = pathElement as HTMLElement;
+                  // Apply inline styles for better visibility during capture
+                  htmlElement.style.stroke = '#FF3B30';  // Bright red
+                  htmlElement.style.strokeWidth = '6px'; // Thicker lines
+                  htmlElement.style.opacity = '1';       // Full opacity
+                }
               }
             }
           }}
