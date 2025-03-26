@@ -6,27 +6,10 @@ import EmergencySidebar from '@/components/EmergencySidebar';
 import ExportButton from '@/components/ExportButton';
 import { useToast } from '@/components/ui/use-toast';
 
-// CSS fix for Leaflet marker icons
-const fixLeafletMarker = () => {
-  // Get the image path based on the code's environment
-  const getImagePath = (iconName: string) => {
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    return `${baseUrl}marker-icon-${iconName}.png`;
-  };
-
-  // Fix the default Leaflet icon path issue
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-  document.head.appendChild(link);
-};
-
 const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fixLeafletMarker();
-    
     // Welcome toast
     toast({
       title: "Welcome to Emergency Response Planner",

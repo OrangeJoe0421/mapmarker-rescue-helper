@@ -8,9 +8,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
-// Load Leaflet CSS globally
-import "leaflet/dist/leaflet.css";
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
