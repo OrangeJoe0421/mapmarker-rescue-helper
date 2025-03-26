@@ -3,13 +3,26 @@ import React from 'react';
 import LeafletMapMarkers from './LeafletMapMarkers';
 import { useMapStore } from '../store/useMapStore';
 import MapCapture from './MapCapture';
+import { mapCaptureService } from './MapCapture';
+import { Info } from 'lucide-react';
 
 const MapContainer = () => {
   const { routes } = useMapStore();
   
+  // Determine if a map was captured and when
+  const capturedImage = mapCaptureService.getCapturedImage();
+  const captureTime = mapCaptureService.getCaptureTimestamp();
+  const captureStatus = capturedImage 
+    ? `Map captured on: ${captureTime?.toLocaleString() || 'unknown time'}` 
+    : 'Map not captured yet. Use "Capture Map" before exporting.';
+  
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center text-sm text-gray-500 gap-1">
+          <Info className="h-4 w-4" />
+          <span>{captureStatus}</span>
+        </div>
         <MapCapture />
       </div>
       

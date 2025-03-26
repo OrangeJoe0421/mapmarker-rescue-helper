@@ -26,6 +26,21 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
         try {
           // Add some padding to the bounds to ensure routes are visible
           map.fitBounds(allPoints as [number, number][], { padding: [50, 50] });
+          
+          // Add a bit of delay to ensure the map has updated before potential capture
+          setTimeout(() => {
+            // Force a repaint of route elements
+            routeRefs.current.forEach(routeRef => {
+              if (routeRef && routeRef.getElement()) {
+                const el = routeRef.getElement();
+                if (el) {
+                  el.style.stroke = '#FF3B30';
+                  el.style.strokeWidth = '6px';
+                  el.style.opacity = '1';
+                }
+              }
+            });
+          }, 200);
         } catch (error) {
           console.error("Error fitting bounds to routes:", error);
         }
@@ -46,8 +61,14 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
               
               // Apply additional attributes that help with capture
               if (el.getElement()) {
-                el.getElement()?.setAttribute('data-route-line', 'true');
-                el.getElement()?.setAttribute('class', el.getElement().getAttribute('class') + ' route-line');
+                const pathElement = el.getElement();
+                pathElement?.setAttribute('data-route-line', 'true');
+                pathElement?.setAttribute('class', (pathElement.getAttribute('class') || '') + ' route-line');
+                
+                // Apply inline styles for better visibility during capture
+                pathElement.style.stroke = '#FF3B30';  // Bright red
+                pathElement.style.strokeWidth = '6px'; // Thicker lines
+                pathElement.style.opacity = '1';       // Full opacity
               }
             }
           }}
