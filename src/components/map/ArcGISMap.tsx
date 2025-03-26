@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
@@ -302,7 +303,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     let dragHandler: __esri.Handle;
     let dragStartHandler: __esri.Handle;
     let dragEndHandler: __esri.Handle;
-    let mapNavigationEnabledOriginal: boolean;
+    let mapNavigationEnabled = true;
 
     if (dragHandler) dragHandler.remove();
     if (dragStartHandler) dragStartHandler.remove();
@@ -335,8 +336,14 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           currentMarkerRef.current = id;
           setDraggingMarker(id);
           
-          mapNavigationEnabledOriginal = view.navigation.enabled;
-          view.navigation.enabled = false;
+          // Store current navigation state
+          mapNavigationEnabled = view.navigation ? true : false;
+          
+          // Disable map navigation while dragging
+          if (view.navigation) {
+            view.navigation.mouseWheelZoomEnabled = false;
+            view.navigation.browserTouchPanEnabled = false;
+          }
           
           mapDiv.current!.style.cursor = 'grabbing';
           event.stopPropagation();
@@ -372,8 +379,13 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       draggingRef.current = false;
       currentMarkerRef.current = null;
       
+      // Re-enable map navigation after dragging
+      if (view.navigation) {
+        view.navigation.mouseWheelZoomEnabled = true;
+        view.navigation.browserTouchPanEnabled = true;
+      }
+      
       mapDiv.current!.style.cursor = 'auto';
-      view.navigation.enabled = mapNavigationEnabledOriginal;
       
       event.stopPropagation();
     });
@@ -383,8 +395,10 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       if (dragStartHandler) dragStartHandler.remove();
       if (dragEndHandler) dragEndHandler.remove();
       
-      if (viewRef.current) {
-        viewRef.current.navigation.enabled = true;
+      // Make sure navigation is re-enabled when component unmounts
+      if (viewRef.current && viewRef.current.navigation) {
+        viewRef.current.navigation.mouseWheelZoomEnabled = true;
+        viewRef.current.navigation.browserTouchPanEnabled = true;
       }
     };
   }, [customMarkers, userLocation, emergencyServices, setDraggingMarker, updateMarkerPosition]);
