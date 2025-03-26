@@ -3,12 +3,9 @@ import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { getAllEmsData, getEmsDataWithinRadius } from './sampleDataService';
 import { calculateHaversineDistance } from '../utils/mapUtils';
-import * as route from '@arcgis/core/rest/route';
-import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
-import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
-import Point from '@arcgis/core/geometry/Point';
-import Stop from '@arcgis/core/rest/support/Stop';
-import Polyline from '@arcgis/core/geometry/Polyline';
+
+// OSRM API for routing (open source routing machine)
+const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
 
 // Queue for managing API requests to prevent rate limiting
 const requestQueue: (() => Promise<void>)[] = [];
@@ -92,16 +89,16 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
     closestByType.forEach(service => {
       queueRequest(async () => {
         try {
-          const routeInfo = await fetchRouteWithDirections(
+          const roadDistance = await fetchRouteDistance(
             latitude,
             longitude,
             service.latitude,
             service.longitude
           );
           
-          if (routeInfo?.distance) {
+          if (roadDistance !== null) {
             // Update the service with the road distance
-            service.road_distance = routeInfo.distance;
+            service.road_distance = roadDistance;
           }
         } catch (error) {
           console.warn(`Could not calculate road distance for ${service.name}:`, error);
@@ -117,141 +114,21 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
   }
 }
 
-// Use ArcGIS routing service for better route data
-export async function fetchRouteWithDirections(
+// Use OSRM API to get actual road distance
+export async function fetchRouteDistance(
   startLat: number,
   startLon: number,
   endLat: number,
   endLon: number
-): Promise<{ 
-  points: [number, number][]; 
-  distance: number; 
-  duration: number;
-  directions?: Array<{
-    text: string;
-    distance: number;
-    time: number;
-  }>;
-} | null> {
-  try {
-    // Set up the routing service URL - using ArcGIS World Route service
-    const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
-    
-    // Create starting and ending points
-    const startPoint = new Point({
-      longitude: startLon,
-      latitude: startLat
-    });
-    
-    const endPoint = new Point({
-      longitude: endLon,
-      latitude: endLat
-    });
-    
-    // Create stops for the route
-    const stops = new FeatureSet();
-    
-    // Fixed: Remove attributes which doesn't exist in StopProperties
-    const startStop = new Stop({
-      geometry: startPoint
-    });
-    
-    const endStop = new Stop({
-      geometry: endPoint
-    });
-    
-    // Type assertion to work around strict typing
-    stops.features = [startStop as any, endStop as any];
-    
-    // Set up route parameters
-    const routeParams = new RouteParameters({
-      stops: stops,
-      returnDirections: true,
-      directionsLanguage: "en",
-      returnRoutes: true,
-      returnStops: true,
-      outSpatialReference: { wkid: 4326 }
-    });
-    
-    // Make the route request
-    try {
-      const result = await route.solve(routeUrl, routeParams);
-      
-      if (!result || !result.routeResults || result.routeResults.length === 0) {
-        throw new Error('No route found');
-      }
-      
-      const routeResult = result.routeResults[0].route;
-      const geometry = routeResult.geometry;
-      
-      // Fixed: Check if geometry is a Polyline before accessing paths
-      if (!(geometry instanceof Polyline)) {
-        throw new Error('Unexpected geometry type');
-      }
-      
-      // Extract path coordinates
-      const points = geometry.paths[0].map(coord => {
-        // ArcGIS returns [lng, lat], but we need [lat, lng] for leaflet
-        return [coord[1], coord[0]] as [number, number];
-      });
-      
-      // Extract distance and time
-      const distance = parseFloat((routeResult.attributes.Total_Kilometers || 0).toFixed(2));
-      const duration = parseFloat((routeResult.attributes.Total_Minutes || 0).toFixed(2)) * 60; // Convert to seconds
-      
-      // Extract directions if available
-      let directions = undefined;
-      
-      // Fixed: Check if directionsFeatures exists before trying to extract directions
-      if (result.routeResults[0].directions && 
-          result.routeResults[0].directions.features) {
-        directions = result.routeResults[0].directions.features.map(feature => {
-          return {
-            text: feature.attributes.text,
-            distance: feature.attributes.length,
-            time: feature.attributes.time
-          };
-        });
-      }
-      
-      return {
-        points,
-        distance,
-        duration,
-        directions
-      };
-    } catch (arcgisError) {
-      console.error("ArcGIS routing error:", arcgisError);
-      // Fall back to OSRM if ArcGIS fails
-      return fetchOSRMRoute(startLat, startLon, endLat, endLon);
-    }
-  } catch (error) {
-    console.error("Error in route calculation:", error);
-    // Use OSRM as a fallback
-    return fetchOSRMRoute(startLat, startLon, endLat, endLon);
-  }
-}
-
-// Original OSRM API for routing (used as fallback)
-const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
-
-// Use OSRM API to get route as fallback
-export async function fetchOSRMRoute(
-  startLat: number,
-  startLon: number,
-  endLat: number,
-  endLon: number
-): Promise<{ points: [number, number][]; distance: number; duration: number } | null> {
+): Promise<number | null> {
   try {
     // Format coordinates for OSRM API
     const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
-    const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
+    const url = `${OSRM_API_URL}${coordinates}?overview=full`;
     
-    console.log("Fetching route path (OSRM fallback):", url);
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.error(`OSRM API error: ${response.status} ${response.statusText}`);
       throw new Error(`OSRM API error: ${response.status}`);
     }
     
@@ -261,36 +138,75 @@ export async function fetchOSRMRoute(
       throw new Error('No route found');
     }
     
-    const route = data.routes[0];
-    const geometry = route.geometry;
-    
-    // Extract coordinates from GeoJSON
-    const points = geometry.coordinates.map((coord: [number, number]) => {
-      // OSRM returns [lng, lat], but we need [lat, lng] for leaflet
-      return [coord[1], coord[0]] as [number, number];
-    });
-    
-    return {
-      points,
-      distance: route.distance / 1000, // convert meters to kilometers
-      duration: route.duration, // seconds
-    };
+    // Get distance in kilometers (OSRM returns meters)
+    const distanceKm = data.routes[0].distance / 1000;
+    return parseFloat(distanceKm.toFixed(2));
   } catch (error) {
-    console.error("Error fetching route path:", error);
-    
-    // Create a fallback route with just start and end points
-    console.log("Using fallback route calculation");
-    const fallbackPoints: [number, number][] = [
-      [startLat, startLon],
-      [endLat, endLon]
-    ];
-    
-    const distance = calculateHaversineDistance(startLat, startLon, endLat, endLon);
-    return {
-      points: fallbackPoints,
-      distance: distance,
-      duration: distance / 50 * 60 // Rough estimate: 50 km/h average speed
-    };
+    console.error("Error calculating route distance:", error);
+    // Fall back to Haversine distance with a road factor
+    return calculateHaversineDistance(startLat, startLon, endLat, endLon) * 1.3;
   }
 }
 
+// Function to fetch a route with all waypoints 
+export async function fetchRoutePath(
+  startLat: number,
+  startLon: number,
+  endLat: number,
+  endLon: number
+): Promise<{ points: [number, number][]; distance: number; duration: number } | null> {
+  return new Promise((resolve) => {
+    queueRequest(async () => {
+      try {
+        // Format coordinates for OSRM API
+        const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
+        const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
+        
+        console.log("Fetching route path:", url);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          console.error(`OSRM API error: ${response.status} ${response.statusText}`);
+          throw new Error(`OSRM API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+          throw new Error('No route found');
+        }
+        
+        const route = data.routes[0];
+        const geometry = route.geometry;
+        
+        // Extract coordinates from GeoJSON
+        const points = geometry.coordinates.map((coord: [number, number]) => {
+          // OSRM returns [lng, lat], but we need [lat, lng] for leaflet
+          return [coord[1], coord[0]] as [number, number];
+        });
+        
+        resolve({
+          points,
+          distance: route.distance / 1000, // convert meters to kilometers
+          duration: route.duration / 60, // convert seconds to minutes
+        });
+      } catch (error) {
+        console.error("Error fetching route path:", error);
+        
+        // Create a fallback route with just start and end points
+        console.log("Using fallback route calculation");
+        const fallbackPoints: [number, number][] = [
+          [startLat, startLon],
+          [endLat, endLon]
+        ];
+        
+        const distance = calculateHaversineDistance(startLat, startLon, endLat, endLon);
+        resolve({
+          points: fallbackPoints,
+          distance: distance,
+          duration: distance / 50 * 60 // Rough estimate: 50 km/h average speed
+        });
+      }
+    });
+  });
+}

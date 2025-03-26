@@ -1,8 +1,8 @@
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
-import { Route, RoutePoint, EmergencyService, RouteDirection } from '@/types/mapTypes';
+import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
-import { fetchRouteWithDirections, fetchOSRMRoute } from '@/services/emergencyService';
+import { fetchRoutePath } from '@/services/emergencyService';
 import { mapCaptureService } from '@/components/MapCapture';
 
 export interface RoutesState {
@@ -76,8 +76,8 @@ export const createRoutesSlice: StateCreator<
       
       console.info(`Fetching route from [${startCoords.latitude}, ${startCoords.longitude}] to [${endCoords.latitude}, ${endCoords.longitude}]`);
       
-      // Call the enhanced routing service to get a real route with directions
-      const routeData = await fetchRouteWithDirections(
+      // Call the enhanced routing service to get a real route
+      const routeData = await fetchRoutePath(
         startCoords.latitude,
         startCoords.longitude,
         endCoords.latitude,
@@ -94,13 +94,10 @@ export const createRoutesSlice: StateCreator<
         longitude: point[1]
       }));
       
-      // Extract directions if available
-      const directions: RouteDirection[] | undefined = routeData.directions;
-      
       // Create a unique ID for the route that includes a timestamp
       // This helps in detecting if routes were added after a capture
       const routeId = `route-${Date.now()}`;
-      console.info(`Created new route with ID: ${routeId}, points: ${routePoints.length}, has directions: ${!!directions}`);
+      console.info(`Created new route with ID: ${routeId}, points: ${routePoints.length}`);
       
       // Create the route object
       const newRoute: Route = {
@@ -109,8 +106,7 @@ export const createRoutesSlice: StateCreator<
         fromId: sourceMarker.id,
         toId: toUserLocation ? null : "destination-id",
         distance: routeData.distance,
-        duration: routeData.duration,
-        directions: directions
+        duration: routeData.duration
       };
       
       // Add the route to state
@@ -118,7 +114,7 @@ export const createRoutesSlice: StateCreator<
         routes: [...state.routes, newRoute]
       }));
       
-      toast.success(`Route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration / 60)} min)`);
+      toast.success(`Route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration)} min)`);
     } catch (error) {
       console.error("Error calculating route:", error);
       
@@ -221,7 +217,7 @@ export const createRoutesSlice: StateCreator<
         };
         
         // Call the enhanced routing service to get a real route
-        const routeData = await fetchOSRMRoute(
+        const routeData = await fetchRoutePath(
           startCoords.latitude,
           startCoords.longitude,
           endCoords.latitude,
