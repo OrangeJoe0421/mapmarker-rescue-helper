@@ -43,6 +43,12 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
             // Store reference to the Polyline instance
             if (el) {
               routeRefs.current[index] = el;
+              
+              // Apply additional attributes that help with capture
+              if (el.getElement()) {
+                el.getElement()?.setAttribute('data-route-line', 'true');
+                el.getElement()?.setAttribute('class', el.getElement().getAttribute('class') + ' route-line');
+              }
             }
           }}
           color="#FF3B30" // Bright red for better visibility
@@ -51,6 +57,8 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
           className="route-line"
           pathOptions={{
             className: 'route-path',
+            lineCap: 'round',
+            lineJoin: 'round',
           }}
         />
       ))}

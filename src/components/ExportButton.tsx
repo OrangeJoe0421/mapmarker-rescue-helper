@@ -5,6 +5,7 @@ import { FileDown } from 'lucide-react';
 import { useMapStore } from '../store/useMapStore';
 import { exportToPdf } from '../utils/pdf';
 import { toast } from 'sonner';
+import { mapCaptureService } from './MapCapture';
 
 const ExportButton = () => {
   const [exporting, setExporting] = useState(false);
@@ -13,6 +14,13 @@ const ExportButton = () => {
   const handleExport = async () => {
     try {
       setExporting(true);
+      
+      // Check if a map was captured
+      if (routes.length > 0 && !mapCaptureService.getCapturedImage()) {
+        toast.warning('No map capture found. The PDF will not include a map view. Use the "Capture Map" button first.', {
+          duration: 5000
+        });
+      }
       
       // Ensure map is fully rendered with routes before exporting
       setTimeout(async () => {
