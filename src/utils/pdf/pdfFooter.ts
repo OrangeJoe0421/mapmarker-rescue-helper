@@ -20,6 +20,6 @@ export const addPdfFooter = (doc: jsPDF): void => {
     
     // Add Stantec copyright in white with slightly smaller font
     doc.setFontSize(8);
-    doc.text('© Stantec Emergency Response Planner', 10, pageHeight - 5, { color: 'white' });
+    doc.text('© Stantec Emergency Response Planner', 10, pageHeight - 5);
   }
 };
