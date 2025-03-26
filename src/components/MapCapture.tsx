@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useMapStore } from '../store/useMapStore';
 import html2canvas from 'html2canvas';
 import { Route } from '../types/mapTypes';
+import { esriConfig } from '@arcgis/core/config';
 
 // Create a service to store the captured image
 export const mapCaptureService = {
@@ -87,7 +88,7 @@ const MapCapture = () => {
       // Clear any previous capture
       mapCaptureService.clearCapture();
       
-      // Find the map container - target the actual map element
+      // Find the map container
       const mapElement = document.querySelector('[data-map-container="true"]') as HTMLElement;
       
       if (!mapElement) {
@@ -99,104 +100,142 @@ const MapCapture = () => {
 
       console.info("Map element found, preparing for capture");
       
-      // Wait longer for routes to fully render
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Check if we're using ArcGIS
+      const mapType = mapElement.getAttribute('data-map-type');
+      const hasRoutes = mapElement.getAttribute('data-has-routes') === 'true';
       
-      // Force redraw of route lines
-      const routeElements = document.querySelectorAll('.leaflet-overlay-pane path');
-      routeElements.forEach(el => {
-        (el as HTMLElement).style.strokeWidth = '8px';
-        (el as HTMLElement).style.stroke = '#FF3B30';
-        (el as HTMLElement).style.opacity = '1';
-        (el as HTMLElement).style.visibility = 'visible';
-      });
+      // Wait for the map to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Wait for styling to take effect
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      try {
-        // Use html2canvas with improved settings
-        console.info("Starting html2canvas capture with enhanced route visibility");
-        const canvas = await html2canvas(mapElement, {
-          useCORS: true,
-          allowTaint: true,
-          logging: true,
-          scale: 2, // Higher scale for better quality
-          backgroundColor: '#ffffff',
-          ignoreElements: (element) => {
-            // Don't ignore any elements that might contain routes
-            return false;
-          },
-          onclone: (documentClone, element) => {
-            // Find the cloned map element in the cloned document
-            const clonedMapElement = documentClone.querySelector('[data-map-container="true"]') as HTMLElement;
+      if (mapType === 'arcgis') {
+        console.info("Detected ArcGIS map, using specialized capture method");
+        // For ArcGIS maps, we need to use the view's takeScreenshot method
+        // Look for the ArcGIS view instance
+        // It's stored in the window.__arcgisView property by our ArcGISMap component
+        const arcgisView = (window as any).__arcgisView;
+        
+        if (arcgisView && arcgisView.takeScreenshot) {
+          try {
+            console.info("Taking ArcGIS screenshot");
+            const screenshot = await arcgisView.takeScreenshot({
+              width: mapElement.clientWidth * 2,  // Higher resolution
+              height: mapElement.clientHeight * 2,
+              format: "png"
+            });
             
-            if (clonedMapElement) {
-              console.info("Enhancing map clone for capture");
-              
-              // Make sure the map is visible in the clone
-              clonedMapElement.style.overflow = 'visible';
-              
-              // Make sure all map elements are visible
-              const allElements = clonedMapElement.querySelectorAll('*');
-              allElements.forEach(el => {
-                (el as HTMLElement).style.visibility = 'visible';
-                (el as HTMLElement).style.opacity = '1';
-              });
-              
-              // Specifically target route lines in SVG
-              const routeLines = clonedMapElement.querySelectorAll('.leaflet-overlay-pane path');
-              console.info(`Found ${routeLines.length} route lines in the clone`);
-              
-              routeLines.forEach(line => {
-                line.setAttribute('stroke', '#FF3B30');
-                line.setAttribute('stroke-width', '8');
-                line.setAttribute('stroke-opacity', '1');
-                line.setAttribute('stroke-linecap', 'round');
-                line.setAttribute('stroke-linejoin', 'round');
-                (line as HTMLElement).style.display = 'block';
-                (line as HTMLElement).style.visibility = 'visible';
-              });
-              
-              // Target the overall overlay pane
-              const overlayPane = clonedMapElement.querySelector('.leaflet-overlay-pane');
-              if (overlayPane) {
-                (overlayPane as HTMLElement).style.visibility = 'visible';
-                (overlayPane as HTMLElement).style.display = 'block';
-                (overlayPane as HTMLElement).style.opacity = '1';
-                (overlayPane as HTMLElement).style.zIndex = '1000';
-              }
-            }
+            // The screenshot is returned as a data URL
+            const imageData = screenshot.dataUrl;
+            
+            // Store the captured image and route snapshot
+            mapCaptureService.setCapturedImage(imageData);
+            mapCaptureService.notifyRouteAdded(routes);
+            console.info("ArcGIS capture saved to service");
+            
+            toast.success('Map captured successfully');
+          } catch (arcgisError) {
+            console.error("Error taking ArcGIS screenshot:", arcgisError);
+            // Fallback to html2canvas if ArcGIS screenshot fails
+            fallbackToHtml2Canvas(mapElement);
           }
-        });
-        
-        // Convert canvas to image data
-        const imageData = canvas.toDataURL('image/png');
-        console.info("Canvas generated, image size:", imageData.length);
-        
-        // Verify the image data is valid (not empty or just a header)
-        if (imageData.length < 1000) {
-          console.error("Generated image is too small, likely empty");
-          toast.error('Failed to capture map - empty image');
-          setCapturing(false);
-          return;
+        } else {
+          console.warn("ArcGIS view not found or doesn't support screenshots, falling back to html2canvas");
+          // Fallback to html2canvas
+          fallbackToHtml2Canvas(mapElement);
         }
-        
-        // Store the captured image and route snapshot
-        mapCaptureService.setCapturedImage(imageData);
-        mapCaptureService.notifyRouteAdded(routes);
-        console.info("Capture saved to service");
-        
-        toast.success('Map captured successfully');
-      } catch (error) {
-        console.error('Error during capture process:', error);
-        toast.error('Failed to capture map');
-      } finally {
-        setCapturing(false);
+      } else {
+        // For other map types, use html2canvas
+        fallbackToHtml2Canvas(mapElement);
       }
     } catch (error) {
       console.error('Error in capture process:', error);
       toast.error('Failed to capture map');
+      setCapturing(false);
+    }
+  };
+  
+  const fallbackToHtml2Canvas = async (mapElement: HTMLElement) => {
+    try {
+      console.info("Using html2canvas as fallback");
+      // Use html2canvas with improved settings
+      const canvas = await html2canvas(mapElement, {
+        useCORS: true,
+        allowTaint: true,
+        logging: true,
+        scale: 2, // Higher scale for better quality
+        backgroundColor: '#ffffff',
+        ignoreElements: (element) => {
+          // Don't ignore any elements that might contain routes
+          return false;
+        },
+        onclone: (documentClone, element) => {
+          // Find the cloned map element in the cloned document
+          const clonedMapElement = documentClone.querySelector('[data-map-container="true"]') as HTMLElement;
+          
+          if (clonedMapElement) {
+            console.info("Enhancing map clone for capture");
+            
+            // Make sure the map is visible in the clone
+            clonedMapElement.style.overflow = 'visible';
+            
+            // Make sure all map elements are visible
+            const allElements = clonedMapElement.querySelectorAll('*');
+            allElements.forEach(el => {
+              if (el instanceof HTMLElement) {
+                el.style.visibility = 'visible';
+                el.style.opacity = '1';
+              }
+            });
+            
+            // Specifically target route lines in SVG
+            const routeLines = clonedMapElement.querySelectorAll('.leaflet-overlay-pane path, .esri-layer-graphics path');
+            console.info(`Found ${routeLines.length} route lines in the clone`);
+            
+            routeLines.forEach(line => {
+              line.setAttribute('stroke', '#FF3B30');
+              line.setAttribute('stroke-width', '8');
+              line.setAttribute('stroke-opacity', '1');
+              line.setAttribute('stroke-linecap', 'round');
+              line.setAttribute('stroke-linejoin', 'round');
+              if (line instanceof HTMLElement) {
+                line.style.display = 'block';
+                line.style.visibility = 'visible';
+              }
+            });
+            
+            // Target the overall overlay pane
+            const overlayPane = clonedMapElement.querySelector('.leaflet-overlay-pane, .esri-layer-graphics');
+            if (overlayPane && overlayPane instanceof HTMLElement) {
+              overlayPane.style.visibility = 'visible';
+              overlayPane.style.display = 'block';
+              overlayPane.style.opacity = '1';
+              overlayPane.style.zIndex = '1000';
+            }
+          }
+        }
+      });
+      
+      // Convert canvas to image data
+      const imageData = canvas.toDataURL('image/png');
+      console.info("Canvas generated, image size:", imageData.length);
+      
+      // Verify the image data is valid (not empty or just a header)
+      if (imageData.length < 1000) {
+        console.error("Generated image is too small, likely empty");
+        toast.error('Failed to capture map - empty image');
+        setCapturing(false);
+        return;
+      }
+      
+      // Store the captured image and route snapshot
+      mapCaptureService.setCapturedImage(imageData);
+      mapCaptureService.notifyRouteAdded(routes);
+      console.info("Capture saved to service");
+      
+      toast.success('Map captured successfully');
+    } catch (error) {
+      console.error('Error during html2canvas capture:', error);
+      toast.error('Failed to capture map');
+    } finally {
       setCapturing(false);
     }
   };

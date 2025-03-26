@@ -44,6 +44,11 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     // Import CSS
     import('@arcgis/core/assets/esri/themes/light/main.css');
     
+    // Set up API key configuration
+    (window as any).esriConfig = {
+      apiKey: API_KEY
+    };
+    
     // Create the map
     const map = new Map({
       basemap: "streets-navigation-vector" // Use a navigation-optimized basemap
@@ -72,13 +77,22 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     
     viewRef.current = view;
     
+    // Expose the view instance to the window object for MapCapture
+    (window as any).__arcgisView = view;
+    
+    // Enable screenshot capability for takeScreenshot
+    view.when(() => {
+      try {
+        // Enable screenshot by setting allowExportImageService to true
+        (view as any).allLayersVisibleForScreenshot = true;
+        console.info("ArcGIS screenshot capability enabled");
+      } catch (error) {
+        console.error("Error enabling ArcGIS screenshot:", error);
+      }
+    });
+    
     // Configure the routing service URL
     const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
-    
-    // Set the API key for the services
-    (window as any).esriConfig = {
-      apiKey: API_KEY
-    };
     
     // Setup click handlers for markers for routing functionality
     view.on("click", (event) => {
@@ -144,6 +158,11 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     // Clean up function
     return () => {
       if (viewRef.current) {
+        // Remove the view reference from the window object
+        if ((window as any).__arcgisView === viewRef.current) {
+          (window as any).__arcgisView = null;
+        }
+        
         viewRef.current.destroy();
         viewRef.current = null;
       }
@@ -156,10 +175,14 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   // Update map center and zoom when they change
   useEffect(() => {
     if (!viewRef.current) return;
-    viewRef.current.goTo({
-      center: [mapCenter[1], mapCenter[0]], // ArcGIS uses [longitude, latitude]
-      zoom: mapZoom
-    });
+    try {
+      viewRef.current.goTo({
+        center: [mapCenter[1], mapCenter[0]], // ArcGIS uses [longitude, latitude]
+        zoom: mapZoom
+      });
+    } catch (error) {
+      console.error("Error updating map center/zoom:", error);
+    }
   }, [mapCenter, mapZoom]);
   
   // Update markers when they change
