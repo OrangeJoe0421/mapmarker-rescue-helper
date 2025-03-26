@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import LeafletMapMarkers from './LeafletMapMarkers';
 import { useMapStore } from '../store/useMapStore';
@@ -85,9 +86,6 @@ const MapContainer = () => {
       
       <div 
         className="h-[600px] w-full rounded-lg overflow-hidden border shadow-md relative"
-        data-map-container="true"
-        data-map-type="leaflet"
-        data-has-routes={routes.length > 0 ? "true" : "false"}
       >
         <LeafletMapMarkers />
         

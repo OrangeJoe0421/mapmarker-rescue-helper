@@ -52,13 +52,11 @@ export const mapCaptureService = {
     return false;
   },
   
-  // Add the missing isCaptureStale method
   isCaptureStale() {
     // Return the stale flag value
     return this.staleFlag;
   },
   
-  // Add the missing markCaptureStaleDueToRouteChange method
   markCaptureStaleDueToRouteChange() {
     // Set the stale flag to true when routes change
     this.staleFlag = true;
@@ -84,13 +82,13 @@ const MapCapture = () => {
   const captureMap = async () => {
     try {
       setCapturing(true);
-      console.info("Starting map capture process with a new approach");
+      console.info("Starting map capture process");
       
       // Clear any previous capture
       mapCaptureService.clearCapture();
       
-      // Find the map container
-      const mapElement = document.querySelector('.leaflet-container') as HTMLElement;
+      // Find the map container - use the MapContainer directly instead of the leaflet-container
+      const mapElement = document.querySelector('[data-map-container="true"]') as HTMLElement;
       
       if (!mapElement) {
         console.error("Map element not found");
@@ -100,111 +98,78 @@ const MapCapture = () => {
       }
 
       console.info("Map element found, preparing for capture");
-
-      // Create a temporary style element for capture
-      const styleElement = document.createElement('style');
-      styleElement.textContent = `
-        .leaflet-control-container { display: none !important; }
-        .leaflet-overlay-pane path.capture-route-line {
-          stroke: #FF3B30 !important;
-          stroke-width: 8px !important;
-          stroke-opacity: 1 !important;
-          stroke-linecap: round !important;
-          stroke-linejoin: round !important;
-          animation: none !important;
-          transition: none !important;
-        }
-      `;
-      document.head.appendChild(styleElement);
       
-      // Force the browser to recalculate layout
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(async () => {
-          // Wait for any animations to finish
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          try {
-            // Create a clone of the map element before capturing
-            // This gives us a fresh copy without any lingering issues
-            const mapClone = mapElement.cloneNode(true) as HTMLElement;
-            const originalDisplay = mapElement.style.display;
+      // Wait for any animations to finish and map to fully render
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Force a repaint to ensure all map elements are visible
+      mapElement.style.opacity = '0.99';
+      setTimeout(() => { mapElement.style.opacity = '1'; }, 50);
+      
+      // Wait again to ensure the repaint is complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      try {
+        // Use html2canvas with appropriate settings
+        console.info("Starting html2canvas capture");
+        const canvas = await html2canvas(mapElement, {
+          useCORS: true,
+          allowTaint: true,
+          logging: true,
+          scale: 2, // Higher scale for better quality
+          backgroundColor: '#ffffff',
+          onclone: (documentClone, element) => {
+            // Find the cloned map element in the cloned document
+            const clonedMapElement = documentClone.querySelector('[data-map-container="true"]') as HTMLElement;
             
-            // Hide the original map
-            mapElement.style.display = 'none';
-            
-            // Style the clone for capture
-            mapClone.style.position = 'absolute';
-            mapClone.style.top = '0';
-            mapClone.style.left = '0';
-            mapClone.style.zIndex = '-1000';
-            mapClone.style.width = mapElement.offsetWidth + 'px';
-            mapClone.style.height = mapElement.offsetHeight + 'px';
-            mapClone.style.overflow = 'hidden';
-            
-            // Apply additional route highlighting to the clone
-            const routeElements = mapClone.querySelectorAll('.leaflet-overlay-pane path');
-            routeElements.forEach(path => {
-              const svgPath = path as SVGElement;
-              svgPath.setAttribute('stroke', '#FF3B30');
-              svgPath.setAttribute('stroke-width', '8');
-              svgPath.setAttribute('stroke-linecap', 'round');
-              svgPath.setAttribute('stroke-linejoin', 'round');
-              svgPath.setAttribute('stroke-opacity', '1');
-              svgPath.classList.add('capture-ready');
-            });
-            
-            // Add the clone to the document
-            document.body.appendChild(mapClone);
-            
-            // Wait for the clone to be fully rendered
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Capture the cloned map
-            console.info("Starting html2canvas capture of cloned map");
-            const canvas = await html2canvas(mapClone, {
-              useCORS: true,
-              allowTaint: true,
-              backgroundColor: null,
-              scale: 2, // Higher scale for better quality
-              logging: true,
-              ignoreElements: (element) => {
-                // Ignore UI controls
-                return element.classList.contains('leaflet-control-container');
-              }
-            });
-            
-            // Clean up - remove the clone and restore the original
-            document.body.removeChild(mapClone);
-            mapElement.style.display = originalDisplay;
-            
-            // Convert canvas to image data
-            const imageData = canvas.toDataURL('image/png');
-            console.info("Canvas generated, image size:", imageData.length);
-            
-            // Verify the image data is valid (not empty or just a header)
-            if (imageData.length < 1000) {
-              console.error("Generated image is too small, likely empty");
-              toast.error('Failed to capture map - empty image');
-              setCapturing(false);
-              return;
+            if (clonedMapElement) {
+              // Make sure the map is visible in the clone
+              clonedMapElement.style.overflow = 'visible';
+              
+              // Make sure all leaf elements are visible
+              const leafletElements = clonedMapElement.querySelectorAll('.leaflet-tile, .leaflet-marker-icon, .leaflet-overlay-pane svg, .leaflet-overlay-pane path');
+              leafletElements.forEach(el => {
+                (el as HTMLElement).style.visibility = 'visible';
+                (el as HTMLElement).style.opacity = '1';
+              });
+              
+              // Make route lines more prominent
+              const routeLines = clonedMapElement.querySelectorAll('.leaflet-overlay-pane path');
+              routeLines.forEach(line => {
+                line.setAttribute('stroke', '#FF3B30');
+                line.setAttribute('stroke-width', '6');
+                line.setAttribute('stroke-opacity', '1');
+              });
+              
+              console.info("Document clone prepared with enhanced visibility");
             }
-            
-            // Store the captured image and route snapshot
-            mapCaptureService.setCapturedImage(imageData);
-            mapCaptureService.notifyRouteAdded(routes);
-            console.info("Capture saved to service");
-            
-            toast.success('Map captured successfully');
-          } catch (error) {
-            console.error('Error during capture process:', error);
-            toast.error('Failed to capture map');
-          } finally {
-            // Clean up the temporary style
-            styleElement.remove();
-            setCapturing(false);
           }
         });
-      });
+        
+        // Convert canvas to image data
+        const imageData = canvas.toDataURL('image/png');
+        console.info("Canvas generated, image size:", imageData.length);
+        
+        // Verify the image data is valid (not empty or just a header)
+        if (imageData.length < 1000) {
+          console.error("Generated image is too small, likely empty");
+          toast.error('Failed to capture map - empty image');
+          setCapturing(false);
+          return;
+        }
+        
+        // Store the captured image and route snapshot
+        mapCaptureService.setCapturedImage(imageData);
+        mapCaptureService.notifyRouteAdded(routes);
+        console.info("Capture saved to service");
+        
+        toast.success('Map captured successfully');
+      } catch (error) {
+        console.error('Error during capture process:', error);
+        toast.error('Failed to capture map');
+      } finally {
+        setCapturing(false);
+      }
     } catch (error) {
       console.error('Error in capture process:', error);
       toast.error('Failed to capture map');
