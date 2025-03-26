@@ -32,8 +32,8 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
           // and any existing capture is now stale
           mapCaptureService.markCaptureStaleDueToRouteChange();
           
-          // Check if the map is currently moving - use proper Leaflet methods instead of private properties
-          const isMapMoving = map.isMoving();
+          // Check if the map is currently animating/moving
+          const isMapMoving = map._animatingZoom || map._moving;
           
           // Function to apply styles to routes
           const applyRouteStyles = () => {
