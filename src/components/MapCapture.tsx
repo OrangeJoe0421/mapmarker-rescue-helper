@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { useMapStore } from '../store/useMapStore';
 import html2canvas from 'html2canvas';
 import { Route } from '../types/mapTypes';
-import esriConfig from '@arcgis/core/config';
 
 // Create a service to store the captured image
 export const mapCaptureService = {
@@ -187,7 +186,7 @@ const MapCapture = () => {
             });
             
             // Specifically target route lines in SVG
-            const routeLines = clonedMapElement.querySelectorAll('.leaflet-overlay-pane path, .esri-layer-graphics path');
+            const routeLines = clonedMapElement.querySelectorAll('.esri-layer-graphics path');
             console.info(`Found ${routeLines.length} route lines in the clone`);
             
             routeLines.forEach(line => {
@@ -202,8 +201,8 @@ const MapCapture = () => {
               }
             });
             
-            // Target the overall overlay pane
-            const overlayPane = clonedMapElement.querySelector('.leaflet-overlay-pane, .esri-layer-graphics');
+            // Target the overall graphics layer
+            const overlayPane = clonedMapElement.querySelector('.esri-layer-graphics');
             if (overlayPane && overlayPane instanceof HTMLElement) {
               overlayPane.style.visibility = 'visible';
               overlayPane.style.display = 'block';
