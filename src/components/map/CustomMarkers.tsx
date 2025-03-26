@@ -4,6 +4,7 @@ import { Marker, Popup } from 'react-leaflet';
 import { customIcon } from './MapIcons';
 import { Button } from '../ui/button';
 import { CustomMarker } from '../../types/mapTypes';
+import { GripVertical } from 'lucide-react';
 
 interface CustomMarkersProps {
   markers: CustomMarker[];
@@ -55,6 +56,11 @@ const CustomMarkers: React.FC<CustomMarkersProps> = ({
               <Button size="sm" onClick={() => calculateRoute(marker.id, true)}>
                 Route to Project
               </Button>
+            </div>
+            
+            <div className="mt-2 bg-muted/30 p-1 rounded flex items-center text-xs text-muted-foreground">
+              <GripVertical className="h-3 w-3 mr-1" />
+              <span>Drag marker to reposition</span>
             </div>
           </Popup>
         </Marker>

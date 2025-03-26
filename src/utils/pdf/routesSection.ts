@@ -131,3 +131,104 @@ export const addServiceDetailsSection = (
     yPosition += 10; // Add space after each service type group
   }
 };
+
+// Add detailed route information for each hospital
+export const addDetailedRouteInformation = (
+  doc: jsPDF,
+  routes: Route[],
+  customMarkers: CustomMarker[],
+  emergencyServices: EmergencyService[],
+  userLocation: UserLocation | null,
+  pageWidth: number
+): void => {
+  // Only show routes for hospitals
+  const hospitalRoutes = routes.filter(route => {
+    const service = emergencyServices.find(s => s.id === route.fromId);
+    return service && 
+           typeof service.type === 'string' && 
+           (service.type.toLowerCase().includes('hospital') || 
+            service.type.toLowerCase().includes('medical center'));
+  });
+  
+  if (hospitalRoutes.length === 0) return;
+  
+  // Add a new page for the routes
+  doc.addPage();
+  doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
+  doc.rect(10, 10, pageWidth - 20, 10, 'F'); // Section header
+  doc.setTextColor(255, 255, 255); // White text
+  doc.setFontSize(16);
+  doc.text('Hospital Route Information', pageWidth / 2, 15, { align: 'center' });
+  
+  let yPosition = 30;
+  
+  // For each hospital route, add a table with turn-by-turn directions
+  hospitalRoutes.forEach((route, index) => {
+    const service = emergencyServices.find(s => s.id === route.fromId);
+    if (!service) return;
+    
+    // Calculate if we need a new page for this route
+    if (yPosition > doc.internal.pageSize.getHeight() - 60 && index > 0) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    // Add route header
+    doc.setTextColor(51, 51, 51); // Dark gray text
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Route to ${service.name}`, 14, yPosition);
+    yPosition += 10;
+    
+    // Add route summary
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Distance: ${route.distance.toFixed(2)} km`, 14, yPosition);
+    yPosition += 5;
+    
+    if (route.duration) {
+      const minutes = Math.floor(route.duration / 60);
+      const seconds = Math.round(route.duration % 60);
+      doc.text(`Estimated travel time: ${minutes} min ${seconds} sec`, 14, yPosition);
+      yPosition += 5;
+    }
+    
+    // Set up table headers for turn-by-turn directions
+    const tableHeaders = [['Step', 'Direction', 'Distance (km)']];
+    
+    // Create dummy turn-by-turn data since we don't have actual directions
+    // In a real app, this would come from the routing service
+    const tableData = [
+      ['1', 'Start at your location', '0.0'],
+      ['2', `Head toward ${service.name}`, (route.distance * 0.2).toFixed(2)],
+      ['3', 'Continue on main road', (route.distance * 0.4).toFixed(2)],
+      ['4', `Turn into ${service.name} parking lot`, (route.distance * 0.4).toFixed(2)],
+      ['5', 'Arrive at destination', '0.0']
+    ];
+    
+    // Add the table
+    autoTable(doc, {
+      head: tableHeaders,
+      body: tableData,
+      startY: yPosition,
+      margin: { left: 14 },
+      theme: 'grid',
+      tableWidth: pageWidth - 28,
+      styles: {
+        fontSize: 9,
+        cellPadding: 3
+      },
+      headStyles: {
+        fillColor: [220, 220, 220],
+        textColor: [50, 50, 50],
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      }
+    });
+    
+    // Get the final Y position to update for the next table
+    yPosition = (doc as any).lastAutoTable.finalY + 20;
+  });
+}

@@ -7,6 +7,7 @@ export interface MarkersState {
   customMarkers: CustomMarker[];
   selectedMarker: CustomMarker | null;
   addingMarker: boolean;
+  draggingMarker: string | null;
   
   // Actions
   addCustomMarker: (marker: Omit<CustomMarker, 'id' | 'createdAt'>) => void;
@@ -14,6 +15,8 @@ export interface MarkersState {
   deleteCustomMarker: (id: string) => void;
   selectMarker: (marker: CustomMarker | null) => void;
   toggleAddingMarker: () => void;
+  setDraggingMarker: (id: string | null) => void;
+  updateMarkerPosition: (id: string, latitude: number, longitude: number) => void;
 }
 
 export const createMarkersSlice: StateCreator<
@@ -22,6 +25,7 @@ export const createMarkersSlice: StateCreator<
   customMarkers: [],
   selectedMarker: null,
   addingMarker: false,
+  draggingMarker: null,
 
   addCustomMarker: (marker) => {
     const newMarker = {
@@ -72,5 +76,20 @@ export const createMarkersSlice: StateCreator<
       }
       return { addingMarker: newAddingMarker };
     });
+  },
+  
+  // New actions for drag-and-drop functionality
+  setDraggingMarker: (id) => {
+    set({ draggingMarker: id });
+  },
+  
+  updateMarkerPosition: (id, latitude, longitude) => {
+    set((state) => ({
+      customMarkers: state.customMarkers.map((marker) =>
+        marker.id === id ? { ...marker, latitude, longitude } : marker
+      ),
+      draggingMarker: null,
+    }));
+    // Don't show a toast to avoid spamming when dragging
   },
 });

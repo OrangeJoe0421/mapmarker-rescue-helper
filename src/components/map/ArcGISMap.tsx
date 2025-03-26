@@ -27,6 +27,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   const graphicsLayerRef = useRef<GraphicsLayer | null>(null);
   const routeLayerRef = useRef<GraphicsLayer | null>(null);
   const clickHandleRef = useRef<__esri.Handle | null>(null);
+  const draggingRef = useRef<boolean>(false);
+  const currentMarkerRef = useRef<string | null>(null);
   
   const { 
     mapCenter, 
@@ -36,7 +38,9 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     customMarkers,
     routes,
     calculateRoute,
-    selectService
+    selectService,
+    setDraggingMarker,
+    updateMarkerPosition
   } = useMapStore();
   
   // Initialize map
@@ -219,9 +223,10 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   
   // Update markers when they change
   useEffect(() => {
-    if (!graphicsLayerRef.current) return;
+    if (!graphicsLayerRef.current || !viewRef.current) return;
     
     const graphicsLayer = graphicsLayerRef.current;
+    const view = viewRef.current;
     graphicsLayer.removeAll();
     
     // Add user location marker if it exists
@@ -297,7 +302,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       graphicsLayer.add(graphic);
     });
     
-    // Add custom markers
+    // Add custom markers with dragging capability
     customMarkers.forEach(marker => {
       const point = new Point({
         longitude: marker.longitude,
@@ -321,13 +326,113 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           id: marker.id,
           type: "custom",
           name: marker.name,
-          metadata: JSON.stringify(marker.metadata || {})
+          metadata: JSON.stringify(marker.metadata || {}),
+          draggable: "true" // Mark this graphic as draggable
         }
       });
       
       graphicsLayer.add(graphic);
     });
-  }, [userLocation, emergencyServices, customMarkers]);
+    
+    // Set up drag-and-drop functionality
+    let dragHandler: __esri.Handle;
+    let dragStartHandler: __esri.Handle;
+    let dragEndHandler: __esri.Handle;
+
+    // Remove existing handlers
+    if (dragHandler) dragHandler.remove();
+    if (dragStartHandler) dragStartHandler.remove();
+    if (dragEndHandler) dragEndHandler.remove();
+    
+    // Add pointer-down event listener for custom markers
+    dragStartHandler = view.on("pointer-down", (event) => {
+      // If we're already dragging, ignore new pointer-down events
+      if (draggingRef.current) return;
+      
+      // Use hitTest to find if a draggable graphic was clicked
+      view.hitTest(event).then(response => {
+        // Check if we have graphics in the hit test result
+        if (response.results.length > 0) {
+          // Get the first graphic from the result
+          const graphicResults = response.results.filter(result => {
+            // Type assertion to access the graphic property safely
+            const hitResult = result as any;
+            return hitResult.graphic && 
+                   hitResult.graphic.layer === graphicsLayer && 
+                   hitResult.graphic.attributes && 
+                   hitResult.graphic.attributes.type === "custom";
+          });
+          
+          if (graphicResults.length === 0) return;
+          
+          // Use type assertion to access the graphic
+          const hitResult = graphicResults[0] as any;
+          const graphic = hitResult.graphic;
+          
+          if (!graphic || !graphic.attributes) return;
+          
+          // Get the clicked graphic's ID
+          const id = graphic.attributes.id;
+          if (!id) return;
+          
+          // Set as currently dragging marker
+          draggingRef.current = true;
+          currentMarkerRef.current = id;
+          setDraggingMarker(id);
+          
+          // Change cursor style
+          mapDiv.current!.style.cursor = 'grabbing';
+          
+          // Prevent default to avoid map panning
+          event.stopPropagation();
+        }
+      });
+    });
+    
+    // Add pointer-move event listener to update marker position during drag
+    dragHandler = view.on("pointer-move", (event) => {
+      if (!draggingRef.current || !currentMarkerRef.current) return;
+      
+      // Get map point from screen point
+      const point = view.toMap(event.x, event.y);
+      
+      // Update the marker's position
+      graphicsLayer.graphics.forEach(graphic => {
+        if (graphic.attributes?.id === currentMarkerRef.current) {
+          graphic.geometry = point;
+        }
+      });
+    });
+    
+    // Add pointer-up event listener to end dragging
+    dragEndHandler = view.on("pointer-up", (event) => {
+      if (!draggingRef.current || !currentMarkerRef.current) return;
+      
+      // Get final map point
+      const point = view.toMap(event.x, event.y);
+      
+      // Update marker position in the store
+      updateMarkerPosition(
+        currentMarkerRef.current,
+        point.latitude,
+        point.longitude
+      );
+      
+      // Reset dragging state
+      draggingRef.current = false;
+      currentMarkerRef.current = null;
+      
+      // Reset cursor style
+      mapDiv.current!.style.cursor = 'auto';
+    });
+    
+    // Clean up function for the drag handlers
+    return () => {
+      if (dragHandler) dragHandler.remove();
+      if (dragStartHandler) dragStartHandler.remove();
+      if (dragEndHandler) dragEndHandler.remove();
+    };
+  }, [customMarkers, userLocation, emergencyServices, setDraggingMarker, updateMarkerPosition]);
   
   // Update routes when they change
   useEffect(() => {

@@ -1,9 +1,8 @@
-
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
 import { addEmergencyServicesSection } from './emergencyServicesSection';
-import { addServiceDetailsSection, addDetailedRouteInformation } from './routesSection';
+import { addDetailedRouteInformation } from './routesSection';
 import { addPdfFooter } from './pdfFooter';
 import { mapCaptureService } from '../../components/MapCapture';
 
@@ -56,11 +55,7 @@ export const exportToPdf = async (data: ExportData) => {
   // 2. Add emergency services section
   yPosition = addEmergencyServicesSection(doc, emergencyServices, yPosition);
   
-  // 3. Add service details section
-  addServiceDetailsSection(doc, emergencyServices, pageWidth);
-  
-  // 4. Add detailed route information for hospitals (only hospital routes)
-  // We removed the duplicate service details call that was in this method
+  // 3. Add detailed route information for hospitals (only hospital routes)
   if (routes.length > 0) {
     addDetailedRouteInformation(doc, routes, customMarkers, emergencyServices, userLocation, pageWidth);
   }
