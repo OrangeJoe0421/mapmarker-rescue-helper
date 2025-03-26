@@ -51,17 +51,21 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
             }, 300);
           };
           
-          if (map.isMoving()) {
-            // If map is still moving, wait for it to finish
-            map.once('moveend', applyRouteStyles);
-          } else {
-            applyRouteStyles();
-          }
+          // Use moveend event to ensure styles are applied after map movement
+          map.on('moveend', applyRouteStyles);
+          
+          // Call immediately in case map is not moving
+          applyRouteStyles();
         } catch (error) {
           console.error("Error fitting bounds to routes:", error);
         }
       }
     }
+
+    // Cleanup event listener
+    return () => {
+      map.off('moveend');
+    };
   }, [routes, map]);
   
   return (
@@ -108,3 +112,4 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
 };
 
 export default RouteLines;
+
