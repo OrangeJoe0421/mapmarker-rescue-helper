@@ -10,16 +10,11 @@ export const captureMapForPdf = async (
     // First, try to find a Leaflet map container
     let mapElement = document.querySelector('.leaflet-container') as HTMLElement;
     
-    // If no Leaflet map, try to find ArcGIS map container
+    // If no Leaflet map, try to find a more generic selector
     if (!mapElement) {
-      mapElement = document.querySelector('.esri-view-surface') as HTMLElement;
-      
-      // If still no map element found, use a more generic selector
-      if (!mapElement) {
-        const mapContainers = document.querySelectorAll('[data-map-container="true"]');
-        if (mapContainers.length > 0) {
-          mapElement = mapContainers[0] as HTMLElement;
-        }
+      const mapContainers = document.querySelectorAll('[data-map-container="true"]');
+      if (mapContainers.length > 0) {
+        mapElement = mapContainers[0] as HTMLElement;
       }
     }
     
@@ -31,22 +26,34 @@ export const captureMapForPdf = async (
       doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
       
       // Wait longer to ensure all map elements, especially routes, are fully rendered
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Special handling for Leaflet maps
-      if (mapElement.classList.contains('leaflet-container')) {
-        // Make sure route lines are visible before capture
-        const routeElements = document.querySelectorAll('.leaflet-overlay-pane path');
-        routeElements.forEach(route => {
-          if (route instanceof SVGElement) {
-            route.style.stroke = '#3B82F6';
-            route.style.strokeWidth = '4px';
-            route.style.strokeOpacity = '0.9';
-            route.style.display = 'block';
-            route.style.visibility = 'visible';
-          }
-        });
-      }
+      // Special handling for Leaflet maps - make sure route lines are visible
+      const routeElements = document.querySelectorAll('.leaflet-overlay-pane path, .route-line, path.route-path');
+      const routePaths = document.querySelectorAll('path.leaflet-interactive');
+      
+      // Force routes to be visible and styled prominently
+      [...routeElements, ...routePaths].forEach(route => {
+        if (route instanceof SVGElement) {
+          route.style.stroke = '#3B82F6';
+          route.style.strokeWidth = '6px';
+          route.style.strokeOpacity = '1';
+          route.style.display = 'block';
+          route.style.visibility = 'visible';
+          route.style.zIndex = '1000';
+        }
+      });
+      
+      // Make sure overlay panes are visible
+      const overlayPanes = document.querySelectorAll('.leaflet-overlay-pane');
+      overlayPanes.forEach(pane => {
+        if (pane instanceof HTMLElement) {
+          pane.style.display = 'block';
+          pane.style.visibility = 'visible';
+          pane.style.opacity = '1';
+          pane.style.zIndex = '650';
+        }
+      });
       
       // Use html2canvas with improved settings for route visibility
       const canvas = await html2canvas(mapElement, {
@@ -56,42 +63,30 @@ export const captureMapForPdf = async (
         scale: 2, // Higher resolution
         logging: false,
         onclone: (document, clonedElement) => {
-          // For Leaflet maps
           if (clonedElement.classList.contains('leaflet-container')) {
-            // Make sure the overlay pane containing routes is visible
-            const overlayPanes = clonedElement.querySelectorAll('.leaflet-overlay-pane');
-            overlayPanes.forEach(pane => {
+            // Force all overlay panes to be visible in the clone
+            const clonedOverlayPanes = clonedElement.querySelectorAll('.leaflet-overlay-pane');
+            clonedOverlayPanes.forEach(pane => {
               if (pane instanceof HTMLElement) {
                 pane.style.display = 'block';
                 pane.style.visibility = 'visible';
                 pane.style.opacity = '1';
-                pane.style.zIndex = '650'; // Ensure it's above other layers
+                pane.style.zIndex = '650'; 
               }
             });
             
-            // Specifically target SVG paths (route lines)
-            const routePaths = clonedElement.querySelectorAll('.leaflet-overlay-pane path');
-            routePaths.forEach(path => {
+            // Force all SVG paths (route lines) to be visible and styled prominently
+            const clonedRouteElements = clonedElement.querySelectorAll('.leaflet-overlay-pane path, path.leaflet-interactive, .route-line');
+            clonedRouteElements.forEach(path => {
               if (path instanceof SVGElement) {
                 path.style.stroke = '#3B82F6';
-                path.style.strokeWidth = '4px';
-                path.style.strokeOpacity = '0.9';
+                path.style.strokeWidth = '6px';
+                path.style.strokeOpacity = '1';
                 path.style.display = 'block';
                 path.style.visibility = 'visible';
+                path.style.zIndex = '1000';
               }
             });
-          }
-          
-          // For ArcGIS maps, make sure all canvas elements are visible
-          if (clonedElement.classList.contains('esri-view-surface')) {
-            const canvasElements = clonedElement.parentElement?.querySelectorAll('canvas');
-            if (canvasElements) {
-              canvasElements.forEach(canvas => {
-                canvas.style.display = 'block';
-                canvas.style.visibility = 'visible';
-                canvas.style.opacity = '1';
-              });
-            }
           }
         }
       });
