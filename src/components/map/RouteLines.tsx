@@ -56,22 +56,26 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
               // Get the underlying SVG element
               const pathElement = el.getElement();
               if (pathElement) {
-                // Add a class for custom styling without dataset attributes (avoiding TS errors)
+                // Add data attributes for easier identification in html2canvas
                 pathElement.classList.add('capture-route-line');
                 pathElement.classList.add(`route-${route.id}`);
+                pathElement.setAttribute('data-route-id', route.id);
+                pathElement.setAttribute('data-is-route', 'true');
                 
-                // Apply styling directly to ensure it renders correctly for capture
+                // Enhance styling for better visibility in capture
                 pathElement.setAttribute('stroke', '#FF3B30');
-                pathElement.setAttribute('stroke-width', '6');
+                pathElement.setAttribute('stroke-width', '8');
                 pathElement.setAttribute('stroke-opacity', '1');
                 pathElement.setAttribute('stroke-linecap', 'round');
                 pathElement.setAttribute('stroke-linejoin', 'round');
+                pathElement.style.visibility = 'visible';
+                pathElement.style.display = 'block';
               }
             }
           }}
           pathOptions={{
             color: '#FF3B30',
-            weight: 6,
+            weight: 8,
             opacity: 1,
             lineCap: 'round',
             lineJoin: 'round',

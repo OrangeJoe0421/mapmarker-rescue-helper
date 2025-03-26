@@ -87,7 +87,7 @@ const MapCapture = () => {
       // Clear any previous capture
       mapCaptureService.clearCapture();
       
-      // Find the map container - use the MapContainer directly instead of the leaflet-container
+      // Find the map container - target the actual map element
       const mapElement = document.querySelector('[data-map-container="true"]') as HTMLElement;
       
       if (!mapElement) {
@@ -99,49 +99,73 @@ const MapCapture = () => {
 
       console.info("Map element found, preparing for capture");
       
-      // Wait for any animations to finish and map to fully render
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait longer for routes to fully render
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Force a repaint to ensure all map elements are visible
-      mapElement.style.opacity = '0.99';
-      setTimeout(() => { mapElement.style.opacity = '1'; }, 50);
+      // Force redraw of route lines
+      const routeElements = document.querySelectorAll('.leaflet-overlay-pane path');
+      routeElements.forEach(el => {
+        (el as HTMLElement).style.strokeWidth = '8px';
+        (el as HTMLElement).style.stroke = '#FF3B30';
+        (el as HTMLElement).style.opacity = '1';
+        (el as HTMLElement).style.visibility = 'visible';
+      });
       
-      // Wait again to ensure the repaint is complete
+      // Wait for styling to take effect
       await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
-        // Use html2canvas with appropriate settings
-        console.info("Starting html2canvas capture");
+        // Use html2canvas with improved settings
+        console.info("Starting html2canvas capture with enhanced route visibility");
         const canvas = await html2canvas(mapElement, {
           useCORS: true,
           allowTaint: true,
           logging: true,
           scale: 2, // Higher scale for better quality
           backgroundColor: '#ffffff',
+          ignoreElements: (element) => {
+            // Don't ignore any elements that might contain routes
+            return false;
+          },
           onclone: (documentClone, element) => {
             // Find the cloned map element in the cloned document
             const clonedMapElement = documentClone.querySelector('[data-map-container="true"]') as HTMLElement;
             
             if (clonedMapElement) {
+              console.info("Enhancing map clone for capture");
+              
               // Make sure the map is visible in the clone
               clonedMapElement.style.overflow = 'visible';
               
-              // Make sure all leaf elements are visible
-              const leafletElements = clonedMapElement.querySelectorAll('.leaflet-tile, .leaflet-marker-icon, .leaflet-overlay-pane svg, .leaflet-overlay-pane path');
-              leafletElements.forEach(el => {
+              // Make sure all map elements are visible
+              const allElements = clonedMapElement.querySelectorAll('*');
+              allElements.forEach(el => {
                 (el as HTMLElement).style.visibility = 'visible';
                 (el as HTMLElement).style.opacity = '1';
               });
               
-              // Make route lines more prominent
+              // Specifically target route lines in SVG
               const routeLines = clonedMapElement.querySelectorAll('.leaflet-overlay-pane path');
+              console.info(`Found ${routeLines.length} route lines in the clone`);
+              
               routeLines.forEach(line => {
                 line.setAttribute('stroke', '#FF3B30');
-                line.setAttribute('stroke-width', '6');
+                line.setAttribute('stroke-width', '8');
                 line.setAttribute('stroke-opacity', '1');
+                line.setAttribute('stroke-linecap', 'round');
+                line.setAttribute('stroke-linejoin', 'round');
+                (line as HTMLElement).style.display = 'block';
+                (line as HTMLElement).style.visibility = 'visible';
               });
               
-              console.info("Document clone prepared with enhanced visibility");
+              // Target the overall overlay pane
+              const overlayPane = clonedMapElement.querySelector('.leaflet-overlay-pane');
+              if (overlayPane) {
+                (overlayPane as HTMLElement).style.visibility = 'visible';
+                (overlayPane as HTMLElement).style.display = 'block';
+                (overlayPane as HTMLElement).style.opacity = '1';
+                (overlayPane as HTMLElement).style.zIndex = '1000';
+              }
             }
           }
         });
