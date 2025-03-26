@@ -47,9 +47,10 @@ const Index = () => {
             <img 
               src="/stantec-logo-orange.png" 
               alt="Stantec Logo" 
-              className="stantec-logo mr-3 h-10 md:h-12"
+              className="mr-3 h-10 md:h-12"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
+                console.log("Error loading Stantec logo, falling back to SVG");
                 target.src = 'https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg';
               }}
             />
