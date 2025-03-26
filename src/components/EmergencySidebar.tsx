@@ -352,7 +352,7 @@ const EmergencySidebar = () => {
                                       </span>
                                     </div>
                                     <EmergencyRoomVerification 
-                                      service={service.id} 
+                                      service={service} 
                                       hasER={service.verification?.hasEmergencyRoom || false} 
                                     />
                                   </div>
