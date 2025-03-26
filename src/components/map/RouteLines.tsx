@@ -32,7 +32,10 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
           // and any existing capture is now stale
           mapCaptureService.markCaptureStaleDueToRouteChange();
           
-          // Wait for map to finish moving before applying styles
+          // Check if the map is currently animating/moving
+          const isMapMoving = map._animatingZoom || map._moving;
+          
+          // Function to apply styles to routes
           const applyRouteStyles = () => {
             // Force a repaint of route elements with delay to ensure they're rendered
             setTimeout(() => {
@@ -51,7 +54,7 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
             }, 300);
           };
           
-          if (map.isMoving()) {
+          if (isMapMoving) {
             // If map is still moving, wait for it to finish
             map.once('moveend', applyRouteStyles);
           } else {
