@@ -45,7 +45,7 @@ const Index = () => {
         <header className="mb-6 flex justify-between items-center">
           <div className="flex items-center">
             <img 
-              src="/stantec-logo-orange.png" 
+              src="/lovable-uploads/e7fb8cc8-9b48-457c-a65f-7ed272d81060.png" 
               alt="Stantec Logo" 
               className="mr-3 h-10 md:h-12"
               onError={(e) => {

@@ -12,8 +12,8 @@ export * from './types';
 // Add logo to PDF
 const addStantecLogo = (doc: jsPDF, pageWidth: number) => {
   try {
-    // Try to add the Stantec logo
-    doc.addImage('/stantec-logo-orange.png', 'PNG', 10, 10, 30, 30);
+    // Try to add the Stantec logo with the correct path
+    doc.addImage('/lovable-uploads/e7fb8cc8-9b48-457c-a65f-7ed272d81060.png', 'PNG', 10, 10, 30, 30);
   } catch (error) {
     console.error('Error adding Stantec logo to PDF:', error);
     // If logo not found, continue without it
