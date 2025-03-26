@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
@@ -30,6 +29,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   const clickHandleRef = useRef<__esri.Handle | null>(null);
   const draggingRef = useRef<boolean>(false);
   const currentMarkerRef = useRef<string | null>(null);
+  const isCtrlPressed = useRef<boolean>(false);
   
   const { 
     mapCenter, 
@@ -336,16 +336,13 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           currentMarkerRef.current = id;
           setDraggingMarker(id);
           
-          // Store current navigation state
-          mapNavigationEnabled = view.navigation ? true : false;
-          
-          // Disable map navigation while dragging
-          if (view.navigation) {
+          if (isCtrlPressed.current && view.navigation) {
+            mapNavigationEnabled = view.navigation ? true : false;
             view.navigation.mouseWheelZoomEnabled = false;
             view.navigation.browserTouchPanEnabled = false;
+            mapDiv.current!.style.cursor = 'grabbing';
           }
           
-          mapDiv.current!.style.cursor = 'grabbing';
           event.stopPropagation();
         }
       });
@@ -354,7 +351,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     dragHandler = view.on("pointer-move", (event) => {
       if (!draggingRef.current || !currentMarkerRef.current) return;
       
-      const point = view.toMap({x: event.x, y: event.y});
+      const screenPoint = { x: event.x, y: event.y };
+      const point = view.toMap(screenPoint);
       
       graphicsLayer.graphics.forEach(graphic => {
         if (graphic.attributes?.id === currentMarkerRef.current) {
@@ -362,13 +360,16 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
         }
       });
       
-      event.stopPropagation();
+      if (isCtrlPressed.current) {
+        event.stopPropagation();
+      }
     });
     
     dragEndHandler = view.on("pointer-up", (event) => {
       if (!draggingRef.current || !currentMarkerRef.current) return;
       
-      const point = view.toMap({x: event.x, y: event.y});
+      const screenPoint = { x: event.x, y: event.y };
+      const point = view.toMap(screenPoint);
       
       updateMarkerPosition(
         currentMarkerRef.current,
@@ -379,15 +380,16 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       draggingRef.current = false;
       currentMarkerRef.current = null;
       
-      // Re-enable map navigation after dragging
-      if (view.navigation) {
+      if (isCtrlPressed.current && view.navigation) {
         view.navigation.mouseWheelZoomEnabled = true;
         view.navigation.browserTouchPanEnabled = true;
       }
       
       mapDiv.current!.style.cursor = 'auto';
       
-      event.stopPropagation();
+      if (isCtrlPressed.current) {
+        event.stopPropagation();
+      }
     });
     
     return () => {
@@ -395,7 +397,6 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       if (dragStartHandler) dragStartHandler.remove();
       if (dragEndHandler) dragEndHandler.remove();
       
-      // Make sure navigation is re-enabled when component unmounts
       if (viewRef.current && viewRef.current.navigation) {
         viewRef.current.navigation.mouseWheelZoomEnabled = true;
         viewRef.current.navigation.browserTouchPanEnabled = true;
@@ -470,6 +471,28 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       };
     }
   }, [useMapStore.getState().addingMarker]);
+  
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control') {
+        isCtrlPressed.current = true;
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control') {
+        isCtrlPressed.current = false;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
   
   return (
     <div 
