@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import Graphic from '@arcgis/core/Graphic';
@@ -10,7 +10,7 @@ import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import * as route from '@arcgis/core/rest/route';
 import { useMapStore } from '../../store/useMapStore';
 import '@arcgis/core/assets/esri/themes/light/main.css';
-import EmergencyRoomVerification from '../EmergencyRoomVerification';
+import ServiceDetailsCard from '../ServiceDetailsCard';
 import ReactDOMServer from 'react-dom/server';
 
 // ArcGIS API key
@@ -28,6 +28,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   const routeLayerRef = useRef<GraphicsLayer | null>(null);
   const clickHandleRef = useRef<__esri.Handle | null>(null);
   
+  const [selectedService, setSelectedService] = useState<EmergencyService | null>(null);
+  
   const { 
     mapCenter, 
     mapZoom, 
@@ -36,7 +38,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     customMarkers,
     routes,
     calculateRoute,
-    verifyEmergencyRoom
+    verifyEmergencyRoom,
+    selectService
   } = useMapStore();
   
   // Initialize map
@@ -129,100 +132,15 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           if (isService) {
             const service = emergencyServices.find(s => s.id === id);
             if (service) {
-              // Create custom popup content with verification checkbox for hospitals
-              let popupContent = `
-                <div class="esri-popup-content custom-popup">
-                  <h3 class="font-bold text-lg">${service.name}</h3>
-                  <p class="text-sm">${service.type}</p>
-              `;
+              // Update selected service in component state and store
+              setSelectedService(service);
+              selectService(service);
               
-              if (service.road_distance) {
-                popupContent += `<p class="text-xs mt-1">${service.road_distance.toFixed(2)} km away</p>`;
-              }
-              
-              if (service.address) {
-                popupContent += `<p class="text-xs mt-1">${service.address}</p>`;
-              }
-              
-              if (service.phone) {
-                popupContent += `<p class="text-xs mt-1">Phone: ${service.phone}</p>`;
-              }
-              
-              if (service.hours) {
-                popupContent += `<p class="text-xs mt-1">Hours: ${service.hours}</p>`;
-              }
-              
-              // Add the verification component for hospitals
-              if (service.type.toLowerCase().includes('hospital')) {
-                // Create a container for verification UI
-                popupContent += `
-                  <div class="mt-2 bg-gray-100 p-2 rounded">
-                    <div class="flex items-center">
-                      <input 
-                        type="checkbox" 
-                        id="er-verification-${service.id}" 
-                        ${service.verification?.hasEmergencyRoom ? 'checked' : ''}
-                        onclick="window.verifyEmergencyRoom('${service.id}', this.checked)"
-                        class="mr-2"
-                      />
-                      <label for="er-verification-${service.id}" class="text-sm">
-                        Verified Emergency Room
-                      </label>
-                    </div>
-                `;
-                
-                if (service.verification?.verifiedAt) {
-                  const date = new Date(service.verification.verifiedAt);
-                  popupContent += `
-                    <div class="text-xs text-gray-500 mt-1">
-                      Verified on ${date.toLocaleDateString()}
-                    </div>
-                  `;
-                }
-                
-                popupContent += '</div>';
-              }
-              
-              // Add route button
-              popupContent += `
-                <div class="mt-3">
-                  <button 
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
-                    onclick="window.calculateRouteToProject('${service.id}')"
-                  >
-                    Route to Project
-                  </button>
-                </div>
-              `;
-              
-              popupContent += '</div>';
-              
-              // Set up global functions for the verification and routing
-              (window as any).verifyEmergencyRoom = (serviceId: string, checked: boolean) => {
-                verifyEmergencyRoom(serviceId, checked);
-                // Close and reopen the popup to refresh content
-                view.popup.close();
-                setTimeout(() => {
-                  view.popup.open({
-                    location: event.mapPoint,
-                    content: popupContent
-                  });
-                }, 100);
-              };
-              
-              (window as any).calculateRouteToProject = (serviceId: string) => {
-                calculateRoute(serviceId, true);
-                view.popup.close();
-              };
-              
-              // Show the popup
-              view.popup.open({
-                location: event.mapPoint,
-                content: popupContent
-              });
+              // Close any open popup
+              view.popup.close();
             }
           } else if (isCustom || id === 'user-location') {
-            // Handle custom marker or user location click
+            // Handle custom marker or user location click - keep existing popup behavior
             let marker;
             let title = '';
             let details = '';
@@ -255,7 +173,14 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
               location: event.mapPoint,
               content: popupContent
             });
+            
+            // Clear selected service when clicking on other markers
+            setSelectedService(null);
           }
+        } else {
+          // Click was on empty map area, close any popups and clear selected service
+          view.popup.close();
+          setSelectedService(null);
         }
       });
     });
@@ -325,17 +250,6 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           id: "user-location",
           type: "user",
           name: "Project Location"
-        },
-        popupTemplate: {
-          title: "Project Location",
-          content: [
-            {
-              type: "fields",
-              fieldInfos: [
-                { fieldName: "name", label: "Name" }
-              ]
-            }
-          ]
         }
       });
       
@@ -378,13 +292,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           id: service.id,
           type: "service",
           name: service.name,
-          serviceType: service.type,
-          address: service.address || '',
-          phone: service.phone || '',
-          hours: service.hours || '',
-          distance: service.road_distance ? `${service.road_distance.toFixed(2)} km` : 'Unknown',
-          hasEmergencyRoom: service.verification?.hasEmergencyRoom ? 'Yes' : 'No',
-          verifiedAt: service.verification?.verifiedAt ? new Date(service.verification.verifiedAt).toLocaleDateString() : 'Not verified'
+          serviceType: service.type
         }
       });
       
@@ -497,12 +405,25 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     }
   }, [useMapStore.getState().addingMarker]);
   
+  // Close the selected service card when clicking outside
+  const handleCloseCard = () => {
+    setSelectedService(null);
+    selectService(null);
+  };
+  
   return (
     <div 
       ref={mapDiv} 
-      className={`h-full w-full ${className || ''}`}
+      className={`h-full w-full relative ${className || ''}`}
       style={{ height: '100%', width: '100%' }}
-    />
+    >
+      {selectedService && (
+        <ServiceDetailsCard 
+          service={selectedService} 
+          onClose={handleCloseCard} 
+        />
+      )}
+    </div>
   );
 };
 
