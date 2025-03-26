@@ -1,3 +1,4 @@
+
 export interface UserLocation {
   latitude: number;
   longitude: number;
@@ -43,6 +44,12 @@ export interface RoutePoint {
   longitude: number;
 }
 
+export interface RouteDirection {
+  text: string;
+  distance: number;
+  time: number;
+}
+
 export interface Route {
   id: string;
   points: RoutePoint[];
@@ -50,4 +57,5 @@ export interface Route {
   toId: string | null; // null when destination is user location
   distance: number;
   duration?: number;
+  directions?: RouteDirection[];
 }

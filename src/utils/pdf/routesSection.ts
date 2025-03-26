@@ -194,17 +194,34 @@ export const addDetailedRouteInformation = (
     }
     
     // Set up table headers for turn-by-turn directions
-    const tableHeaders = [['Step', 'Direction', 'Distance (km)']];
+    const tableHeaders = [['Step', 'Direction', 'Distance (km)', 'Time (min)']];
     
-    // Create dummy turn-by-turn data since we don't have actual directions
-    // In a real app, this would come from the routing service
-    const tableData = [
-      ['1', 'Start at your location', '0.0'],
-      ['2', `Head toward ${service.name}`, (route.distance * 0.2).toFixed(2)],
-      ['3', 'Continue on main road', (route.distance * 0.4).toFixed(2)],
-      ['4', `Turn into ${service.name} parking lot`, (route.distance * 0.4).toFixed(2)],
-      ['5', 'Arrive at destination', '0.0']
-    ];
+    // Create the route data array - check if we have the directions property 
+    let tableData = [];
+    
+    // @ts-ignore - We need to access the directions property which might not be in the type yet
+    if (route.directions && Array.isArray(route.directions)) {
+      // @ts-ignore - Using the directions property from the enhanced routing
+      tableData = route.directions.map((direction, idx) => {
+        return [
+          `${idx + 1}`, 
+          direction.text, 
+          (direction.distance || 0).toFixed(2),
+          ((direction.time || 0) / 60).toFixed(1) // Convert to minutes
+        ];
+      });
+    } else {
+      // Fallback to generic directions if detailed directions are not available
+      const distanceChunks = route.distance / 5; // Divide route into 5 segments
+      
+      tableData = [
+        ['1', 'Start at your location', '0.0', '0.0'],
+        ['2', `Head toward ${service.name}`, (distanceChunks).toFixed(2), (route.duration / 5 / 60).toFixed(1)],
+        ['3', 'Continue on main road', (distanceChunks * 2).toFixed(2), (route.duration * 2 / 5 / 60).toFixed(1)],
+        ['4', `Turn toward ${service.name}`, (distanceChunks).toFixed(2), (route.duration / 5 / 60).toFixed(1)],
+        ['5', `Arrive at ${service.name}`, (route.distance - distanceChunks * 4).toFixed(2), (route.duration / 5 / 60).toFixed(1)]
+      ];
+    }
     
     // Add the table
     autoTable(doc, {
