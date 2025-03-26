@@ -9,7 +9,7 @@ import { mapCaptureService } from '../../components/MapCapture';
 
 export * from './types';
 
-// Add this new function to handle adding the captured map to the PDF
+// Fix the map capture function to handle the image properly
 const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
   try {
     const capturedImage = mapCaptureService.getCapturedImage();
@@ -32,11 +32,16 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     
     // Calculate dimensions to fit on the page while maintaining aspect ratio
     const imgWidth = pageWidth - 20; // Margins
+    
+    // Create an image element to get dimensions
     const image = new Image();
     image.src = capturedImage;
-    const imgHeight = (image.height * imgWidth) / image.width;
     
-    // Add the map image to the PDF
+    // Set a fixed height instead of trying to calculate from image dimensions
+    // This avoids issues with image not being loaded or invalid calculations
+    const imgHeight = 200; // Fixed reasonable height
+    
+    // Add the map image to the PDF with fixed dimensions
     doc.addImage(capturedImage, 'PNG', 10, 25, imgWidth, imgHeight);
     
   } catch (error) {
@@ -85,7 +90,7 @@ export const exportToPdf = async (data: ExportData) => {
     addDetailedRouteInformation(doc, routes, customMarkers, emergencyServices, userLocation, pageWidth);
   }
   
-  // Add captured map to PDF (replacing the old captureMapForPdf function)
+  // Add captured map to PDF (with the fixed implementation)
   addCapturedMapToPdf(doc, pageWidth);
   
   // Add footer
