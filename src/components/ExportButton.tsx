@@ -40,6 +40,19 @@ const ExportButton = () => {
         );
       }
       
+      // Check for hospital routes
+      const hasHospitalRoutes = routes.some(route => {
+        const service = emergencyServices.find(s => s.id === route.fromId);
+        return service && 
+               typeof service.type === 'string' && 
+               (service.type.toLowerCase().includes('hospital') || 
+                service.type.toLowerCase().includes('medical center'));
+      });
+      
+      if (routesExist && !hasHospitalRoutes) {
+        toast.info('Note: Detailed driving instructions are only shown for hospital routes in the PDF');
+      }
+      
       // Ensure map is fully rendered with routes before exporting
       setTimeout(async () => {
         try {

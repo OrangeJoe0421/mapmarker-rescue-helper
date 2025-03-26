@@ -131,33 +131,41 @@ export const addDetailedRouteInformation = (
     
     yPosition = (doc as any).lastAutoTable.finalY + 10;
     
-    // Add written driving instructions if available
-    doc.setFontSize(12);
-    doc.text('Driving Instructions:', 14, yPosition);
-    yPosition += 6;
+    // Add written driving instructions only for hospital routes
+    const isHospital = fromEntity && 
+      'type' in fromEntity && 
+      typeof fromEntity.type === 'string' && 
+      (fromEntity.type.toLowerCase().includes('hospital') || 
+       fromEntity.type.toLowerCase().includes('medical center'));
     
-    // Generate simplified driving instructions based on the route points
-    if (route.points.length > 1) {
-      const instructions = generateRouteInstructions(route, fromName, toName);
+    if (isHospital) {
+      doc.setFontSize(12);
+      doc.text('Driving Instructions:', 14, yPosition);
+      yPosition += 6;
       
-      autoTable(doc, {
-        startY: yPosition,
-        head: [['Step', 'Instruction']],
-        body: instructions.map((instruction, index) => [
-          (index + 1).toString(),
-          instruction
-        ]),
-        theme: 'grid',
-        headStyles: { fillColor: [155, 89, 182], textColor: 255 },
-        styles: { overflow: 'linebreak', cellWidth: 'auto' },
-        columnStyles: { 0: { cellWidth: 30 } },
-        margin: { left: 14, right: 14 }
-      });
-      
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
-    } else {
-      doc.text('Detailed instructions not available for this route.', 14, yPosition);
-      yPosition += 10;
+      // Generate simplified driving instructions based on the route points
+      if (route.points.length > 1) {
+        const instructions = generateRouteInstructions(route, fromName, toName);
+        
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Step', 'Instruction']],
+          body: instructions.map((instruction, index) => [
+            (index + 1).toString(),
+            instruction
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [155, 89, 182], textColor: 255 },
+          styles: { overflow: 'linebreak', cellWidth: 'auto' },
+          columnStyles: { 0: { cellWidth: 30 } },
+          margin: { left: 14, right: 14 }
+        });
+        
+        yPosition = (doc as any).lastAutoTable.finalY + 15;
+      } else {
+        doc.text('Detailed instructions not available for this route.', 14, yPosition);
+        yPosition += 10;
+      }
     }
     
     // Add a page break if we're running out of space and there are more routes
