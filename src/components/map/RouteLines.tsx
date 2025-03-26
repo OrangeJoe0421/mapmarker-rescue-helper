@@ -69,11 +69,9 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
                 pathElement.setAttribute('stroke-linecap', 'round');
                 pathElement.setAttribute('stroke-linejoin', 'round');
                 
-                // Make routes non-interactive
-                pathElement.style.pointerEvents = 'none';
-                
-                // Fix: Cast the element to HTMLElement before accessing style property
+                // Make routes non-interactive - Fix: Check if pathElement is HTMLElement first
                 if (pathElement instanceof HTMLElement) {
+                  pathElement.style.pointerEvents = 'none';
                   pathElement.style.visibility = 'visible';
                   pathElement.style.display = 'block';
                 }
