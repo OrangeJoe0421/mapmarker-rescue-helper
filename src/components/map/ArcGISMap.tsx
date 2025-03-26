@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import Graphic from '@arcgis/core/Graphic';
@@ -9,8 +9,8 @@ import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
 import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import * as route from '@arcgis/core/rest/route';
 import { useMapStore } from '../../store/useMapStore';
+import { EmergencyService } from '@/types/mapTypes';
 import '@arcgis/core/assets/esri/themes/light/main.css';
-import ServiceDetailsCard from '../ServiceDetailsCard';
 import ReactDOMServer from 'react-dom/server';
 
 // ArcGIS API key
@@ -28,8 +28,6 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   const routeLayerRef = useRef<GraphicsLayer | null>(null);
   const clickHandleRef = useRef<__esri.Handle | null>(null);
   
-  const [selectedService, setSelectedService] = useState<EmergencyService | null>(null);
-  
   const { 
     mapCenter, 
     mapZoom, 
@@ -38,7 +36,6 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     customMarkers,
     routes,
     calculateRoute,
-    verifyEmergencyRoom,
     selectService
   } = useMapStore();
   
@@ -132,9 +129,14 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           if (isService) {
             const service = emergencyServices.find(s => s.id === id);
             if (service) {
-              // Update selected service in component state and store
-              setSelectedService(service);
+              // Update selected service in store and switch to results tab
               selectService(service);
+              
+              // Set active tab to results - we'll add this functionality in the EmergencySidebar component
+              const tabsElement = document.querySelector('[value="results"]') as HTMLButtonElement;
+              if (tabsElement) {
+                tabsElement.click();
+              }
               
               // Close any open popup
               view.popup.close();
@@ -173,14 +175,10 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
               location: event.mapPoint,
               content: popupContent
             });
-            
-            // Clear selected service when clicking on other markers
-            setSelectedService(null);
           }
         } else {
-          // Click was on empty map area, close any popups and clear selected service
+          // Click was on empty map area, close any popups
           view.popup.close();
-          setSelectedService(null);
         }
       });
     });
@@ -405,25 +403,12 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     }
   }, [useMapStore.getState().addingMarker]);
   
-  // Close the selected service card when clicking outside
-  const handleCloseCard = () => {
-    setSelectedService(null);
-    selectService(null);
-  };
-  
   return (
     <div 
       ref={mapDiv} 
       className={`h-full w-full relative ${className || ''}`}
       style={{ height: '100%', width: '100%' }}
-    >
-      {selectedService && (
-        <ServiceDetailsCard 
-          service={selectedService} 
-          onClose={handleCloseCard} 
-        />
-      )}
-    </div>
+    />
   );
 };
 

@@ -23,10 +23,15 @@ import {
   Hash,
   Globe,
   Route,
-  Ambulance
+  Ambulance,
+  Phone,
+  Clock,
+  Navigation,
+  CheckCircle
 } from 'lucide-react';
 import MarkerMetadataForm from './MarkerMetadataForm';
 import LocationMetadataForm from './LocationMetadataForm';
+import EmergencyRoomVerification from './EmergencyRoomVerification';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 const EmergencySidebar = () => {
@@ -52,6 +57,7 @@ const EmergencySidebar = () => {
     selectService,
     selectMarker,
     clearAll,
+    calculateRoute,
     calculateRoutesForAllEMS
   } = useMapStore();
 
@@ -130,6 +136,24 @@ const EmergencySidebar = () => {
       setLongitude("");
       setActiveTab("search");
     }
+  };
+
+  const getServiceColor = (service) => {
+    const type = service.type.toLowerCase();
+    if (type.includes('hospital')) return 'bg-red-600';
+    if (type.includes('fire')) return 'bg-orange-600';
+    if (type.includes('police') || type.includes('law')) return 'bg-blue-800';
+    if (type.includes('ems')) return 'bg-amber-500';
+    return 'bg-blue-600';
+  };
+
+  const getServiceIcon = (service) => {
+    const type = service.type.toLowerCase();
+    if (type.includes('hospital')) return <span className="text-xl">🏥</span>;
+    if (type.includes('fire')) return <span className="text-xl">🚒</span>;
+    if (type.includes('police') || type.includes('law')) return <span className="text-xl">👮</span>;
+    if (type.includes('ems')) return <span className="text-xl">🚑</span>;
+    return <span className="text-xl">📍</span>;
   };
 
   return (
@@ -273,10 +297,15 @@ const EmergencySidebar = () => {
                         onClick={() => selectService(service)}
                       >
                         <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium">
-                              {service.type}: {service.name}
-                            </h4>
+                          <div className="w-full">
+                            <div className="flex items-center gap-2">
+                              {getServiceIcon(service)}
+                              <h4 className="font-medium">
+                                {service.name}
+                              </h4>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{service.type}</p>
+                            
                             {service.road_distance && (
                               <div className="text-sm text-muted-foreground mt-1 flex items-center">
                                 <span>Distance: {service.road_distance.toFixed(2)} km</span>
@@ -284,18 +313,87 @@ const EmergencySidebar = () => {
                                 <span>~{Math.ceil(service.road_distance / 0.8)} min drive</span>
                               </div>
                             )}
+
+                            {selectedService?.id === service.id && (
+                              <div className="mt-3 pt-3 border-t space-y-2">
+                                {service.address && (
+                                  <div className="flex items-start gap-2 text-sm">
+                                    <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                                    <span>{service.address}</span>
+                                  </div>
+                                )}
+                                
+                                {service.phone && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span>{service.phone}</span>
+                                  </div>
+                                )}
+                                
+                                {service.hours && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span>{service.hours}</span>
+                                  </div>
+                                )}
+                                
+                                {service.type.toLowerCase().includes('hospital') && (
+                                  <div className="mt-2 pt-2 border-t">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      {service.verification?.hasEmergencyRoom ? (
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      ) : (
+                                        <AlertCircle className="h-4 w-4 text-amber-500" />
+                                      )}
+                                      <span className="text-sm font-medium">
+                                        {service.verification?.hasEmergencyRoom 
+                                          ? 'Verified Emergency Room' 
+                                          : 'Emergency Room Status Unverified'}
+                                      </span>
+                                    </div>
+                                    <EmergencyRoomVerification 
+                                      service={service.id} 
+                                      hasER={service.verification?.hasEmergencyRoom || false} 
+                                    />
+                                  </div>
+                                )}
+                                
+                                <Button 
+                                  onClick={() => calculateRoute(service.id, true)} 
+                                  className="w-full gap-2 mt-2"
+                                  size="sm"
+                                >
+                                  <Navigation className="h-4 w-4" />
+                                  Route to Project
+                                </Button>
+                              </div>
+                            )}
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              selectService(service);
-                            }}
-                          >
-                            <MapPin className="h-4 w-4" />
-                          </Button>
+                          {!selectedService || selectedService.id !== service.id ? (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectService(service);
+                              }}
+                            >
+                              <MapPin className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectService(null);
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}

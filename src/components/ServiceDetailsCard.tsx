@@ -101,8 +101,8 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
               </span>
             </div>
             <EmergencyRoomVerification 
-              serviceId={service.id} 
-              hasEmergencyRoom={service.verification?.hasEmergencyRoom || false} 
+              service={service.id} 
+              hasER={service.verification?.hasEmergencyRoom || false} 
             />
           </div>
         )}
