@@ -40,16 +40,27 @@ const Index = () => {
   }, [userLocation?.latitude, userLocation?.longitude]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
       <div className="container mx-auto max-w-7xl">
         <header className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground animate-fade-in">
-              Emergency Response Planner
-            </h1>
-            <p className="text-muted-foreground mt-1 animate-fade-in" style={{ animationDelay: '100ms' }}>
-              Find and map emergency services near any location
-            </p>
+          <div className="flex items-center">
+            <img 
+              src="/stantec-logo.svg" 
+              alt="Stantec Logo" 
+              className="stantec-logo mr-3"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg';
+              }}
+            />
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground animate-fade-in">
+                Emergency Response Planner
+              </h1>
+              <p className="text-muted-foreground mt-1 animate-fade-in" style={{ animationDelay: '100ms' }}>
+                Find and map emergency services near any location
+              </p>
+            </div>
           </div>
           <ExportButton />
         </header>

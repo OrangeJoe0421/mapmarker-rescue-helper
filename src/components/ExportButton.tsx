@@ -80,7 +80,7 @@ const ExportButton = () => {
   return (
     <Button 
       onClick={handleExport}
-      className="bg-blue-600 hover:bg-blue-700"
+      className="bg-primary hover:bg-primary/90 text-primary-foreground"
       disabled={((!userLocation && customMarkers.length === 0) || exporting)}
     >
       <FileDown className={`mr-2 h-4 w-4 ${exporting ? 'animate-bounce' : ''}`} />

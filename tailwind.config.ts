@@ -77,6 +77,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				stantec: {
+					orange: '#F97316',
+					black: '#222222',
+					darkGray: '#333333',
+					mediumGray: '#999999',
+					lightGray: '#cccccc',
+					white: '#ffffff',
 				}
 			},
 			borderRadius: {
