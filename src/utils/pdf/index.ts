@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
@@ -64,7 +65,7 @@ export const exportToPdf = async (data: ExportData) => {
   // Add routes section
   yPosition = addRoutesSection(doc, routes, customMarkers, emergencyServices, userLocation, yPosition);
   
-  // Add detailed route information
+  // Add detailed route information for hospitals and service details
   if (routes.length > 0) {
     addDetailedRouteInformation(doc, routes, customMarkers, emergencyServices, userLocation, pageWidth);
   }

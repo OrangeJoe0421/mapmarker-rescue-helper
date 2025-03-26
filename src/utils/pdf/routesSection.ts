@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Route, CustomMarker, EmergencyService, UserLocation } from '@/types/mapTypes';
@@ -90,97 +91,105 @@ export const addDetailedRouteInformation = (
   doc.rect(10, 10, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
   doc.setTextColor(255, 255, 255); // White text
   doc.setFontSize(16);
-  doc.text('Detailed Route Information', pageWidth / 2, 15, { align: 'center' });
+  doc.text('Hospital Route Information', pageWidth / 2, 15, { align: 'center' });
   let yPosition = 30;
   
-  for (let i = 0; i < routes.length; i++) {
-    const route = routes[i];
-    
-    // Find from and to information
-    let fromEntity: any = customMarkers.find(m => m.id === route.fromId);
-    if (!fromEntity) {
-      fromEntity = emergencyServices.find(s => s.id === route.fromId);
-    }
-    
-    let toEntity: any = null;
-    let toName = 'Project Location';
-    
-    if (route.toId) {
-      toEntity = customMarkers.find(m => m.id === route.toId);
-      if (toEntity) {
-        toName = toEntity.name;
-      }
-    } else if (userLocation) {
-      toEntity = userLocation;
-    }
-    
-    const fromName = fromEntity ? fromEntity.name : 'Unknown';
-    
-    doc.setFontSize(14);
-    doc.text(`Route ${i + 1}: ${fromName} to ${toName}`, 14, yPosition);
-    yPosition += 8;
-    
-    // Route summary
-    const routeDetails = [
-      ['Starting Point', fromName],
-      ['Destination', toName],
-      ['Total Distance', `${route.distance.toFixed(2)} km`],
-      ['Estimated Duration', route.duration ? `${Math.ceil(route.duration)} min` : 'N/A'],
-      ['Average Speed', `${(route.distance / (route.duration ? route.duration / 60 : 0.5)).toFixed(1)} km/h`],
-    ];
-    
-    if (fromEntity) {
-      if (fromEntity.address) {
-        routeDetails.push(['Starting Address', fromEntity.address]);
-      }
-      if (fromEntity.phone) {
-        routeDetails.push(['Starting Point Contact', fromEntity.phone]);
-      }
-    }
-    
-    if (toEntity && 'address' in toEntity) {
-      routeDetails.push(['Destination Address', toEntity.address]);
-    }
-    
-    // Clean table styling without background colors
-    autoTable(doc, {
-      startY: yPosition,
-      head: [['Property', 'Value']],
-      body: routeDetails,
-      theme: 'plain',
-      headStyles: { 
-        fillColor: [255, 255, 255] as any, // White background
-        textColor: [51, 51, 51] as any, // Dark gray text
-        fontStyle: 'bold',
-        cellPadding: 4
-      },
-      alternateRowStyles: {
-        fillColor: [255, 255, 255] as any // White background
-      },
-      margin: { left: 14, right: 14 },
-      styles: {
-        fontSize: 9,
-        cellPadding: 4,
-        lineColor: [220, 220, 220] as any, // Lighter grid lines
-        lineWidth: 0.1 // Thinner lines for a cleaner look
-      },
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        1: { halign: 'left' }
-      }
-    });
-    
-    yPosition = (doc as any).lastAutoTable.finalY + 10;
-    
-    // Add written driving instructions only for hospital routes
-    const isHospital = fromEntity && 
+  // Filter to only include hospital routes
+  const hospitalRoutes = routes.filter(route => {
+    const fromEntity = emergencyServices.find(s => s.id === route.fromId);
+    return fromEntity && 
       'type' in fromEntity && 
       typeof fromEntity.type === 'string' && 
       (fromEntity.type.toLowerCase().includes('hospital') || 
        fromEntity.type.toLowerCase().includes('medical center'));
-    
-    if (isHospital) {
+  });
+  
+  if (hospitalRoutes.length === 0) {
+    doc.setTextColor(51, 51, 51); // Dark gray text
+    doc.setFontSize(12);
+    doc.text('No hospital routes available', 14, yPosition);
+    yPosition += 20;
+  } else {
+    for (let i = 0; i < hospitalRoutes.length; i++) {
+      const route = hospitalRoutes[i];
+      
+      // Find from and to information
+      const fromEntity = emergencyServices.find(s => s.id === route.fromId);
+      
+      let toEntity: any = null;
+      let toName = 'Project Location';
+      
+      if (route.toId) {
+        toEntity = customMarkers.find(m => m.id === route.toId);
+        if (toEntity) {
+          toName = toEntity.name;
+        }
+      } else if (userLocation) {
+        toEntity = userLocation;
+      }
+      
+      const fromName = fromEntity ? fromEntity.name : 'Unknown';
+      
+      doc.setFontSize(14);
+      doc.setTextColor(51, 51, 51); // Dark gray text
+      doc.text(`Route to ${fromName}`, 14, yPosition);
+      yPosition += 8;
+      
+      // Route summary
+      const routeDetails = [
+        ['Starting Point', fromName],
+        ['Destination', toName],
+        ['Total Distance', `${route.distance.toFixed(2)} km`],
+        ['Estimated Duration', route.duration ? `${Math.ceil(route.duration)} min` : 'N/A'],
+        ['Average Speed', `${(route.distance / (route.duration ? route.duration / 60 : 0.5)).toFixed(1)} km/h`],
+      ];
+      
+      if (fromEntity) {
+        if (fromEntity.address) {
+          routeDetails.push(['Starting Address', fromEntity.address]);
+        }
+        if (fromEntity.phone) {
+          routeDetails.push(['Starting Point Contact', fromEntity.phone]);
+        }
+      }
+      
+      if (toEntity && 'address' in toEntity) {
+        routeDetails.push(['Destination Address', toEntity.address]);
+      }
+      
+      // Clean table styling without background colors
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Property', 'Value']],
+        body: routeDetails,
+        theme: 'plain',
+        headStyles: { 
+          fillColor: [51, 51, 51] as any, // Dark background for header
+          textColor: [255, 255, 255] as any, // White text for header
+          fontStyle: 'bold',
+          cellPadding: 4
+        },
+        alternateRowStyles: {
+          fillColor: [255, 255, 255] as any // White background
+        },
+        margin: { left: 14, right: 14 },
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          lineColor: [220, 220, 220] as any, // Lighter grid lines
+          lineWidth: 0.1 // Thinner lines for a cleaner look
+        },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          1: { halign: 'left' }
+        }
+      });
+      
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+      
+      // Add written driving instructions
       doc.setFontSize(12);
+      doc.setTextColor(51, 51, 51); // Dark gray text
       doc.text('Driving Instructions:', 14, yPosition);
       yPosition += 6;
       
@@ -188,7 +197,7 @@ export const addDetailedRouteInformation = (
       if (route.points.length > 1) {
         const instructions = generateRouteInstructions(route, fromName, toName);
         
-        // Clean table styling without background colors
+        // Clean table styling with white header text
         autoTable(doc, {
           startY: yPosition,
           head: [['Step', 'Instruction']],
@@ -198,8 +207,8 @@ export const addDetailedRouteInformation = (
           ]),
           theme: 'plain',
           headStyles: { 
-            fillColor: [255, 255, 255] as any, // White background
-            textColor: [51, 51, 51] as any, // Dark gray text
+            fillColor: [51, 51, 51] as any, // Dark background for header
+            textColor: [255, 255, 255] as any, // White text for header
             fontStyle: 'bold',
             cellPadding: 4
           },
@@ -223,13 +232,145 @@ export const addDetailedRouteInformation = (
         doc.text('Detailed instructions not available for this route.', 14, yPosition);
         yPosition += 10;
       }
+      
+      // Add a page break if we're running out of space and there are more routes
+      if (i < hospitalRoutes.length - 1 && yPosition > 200) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    }
+  }
+  
+  // Add the Service Details section
+  addServiceDetailsSection(doc, emergencyServices, pageWidth);
+};
+
+export const addServiceDetailsSection = (
+  doc: jsPDF,
+  emergencyServices: EmergencyService[],
+  pageWidth: number
+): void => {
+  doc.addPage();
+  doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
+  doc.rect(10, 10, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
+  doc.setTextColor(255, 255, 255); // White text
+  doc.setFontSize(16);
+  doc.text('Service Details', pageWidth / 2, 15, { align: 'center' });
+  
+  let yPosition = 30;
+  
+  if (emergencyServices.length === 0) {
+    doc.setTextColor(51, 51, 51); // Dark gray text
+    doc.setFontSize(12);
+    doc.text('No emergency services available', 14, yPosition);
+    return;
+  }
+  
+  // Group services by type for better organization
+  const serviceTypes = [...new Set(emergencyServices.map(service => 
+    service.type.toLowerCase().includes('hospital') ? 'Hospital' :
+    service.type.toLowerCase().includes('fire') ? 'Fire Department' :
+    service.type.toLowerCase().includes('police') || service.type.toLowerCase().includes('law') ? 'Law Enforcement' :
+    service.type.toLowerCase().includes('ems') ? 'EMS' : 'Other'
+  ))];
+  
+  for (const type of serviceTypes) {
+    // Filter services by current type
+    const typeServices = emergencyServices.filter(service => {
+      const serviceType = service.type.toLowerCase();
+      return (
+        (type === 'Hospital' && serviceType.includes('hospital')) ||
+        (type === 'Fire Department' && serviceType.includes('fire')) ||
+        (type === 'Law Enforcement' && (serviceType.includes('police') || serviceType.includes('law'))) ||
+        (type === 'EMS' && serviceType.includes('ems')) ||
+        (type === 'Other' && !serviceType.includes('hospital') && !serviceType.includes('fire') && 
+         !serviceType.includes('police') && !serviceType.includes('law') && !serviceType.includes('ems'))
+      );
+    });
+    
+    if (typeServices.length === 0) continue;
+    
+    // Section header for each type
+    doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
+    doc.rect(10, yPosition - 5, doc.internal.pageSize.getWidth() - 20, 10, 'F');
+    doc.setTextColor(255, 255, 255); // White text
+    doc.setFontSize(14);
+    doc.text(type, 14, yPosition);
+    yPosition += 10;
+    
+    for (const service of typeServices) {
+      // Create a card-like section for each service
+      doc.setFillColor(245, 245, 245, 0.5); // Very light gray background
+      doc.rect(14, yPosition, pageWidth - 28, 60, 'F');
+      
+      // Service name
+      doc.setTextColor(51, 51, 51); // Dark gray text
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(service.name, 20, yPosition + 10);
+      
+      // Service type
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(service.type, 20, yPosition + 20);
+      
+      // Details in two columns
+      const leftColumn = 20;
+      const rightColumn = pageWidth / 2;
+      let detailsY = yPosition + 30;
+      
+      // Left column
+      if (service.address) {
+        doc.setFontSize(9);
+        doc.text('Address:', leftColumn, detailsY);
+        doc.text(service.address, leftColumn + 35, detailsY);
+        detailsY += 8;
+      }
+      
+      if (service.phone) {
+        doc.setFontSize(9);
+        doc.text('Phone:', leftColumn, detailsY);
+        doc.text(service.phone, leftColumn + 35, detailsY);
+        detailsY += 8;
+      }
+      
+      // Right column
+      detailsY = yPosition + 30;
+      
+      if (service.hours) {
+        doc.setFontSize(9);
+        doc.text('Hours:', rightColumn, detailsY);
+        doc.text(service.hours, rightColumn + 35, detailsY);
+        detailsY += 8;
+      }
+      
+      if (service.road_distance !== undefined) {
+        doc.setFontSize(9);
+        doc.text('Distance:', rightColumn, detailsY);
+        doc.text(`${service.road_distance.toFixed(2)} km from project`, rightColumn + 35, detailsY);
+        detailsY += 8;
+      }
+      
+      // For hospitals, add emergency room verification
+      if (service.type.toLowerCase().includes('hospital')) {
+        const hasER = service.verification?.hasEmergencyRoom;
+        const erStatus = hasER ? 'Yes - Verified' : 'Not verified';
+        
+        doc.setFontSize(9);
+        doc.text('Emergency Room:', leftColumn, detailsY);
+        doc.text(erStatus, leftColumn + 35, detailsY);
+      }
+      
+      yPosition += 70; // Move to next service with spacing
+      
+      // Add page break if needed
+      if (yPosition > doc.internal.pageSize.getHeight() - 60) {
+        doc.addPage();
+        yPosition = 20;
+      }
     }
     
-    // Add a page break if we're running out of space and there are more routes
-    if (i < routes.length - 1 && yPosition > 200) {
-      doc.addPage();
-      yPosition = 20;
-    }
+    yPosition += 10; // Add space after each service type group
   }
 };
 
