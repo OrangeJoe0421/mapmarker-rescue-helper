@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Route, CustomMarker, EmergencyService, UserLocation } from '@/types/mapTypes';
@@ -241,9 +240,6 @@ export const addDetailedRouteInformation = (
       }
     }
   }
-  
-  // Add the Service Details section
-  addServiceDetailsSection(doc, emergencyServices, pageWidth);
 };
 
 export const addServiceDetailsSection = (
@@ -300,12 +296,12 @@ export const addServiceDetailsSection = (
     yPosition += 10;
     
     for (const service of typeServices) {
-      // Create a card-like section for each service
+      // Create a card-like section for each service with a light background instead of dark
       doc.setFillColor(245, 245, 245, 0.5); // Very light gray background
       doc.rect(14, yPosition, pageWidth - 28, 60, 'F');
       
       // Service name
-      doc.setTextColor(51, 51, 51); // Dark gray text
+      doc.setTextColor(51, 51, 51); // Dark gray text for all text elements
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text(service.name, 20, yPosition + 10);
