@@ -3,7 +3,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Route, CustomMarker, EmergencyService, UserLocation } from '@/types/mapTypes';
 
-export const addRoutesSection = (
+// We're not exporting this function anymore since we're not using it in the new structure
+const addRoutesSection = (
   doc: jsPDF,
   routes: Route[],
   customMarkers: CustomMarker[],

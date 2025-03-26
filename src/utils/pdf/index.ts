@@ -1,9 +1,8 @@
-
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
 import { addEmergencyServicesSection } from './emergencyServicesSection';
-import { addRoutesSection, addDetailedRouteInformation } from './routesSection';
+import { addServiceDetailsSection, addDetailedRouteInformation } from './routesSection';
 import { addPdfFooter } from './pdfFooter';
 import { mapCaptureService } from '../../components/MapCapture';
 
@@ -50,22 +49,16 @@ export const exportToPdf = async (data: ExportData) => {
   
   let yPosition = 60; // Start content further down after the header
   
-  // Add project location section
+  // 1. Add project location section
   yPosition = addProjectLocationSection(doc, userLocation, yPosition);
   
-  // Add emergency services section
+  // 2. Add emergency services section
   yPosition = addEmergencyServicesSection(doc, emergencyServices, yPosition);
   
-  // Check if we need a new page
-  if (yPosition > 230) {
-    doc.addPage();
-    yPosition = 20;
-  }
+  // 3. Add service details section (moved here from the end)
+  addServiceDetailsSection(doc, emergencyServices, pageWidth);
   
-  // Add routes section
-  yPosition = addRoutesSection(doc, routes, customMarkers, emergencyServices, userLocation, yPosition);
-  
-  // Add detailed route information for hospitals and service details
+  // 4. Add detailed route information for hospitals (only hospital routes)
   if (routes.length > 0) {
     addDetailedRouteInformation(doc, routes, customMarkers, emergencyServices, userLocation, pageWidth);
   }
