@@ -90,19 +90,21 @@ const MapCapture = () => {
 
       console.info("Map element found:", mapElement);
 
-      // Ensure the map routes are in a visible state
+      // Ensure the map routes are in a visible state before capture
       const routeLines = document.querySelectorAll('.leaflet-overlay-pane path');
       console.info(`Found ${routeLines.length} route lines`);
       
+      // Apply SVG attributes directly for better capture compatibility
       routeLines.forEach((line, index) => {
         console.info(`Enhancing route line ${index}`);
-        (line as HTMLElement).style.strokeWidth = '8px';
-        (line as HTMLElement).style.stroke = '#FF3B30';
-        (line as HTMLElement).style.opacity = '1';
+        const svgElement = line as SVGElement;
+        svgElement.setAttribute('stroke', '#FF3B30');
+        svgElement.setAttribute('stroke-width', '8');
+        svgElement.setAttribute('opacity', '1');
       });
 
       // Wait a moment for styles to apply
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Use html2canvas for direct screen capture with improved settings
       console.info("Starting html2canvas capture");
@@ -121,9 +123,11 @@ const MapCapture = () => {
           console.info("Preparing cloned document for capture");
           const routeLinesInClone = documentClone.querySelectorAll('.leaflet-overlay-pane path');
           routeLinesInClone.forEach((line) => {
-            (line as HTMLElement).style.strokeWidth = '8px';
-            (line as HTMLElement).style.stroke = '#FF3B30';
-            (line as HTMLElement).style.opacity = '1';
+            // Using setAttribute which works for SVG elements
+            const svgElement = line as SVGElement;
+            svgElement.setAttribute('stroke', '#FF3B30');
+            svgElement.setAttribute('stroke-width', '8');
+            svgElement.setAttribute('opacity', '1');
           });
         }
       });
