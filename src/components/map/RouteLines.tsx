@@ -68,8 +68,12 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
                 pathElement.setAttribute('stroke-opacity', '1');
                 pathElement.setAttribute('stroke-linecap', 'round');
                 pathElement.setAttribute('stroke-linejoin', 'round');
-                pathElement.style.visibility = 'visible';
-                pathElement.style.display = 'block';
+                
+                // Fix: Cast the element to HTMLElement before accessing style property
+                if (pathElement instanceof HTMLElement) {
+                  pathElement.style.visibility = 'visible';
+                  pathElement.style.display = 'block';
+                }
               }
             }
           }}
