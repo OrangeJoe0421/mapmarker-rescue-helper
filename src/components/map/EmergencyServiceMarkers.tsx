@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import { getServiceIcon } from './MapIcons';
@@ -51,7 +52,7 @@ const EmergencyServiceMarkers: React.FC<EmergencyServiceMarkersProps> = ({
               <p className="text-xs mt-1">Hours: {service.hours}</p>
             )}
             
-            {/* Add the verification component */}
+            {/* Add the verification component with proper props */}
             <EmergencyRoomVerification service={service} />
             
             <div className="flex mt-3 gap-2">

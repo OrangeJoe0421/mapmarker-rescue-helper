@@ -8,13 +8,13 @@ export const addEmergencyServicesSection = (
   emergencyServices: EmergencyService[],
   yPosition: number
 ): number => {
-  // Add a modern section header
-  doc.setFillColor(34, 34, 34); // Dark background
+  // Add a modern section header - more subtle with gradient effect
+  doc.setFillColor(60, 60, 60, 0.9); // Dark background with transparency
   doc.rect(10, yPosition - 5, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
   doc.setTextColor(255, 255, 255); // White text
   doc.setFontSize(14);
   doc.text('Emergency Services', 14, yPosition);
-  doc.setTextColor(0, 0, 0); // Reset text color
+  doc.setTextColor(51, 51, 51); // Reset to dark gray text
   yPosition += 10;
   
   if (emergencyServices.length > 0) {
@@ -28,23 +28,32 @@ export const addEmergencyServicesSection = (
       service.hours || 'N/A'
     ]);
     
+    // More modern table styling
     autoTable(doc, {
       startY: yPosition,
       head: [['Name', 'Type', 'Distance', 'ER Available', 'Phone', 'Address', 'Hours']],
       body: emergencyServicesData,
       theme: 'grid',
       headStyles: { 
-        fillColor: [249, 115, 22], // Stantec orange (#F97316)
+        fillColor: [249, 115, 22, 0.85], // Stantec orange with transparency
         textColor: 255,
-        fontStyle: 'bold'
+        fontStyle: 'bold',
+        cellPadding: 4
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245]
+        fillColor: [245, 245, 245, 0.5] // Very light gray with transparency
       },
       margin: { left: 10, right: 10 },
       styles: {
-        fontSize: 10,
-        cellPadding: 3
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [220, 220, 220], // Lighter grid lines
+        lineWidth: 0.1 // Thinner lines for a cleaner look
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        2: { halign: 'center' },
+        3: { halign: 'center' }
       }
     });
     

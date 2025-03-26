@@ -36,28 +36,28 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     if (!capturedImage) {
       // Add a message if no map was captured
       doc.addPage();
-      doc.setFillColor(249, 115, 22); // Stantec orange
+      doc.setFillColor(249, 115, 22, 0.8); // Stantec orange with transparency
       doc.rect(0, 0, pageWidth, 20, 'F'); // Orange header
       doc.setTextColor(255, 255, 255); // White text
       doc.setFontSize(16);
       doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
-      doc.setTextColor(0, 0, 0); // Reset text color
+      doc.setTextColor(51, 51, 51); // Dark gray text
       doc.setFontSize(12);
       doc.text('No map capture available. Use the "Capture Map" button before exporting.', 
-        pageWidth / 2, 40, { align: 'center', maxWidth: pageWidth - 20 });
+        pageWidth / 2, 40, { align: 'center', maxWidth: pageWidth - 40 });
       return;
     }
     
     // Add a new page for the map
     doc.addPage();
     
-    // Stantec orange header
-    doc.setFillColor(249, 115, 22); // Stantec orange
-    doc.rect(0, 0, pageWidth, 20, 'F'); // Orange header
+    // Stantec orange header with slight transparency for a more modern look
+    doc.setFillColor(249, 115, 22, 0.8);
+    doc.rect(0, 0, pageWidth, 20, 'F');
     doc.setTextColor(255, 255, 255); // White text
     doc.setFontSize(16);
     doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
-    doc.setTextColor(0, 0, 0); // Reset text color
+    doc.setTextColor(51, 51, 51); // Dark gray for better readability
     
     // Add capture timestamp if available
     if (captureTime) {
@@ -66,31 +66,31 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     }
     
     // Calculate dimensions to fit on the page while maintaining aspect ratio
-    const imgWidth = pageWidth - 20; // Margins
+    const imgWidth = pageWidth - 40; // More margin for a cleaner look
     
     // Use a fixed height to avoid scaling issues
     const imgHeight = 180; // Fixed reasonable height that works well for most maps
     
     // Add the map image to the PDF with fixed dimensions and move it down a bit to make room for the timestamp
-    doc.addImage(capturedImage, 'PNG', 10, 30, imgWidth, imgHeight);
+    doc.addImage(capturedImage, 'PNG', 20, 35, imgWidth, imgHeight);
     
-    // Add a note about the map capture
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100); // Gray text color
+    // Add a note about the map capture with more subtle styling
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120); // Lighter gray text color for notes
     doc.text('Note: Map reflects the view at time of capture. To update the map view, use "Capture Map" again.', 
-      pageWidth / 2, imgHeight + 40, { align: 'center', maxWidth: pageWidth - 20 });
-    doc.setTextColor(0, 0, 0); // Reset text color
+      pageWidth / 2, imgHeight + 45, { align: 'center', maxWidth: pageWidth - 40 });
+    doc.setTextColor(51, 51, 51); // Reset text color to standard
     
   } catch (error) {
     console.error('Error adding captured map to PDF:', error);
     // Add a page with an error message if map capture fails
     doc.addPage();
-    doc.setFillColor(249, 115, 22); // Stantec orange
-    doc.rect(0, 0, pageWidth, 20, 'F'); // Orange header
-    doc.setTextColor(255, 255, 255); // White text
+    doc.setFillColor(249, 115, 22, 0.8);
+    doc.rect(0, 0, pageWidth, 20, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
-    doc.setTextColor(0, 0, 0); // Reset text color
+    doc.setTextColor(51, 51, 51);
     doc.setFontSize(12);
     doc.text('Error adding map image to the report', pageWidth / 2, 40, { align: 'center' });
   }
@@ -103,24 +103,27 @@ export const exportToPdf = async (data: ExportData) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Add Stantec brand color as the header
-  doc.setFillColor(249, 115, 22); // Stantec orange (#F97316)
-  doc.rect(0, 0, pageWidth, 40, 'F'); // Orange header
+  // Add a subtle gradient-like header instead of solid color block
+  // Create gradient effect with multiple rectangles of decreasing opacity
+  doc.setFillColor(249, 115, 22, 0.9); // Stantec orange with 90% opacity
+  doc.rect(0, 0, pageWidth, 40, 'F');
+  doc.setFillColor(249, 115, 22, 0.2); // Lower opacity for gradient effect
+  doc.rect(0, 40, pageWidth, 10, 'F');
 
   // Add Stantec logo
   addStantecLogo(doc, pageWidth);
   
   // Add title with white text color
   doc.setTextColor(255, 255, 255); // White text
-  doc.setFontSize(20);
-  doc.text('Emergency Response Plan', pageWidth / 2, 20, { align: 'center' });
+  doc.setFontSize(22);
+  doc.text('Emergency Response Plan', pageWidth / 2, 22, { align: 'center' });
   doc.setFontSize(12);
-  doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 30, { align: 'center' });
+  doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 32, { align: 'center' });
   
-  // Reset text color to black for remaining content
-  doc.setTextColor(0, 0, 0);
+  // Reset text color to a softer black for better readability
+  doc.setTextColor(51, 51, 51);
   
-  let yPosition = 50; // Start content after header
+  let yPosition = 60; // Start content further down after the gradient header
   
   // Add project location section
   yPosition = addProjectLocationSection(doc, userLocation, yPosition);
