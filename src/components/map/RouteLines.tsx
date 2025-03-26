@@ -45,6 +45,7 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
                     htmlElement.style.stroke = '#FF3B30';
                     htmlElement.style.strokeWidth = '6px';
                     htmlElement.style.opacity = '1';
+                    htmlElement.classList.add('route-line-visible');
                   }
                 }
               });
@@ -112,4 +113,3 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
 };
 
 export default RouteLines;
-

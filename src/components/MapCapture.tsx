@@ -65,34 +65,35 @@ const MapCapture = () => {
         return;
       }
       
-      // First, add a temporary class to ensure route lines are visible in the capture
+      // First, enhance the visibility of routes for the capture
       const routeElements = document.querySelectorAll('.leaflet-overlay-pane path');
       routeElements.forEach(route => {
         route.classList.add('capture-visible');
+        (route as HTMLElement).style.strokeWidth = '6px';
+        (route as HTMLElement).style.stroke = '#FF3B30';
+        (route as HTMLElement).style.opacity = '1';
       });
       
-      // Wait a moment to ensure all rendering is complete before capture
+      // Get the exact dimensions and position of the map on screen
+      const rect = mapElement.getBoundingClientRect();
+      
+      // Wait a moment to ensure all styling is applied
       setTimeout(async () => {
         try {
-          // Use html2canvas with improved settings
-          const canvas = await html2canvas(mapElement, {
+          // Use html2canvas with direct screen coordinates
+          const canvas = await html2canvas(document.body, {
             useCORS: true,
             allowTaint: true,
             backgroundColor: null,
             scale: 2, // Higher resolution
             logging: false,
-            onclone: (clonedDoc) => {
-              // Apply additional styling to the cloned document to enhance route visibility
-              const clonedRoutes = clonedDoc.querySelectorAll('.leaflet-overlay-pane path');
-              clonedRoutes.forEach(route => {
-                (route as HTMLElement).style.strokeWidth = '6px';
-                (route as HTMLElement).style.stroke = '#FF3B30';
-                (route as HTMLElement).style.opacity = '1';
-              });
-            }
+            x: rect.left, // Capture from the left edge of the map
+            y: rect.top, // Capture from the top edge of the map
+            width: rect.width, // Only capture the width of the map
+            height: rect.height, // Only capture the height of the map
           });
           
-          // Remove the temporary class
+          // Remove the temporary styling
           routeElements.forEach(route => {
             route.classList.remove('capture-visible');
           });
