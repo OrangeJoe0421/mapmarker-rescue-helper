@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
@@ -8,6 +9,17 @@ import { mapCaptureService } from '../../components/MapCapture';
 
 export * from './types';
 
+// Add logo to PDF
+const addStantecLogo = (doc: jsPDF, pageWidth: number) => {
+  try {
+    // Try to add the Stantec logo (ensure it's available in public assets)
+    doc.addImage('/stantec-logo-orange.png', 'PNG', 10, 10, 30, 30);
+  } catch (error) {
+    console.error('Error adding Stantec logo:', error);
+    // If logo not found, continue without it
+  }
+};
+
 // Improved function to add the captured map to PDF
 const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
   try {
@@ -17,8 +29,12 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     if (!capturedImage) {
       // Add a message if no map was captured
       doc.addPage();
+      doc.setFillColor(34, 34, 34); // Dark background
+      doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+      doc.setTextColor(255, 255, 255); // White text
       doc.setFontSize(16);
       doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
+      doc.setTextColor(0, 0, 0); // Reset text color
       doc.setFontSize(12);
       doc.text('No map capture available. Use the "Capture Map" button before exporting.', 
         pageWidth / 2, 40, { align: 'center', maxWidth: pageWidth - 20 });
@@ -27,8 +43,14 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     
     // Add a new page for the map
     doc.addPage();
+    
+    // Modern dark header
+    doc.setFillColor(34, 34, 34); // Dark background
+    doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+    doc.setTextColor(255, 255, 255); // White text
     doc.setFontSize(16);
     doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
+    doc.setTextColor(0, 0, 0); // Reset text color
     
     // Add capture timestamp if available
     if (captureTime) {
@@ -56,8 +78,12 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     console.error('Error adding captured map to PDF:', error);
     // Add a page with an error message if map capture fails
     doc.addPage();
+    doc.setFillColor(34, 34, 34); // Dark background
+    doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+    doc.setTextColor(255, 255, 255); // White text
     doc.setFontSize(16);
     doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
+    doc.setTextColor(0, 0, 0); // Reset text color
     doc.setFontSize(12);
     doc.text('Error adding map image to the report', pageWidth / 2, 40, { align: 'center' });
   }
@@ -70,13 +96,24 @@ export const exportToPdf = async (data: ExportData) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Add title
-  doc.setFontSize(20);
-  doc.text('Emergency Response Plan', pageWidth / 2, 15, { align: 'center' });
-  doc.setFontSize(12);
-  doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 22, { align: 'center' });
+  // Add Stantec brand color as the header
+  doc.setFillColor(249, 115, 22); // Stantec orange (#F97316)
+  doc.rect(0, 0, pageWidth, 40, 'F'); // Orange header
+
+  // Add Stantec logo
+  addStantecLogo(doc, pageWidth);
   
-  let yPosition = 30;
+  // Add title with white text color
+  doc.setTextColor(255, 255, 255); // White text
+  doc.setFontSize(20);
+  doc.text('Emergency Response Plan', pageWidth / 2, 20, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 30, { align: 'center' });
+  
+  // Reset text color to black for remaining content
+  doc.setTextColor(0, 0, 0);
+  
+  let yPosition = 50; // Start content after header
   
   // Add project location section
   yPosition = addProjectLocationSection(doc, userLocation, yPosition);

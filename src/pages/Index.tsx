@@ -45,9 +45,9 @@ const Index = () => {
         <header className="mb-6 flex justify-between items-center">
           <div className="flex items-center">
             <img 
-              src="/stantec-logo.svg" 
+              src="/stantec-logo-orange.png" 
               alt="Stantec Logo" 
-              className="stantec-logo mr-3"
+              className="stantec-logo mr-3 h-10 md:h-12"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg';
