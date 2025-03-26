@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint } from '@/types/mapTypes';
@@ -51,7 +50,7 @@ export const createRoutesSlice: StateCreator<
       toast.error('Destination not set');
       return;
     }
-
+    
     // Clear any existing routes with this source to avoid clutter
     set(state => ({
       routes: state.routes.filter(route => route.fromId !== fromId)

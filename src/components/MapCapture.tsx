@@ -12,11 +12,13 @@ export const mapCaptureService = {
   capturedImage: null as string | null,
   capturedAt: null as Date | null,
   routeSnapshot: [] as Route[],
+  staleFlag: false,
   
   setCapturedImage(imageData: string | null) {
     this.capturedImage = imageData;
     this.capturedAt = imageData ? new Date() : null;
     this.routeSnapshot = [];
+    this.staleFlag = false;
   },
   
   getCapturedImage() {
@@ -50,10 +52,24 @@ export const mapCaptureService = {
     return false;
   },
   
+  // Add the missing isCaptureStale method
+  isCaptureStale() {
+    // Return the stale flag value
+    return this.staleFlag;
+  },
+  
+  // Add the missing markCaptureStaleDueToRouteChange method
+  markCaptureStaleDueToRouteChange() {
+    // Set the stale flag to true when routes change
+    this.staleFlag = true;
+    console.info('Map capture marked as stale due to route change');
+  },
+  
   clearCapture() {
     this.capturedImage = null;
     this.capturedAt = null;
     this.routeSnapshot = [];
+    this.staleFlag = false;
   }
 };
 

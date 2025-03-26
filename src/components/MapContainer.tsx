@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import LeafletMapMarkers from './LeafletMapMarkers';
 import { useMapStore } from '../store/useMapStore';
