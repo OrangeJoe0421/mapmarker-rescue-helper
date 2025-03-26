@@ -9,7 +9,7 @@ export const addProjectLocationSection = (
   yPosition: number
 ): number => {
   // Use a more subtle, professional header style
-  doc.setFillColor(249, 115, 22, 0.1); // Light Stantec orange with low opacity
+  doc.setFillColor(240, 240, 240, 0.5); // Light gray with low opacity
   doc.rect(10, yPosition - 5, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
   doc.setTextColor(51, 51, 51); // Dark gray text for better readability
   doc.setFontSize(14);
@@ -43,13 +43,13 @@ export const addProjectLocationSection = (
       body: userLocationData,
       theme: 'grid',
       headStyles: { 
-        fillColor: [249, 115, 22, 0.2] as any, // Very light Stantec orange
+        fillColor: [240, 240, 240] as any, // Very light gray
         textColor: [51, 51, 51] as any, // Dark gray text
         fontStyle: 'bold',
         cellPadding: 4
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245, 0.5] as any // Very light gray with transparency
+        fillColor: [250, 250, 250, 0.5] as any // Ultra light gray with transparency
       },
       margin: { left: 10, right: 10 },
       styles: {
@@ -59,7 +59,7 @@ export const addProjectLocationSection = (
         lineWidth: 0.1 // Thinner lines for a cleaner look
       },
       columnStyles: {
-        0: { fontStyle: 'bold', fillColor: [249, 115, 22, 0.1] as any }, // Very light orange for property names
+        0: { fontStyle: 'bold', fillColor: [240, 240, 240, 0.1] as any }, // Very light gray for property names
         1: { halign: 'left' }
       }
     });

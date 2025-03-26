@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
@@ -9,7 +8,7 @@ import { mapCaptureService } from '../../components/MapCapture';
 
 export * from './types';
 
-// Add logo to PDF
+// Add Stantec logo to PDF
 const addStantecLogo = (doc: jsPDF, pageWidth: number) => {
   try {
     // Try to add the Stantec logo with the correct path
@@ -103,27 +102,21 @@ export const exportToPdf = async (data: ExportData) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Add a subtle gradient-like header instead of solid color block
-  // Create gradient effect with multiple rectangles of decreasing opacity
-  doc.setFillColor(249, 115, 22, 0.9); // Stantec orange with 90% opacity
+  // Soft, clean header gradient
+  doc.setFillColor(240, 240, 240, 0.5); // Light gray with low opacity
   doc.rect(0, 0, pageWidth, 40, 'F');
-  doc.setFillColor(249, 115, 22, 0.2); // Lower opacity for gradient effect
-  doc.rect(0, 40, pageWidth, 10, 'F');
 
   // Add Stantec logo
   addStantecLogo(doc, pageWidth);
   
-  // Add title with white text color
-  doc.setTextColor(255, 255, 255); // White text
+  // Add title with soft, professional styling
+  doc.setTextColor(51, 51, 51); // Dark gray text
   doc.setFontSize(22);
   doc.text('Emergency Response Plan', pageWidth / 2, 22, { align: 'center' });
   doc.setFontSize(12);
   doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 32, { align: 'center' });
   
-  // Reset text color to a softer black for better readability
-  doc.setTextColor(51, 51, 51);
-  
-  let yPosition = 60; // Start content further down after the gradient header
+  let yPosition = 60; // Start content further down after the header
   
   // Add project location section
   yPosition = addProjectLocationSection(doc, userLocation, yPosition);
