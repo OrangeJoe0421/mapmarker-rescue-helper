@@ -28,20 +28,20 @@ export const addEmergencyServicesSection = (
       service.hours || 'N/A'
     ]);
     
-    // More modern, subtle table styling
+    // Clean table styling without background colors
     autoTable(doc, {
       startY: yPosition,
       head: [['Name', 'Type', 'Distance', 'ER Available', 'Phone', 'Address', 'Hours']],
       body: emergencyServicesData,
-      theme: 'grid',
+      theme: 'plain',
       headStyles: { 
-        fillColor: [240, 240, 240] as any, // Very light gray
+        fillColor: [255, 255, 255] as any, // White background
         textColor: [51, 51, 51] as any, // Dark gray text
         fontStyle: 'bold',
         cellPadding: 4
       },
       alternateRowStyles: {
-        fillColor: [250, 250, 250, 0.5] as any // Ultra light gray with transparency
+        fillColor: [255, 255, 255] as any // White background
       },
       margin: { left: 10, right: 10 },
       styles: {

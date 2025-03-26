@@ -11,9 +11,13 @@ export const addRoutesSection = (
   userLocation: UserLocation | null,
   yPosition: number
 ): number => {
-  doc.setFontSize(16);
+  // Use a more subtle, professional header style
+  doc.setFillColor(240, 240, 240, 0.5); // Light gray with low opacity
+  doc.rect(10, yPosition - 5, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
+  doc.setTextColor(51, 51, 51); // Dark gray text for better readability
+  doc.setFontSize(14);
   doc.text('Routes', 14, yPosition);
-  yPosition += 8;
+  yPosition += 10;
   
   if (routes.length > 0) {
     // Basic routes summary table
@@ -38,13 +42,28 @@ export const addRoutesSection = (
       ];
     });
     
+    // Clean table styling without background colors
     autoTable(doc, {
       startY: yPosition,
       head: [['From', 'To', 'Distance', 'Est. Duration']],
       body: routesData,
-      theme: 'grid',
-      headStyles: { fillColor: [142, 68, 173], textColor: 255 },
-      margin: { left: 14, right: 14 }
+      theme: 'plain',
+      headStyles: { 
+        fillColor: [255, 255, 255] as any, // White background
+        textColor: [51, 51, 51] as any, // Dark gray text
+        fontStyle: 'bold',
+        cellPadding: 4
+      },
+      alternateRowStyles: {
+        fillColor: [255, 255, 255] as any // White background
+      },
+      margin: { left: 14, right: 14 },
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [220, 220, 220] as any, // Lighter grid lines
+        lineWidth: 0.1 // Thinner lines for a cleaner look
+      }
     });
     
     yPosition = (doc as any).lastAutoTable.finalY + 10;
@@ -67,6 +86,11 @@ export const addDetailedRouteInformation = (
 ): void => {
   // Add detailed route information on a new page
   doc.addPage();
+  
+  // Use a more subtle, professional header style
+  doc.setFillColor(240, 240, 240, 0.5); // Light gray with low opacity
+  doc.rect(10, 10, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
+  doc.setTextColor(51, 51, 51); // Dark gray text for better readability
   doc.setFontSize(16);
   doc.text('Detailed Route Information', pageWidth / 2, 15, { align: 'center' });
   let yPosition = 30;
@@ -120,13 +144,32 @@ export const addDetailedRouteInformation = (
       routeDetails.push(['Destination Address', toEntity.address]);
     }
     
+    // Clean table styling without background colors
     autoTable(doc, {
       startY: yPosition,
       head: [['Property', 'Value']],
       body: routeDetails,
-      theme: 'grid',
-      headStyles: { fillColor: [155, 89, 182], textColor: 255 },
-      margin: { left: 14, right: 14 }
+      theme: 'plain',
+      headStyles: { 
+        fillColor: [255, 255, 255] as any, // White background
+        textColor: [51, 51, 51] as any, // Dark gray text
+        fontStyle: 'bold',
+        cellPadding: 4
+      },
+      alternateRowStyles: {
+        fillColor: [255, 255, 255] as any // White background
+      },
+      margin: { left: 14, right: 14 },
+      styles: {
+        fontSize: 9,
+        cellPadding: 4,
+        lineColor: [220, 220, 220] as any, // Lighter grid lines
+        lineWidth: 0.1 // Thinner lines for a cleaner look
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'left' }
+      }
     });
     
     yPosition = (doc as any).lastAutoTable.finalY + 10;
@@ -147,6 +190,7 @@ export const addDetailedRouteInformation = (
       if (route.points.length > 1) {
         const instructions = generateRouteInstructions(route, fromName, toName);
         
+        // Clean table styling without background colors
         autoTable(doc, {
           startY: yPosition,
           head: [['Step', 'Instruction']],
@@ -154,9 +198,24 @@ export const addDetailedRouteInformation = (
             (index + 1).toString(),
             instruction
           ]),
-          theme: 'grid',
-          headStyles: { fillColor: [155, 89, 182], textColor: 255 },
-          styles: { overflow: 'linebreak', cellWidth: 'auto' },
+          theme: 'plain',
+          headStyles: { 
+            fillColor: [255, 255, 255] as any, // White background
+            textColor: [51, 51, 51] as any, // Dark gray text
+            fontStyle: 'bold',
+            cellPadding: 4
+          },
+          alternateRowStyles: {
+            fillColor: [255, 255, 255] as any // White background
+          },
+          styles: { 
+            overflow: 'linebreak', 
+            cellWidth: 'auto',
+            fontSize: 9,
+            cellPadding: 4,
+            lineColor: [220, 220, 220] as any, // Lighter grid lines
+            lineWidth: 0.1 // Thinner lines for a cleaner look
+          },
           columnStyles: { 0: { cellWidth: 30 } },
           margin: { left: 14, right: 14 }
         });
