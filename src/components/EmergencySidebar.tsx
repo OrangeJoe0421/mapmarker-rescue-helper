@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -22,7 +21,9 @@ import {
   AlertCircle,
   FileText,
   Hash,
-  Globe
+  Globe,
+  Route,
+  Ambulance
 } from 'lucide-react';
 import MarkerMetadataForm from './MarkerMetadataForm';
 import LocationMetadataForm from './LocationMetadataForm';
@@ -50,10 +51,10 @@ const EmergencySidebar = () => {
     deleteCustomMarker,
     selectService,
     selectMarker,
-    clearAll
+    clearAll,
+    calculateRoutesForAllEMS
   } = useMapStore();
 
-  // Find the marker being edited
   const markerBeingEdited = editingMarkerId ? 
     customMarkers.find(marker => marker.id === editingMarkerId) : null;
 
@@ -140,7 +141,6 @@ const EmergencySidebar = () => {
           <TabsTrigger value="markers">Markers</TabsTrigger>
         </TabsList>
         
-        {/* Search Tab */}
         <TabsContent value="search" className="animate-fade-in">
           <Card className="glass-card">
             <CardHeader>
@@ -239,7 +239,6 @@ const EmergencySidebar = () => {
           </Card>
         </TabsContent>
         
-        {/* Results Tab */}
         <TabsContent value="results" className="animate-fade-in">
           <Card className="glass-card">
             <CardHeader>
@@ -315,6 +314,18 @@ const EmergencySidebar = () => {
               )}
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
+              {userLocation && emergencyServices.length > 0 && (
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => calculateRoutesForAllEMS()}
+                >
+                  <Ambulance className="mr-2 h-4 w-4" />
+                  Route All EMS to Location
+                </Button>
+              )}
+              
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -391,7 +402,6 @@ const EmergencySidebar = () => {
           )}
         </TabsContent>
         
-        {/* Markers Tab */}
         <TabsContent value="markers" className="animate-fade-in">
           <Card className="glass-card">
             <CardHeader>
@@ -426,7 +436,6 @@ const EmergencySidebar = () => {
                               {marker.latitude.toFixed(5)}, {marker.longitude.toFixed(5)}
                             </p>
                             
-                            {/* Show metadata if available */}
                             {marker.metadata && Object.keys(marker.metadata).length > 0 && (
                               <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
                                 {marker.metadata.projectNumber && (
@@ -533,7 +542,6 @@ const EmergencySidebar = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Metadata editing dialog for markers */}
       <Dialog open={!!editingMarkerId} onOpenChange={(open) => !open && setEditingMarkerId(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogTitle>Edit Marker Metadata</DialogTitle>
@@ -546,7 +554,6 @@ const EmergencySidebar = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Metadata editing dialog for location */}
       <Dialog open={isEditingLocationMetadata} onOpenChange={setIsEditingLocationMetadata}>
         <DialogContent className="sm:max-w-md">
           <DialogTitle>Edit Location Metadata</DialogTitle>

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Camera, RefreshCw } from 'lucide-react';
@@ -6,7 +5,7 @@ import { toast } from 'sonner';
 import { useMapStore } from '../store/useMapStore';
 import html2canvas from 'html2canvas';
 import { Route } from '../types/mapTypes';
-import { esriConfig } from '@arcgis/core/config';
+import esriConfig from '@arcgis/core/config';
 
 // Create a service to store the captured image
 export const mapCaptureService = {

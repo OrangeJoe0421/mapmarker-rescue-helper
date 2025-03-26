@@ -5,9 +5,11 @@ import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
 import ExportButton from '@/components/ExportButton';
 import { useToast } from '@/components/ui/use-toast';
+import { useMapStore } from '@/store/useMapStore';
 
 const Index = () => {
   const { toast } = useToast();
+  const { userLocation, emergencyServices, calculateRoutesForAllEMS } = useMapStore();
 
   useEffect(() => {
     // Welcome toast
@@ -17,6 +19,18 @@ const Index = () => {
       duration: 5000,
     });
   }, [toast]);
+
+  // Effect to automatically calculate routes when emergency services are loaded
+  useEffect(() => {
+    if (userLocation && emergencyServices.length > 0) {
+      // Slight delay to ensure the UI has updated
+      const timer = setTimeout(() => {
+        calculateRoutesForAllEMS();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [userLocation, emergencyServices.length, calculateRoutesForAllEMS]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">

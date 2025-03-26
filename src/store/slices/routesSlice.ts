@@ -1,6 +1,7 @@
+
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
-import { Route, RoutePoint } from '@/types/mapTypes';
+import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
 import { fetchRoutePath } from '@/services/emergencyService';
 import { mapCaptureService } from '@/components/MapCapture';
@@ -10,6 +11,7 @@ export interface RoutesState {
   
   // Actions
   calculateRoute: (fromId: string, toUserLocation: boolean) => Promise<void>;
+  calculateRoutesForAllEMS: () => Promise<void>;
   clearRoutes: () => void;
 }
 
@@ -165,6 +167,106 @@ export const createRoutesSlice: StateCreator<
       }));
       
       toast.warning(`Using simplified route (API failed): ${distance.toFixed(2)} km`);
+    }
+  },
+  
+  calculateRoutesForAllEMS: async () => {
+    const state = get();
+    
+    // Validate necessary data
+    if (!state.userLocation) {
+      toast.error('Please set a user location first by searching for coordinates');
+      return;
+    }
+    
+    if (!state.emergencyServices || state.emergencyServices.length === 0) {
+      toast.error('No emergency services found to route');
+      return;
+    }
+    
+    // Clear all existing routes first
+    set({ routes: [] });
+    
+    // Mark any existing captures as stale
+    mapCaptureService.markCaptureStaleDueToRouteChange();
+    
+    // Count how many services are of EMS type
+    const emsServices = state.emergencyServices.filter(service => 
+      service.type.toLowerCase().includes('ems') || 
+      service.type.toLowerCase().includes('ambulance') ||
+      service.type.toLowerCase().includes('hospital')
+    );
+    
+    if (emsServices.length === 0) {
+      toast.warning('No EMS services found to route');
+      return;
+    }
+    
+    toast.info(`Calculating routes for ${emsServices.length} emergency medical services...`);
+    
+    // Calculate routes for all EMS services
+    let successCount = 0;
+    
+    for (const service of emsServices) {
+      try {
+        // Get start and end coordinates
+        const startCoords = {
+          latitude: service.latitude,
+          longitude: service.longitude
+        };
+        
+        const endCoords = { 
+          latitude: state.userLocation.latitude, 
+          longitude: state.userLocation.longitude 
+        };
+        
+        // Call the enhanced routing service to get a real route
+        const routeData = await fetchRoutePath(
+          startCoords.latitude,
+          startCoords.longitude,
+          endCoords.latitude,
+          endCoords.longitude
+        );
+        
+        if (!routeData) {
+          throw new Error(`Could not calculate route for ${service.name}`);
+        }
+        
+        // Create route points from the fetched route
+        const routePoints: RoutePoint[] = routeData.points.map(point => ({
+          latitude: point[0],
+          longitude: point[1]
+        }));
+        
+        // Create a unique ID for the route
+        const routeId = `route-${service.id}-${Date.now()}`;
+        
+        // Create the route object
+        const newRoute: Route = {
+          id: routeId,
+          points: routePoints,
+          fromId: service.id,
+          toId: null, // null when destination is user location
+          distance: routeData.distance,
+          duration: routeData.duration
+        };
+        
+        // Add the route to state
+        set((state) => ({
+          routes: [...state.routes, newRoute]
+        }));
+        
+        successCount++;
+      } catch (error) {
+        console.error(`Error calculating route for ${service.name}:`, error);
+        // Continue with other services even if one fails
+      }
+    }
+    
+    if (successCount > 0) {
+      toast.success(`Successfully calculated ${successCount} routes to your location`);
+    } else {
+      toast.error('Failed to calculate any routes');
     }
   },
   
