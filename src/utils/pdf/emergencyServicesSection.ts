@@ -35,19 +35,19 @@ export const addEmergencyServicesSection = (
       body: emergencyServicesData,
       theme: 'grid',
       headStyles: { 
-        fillColor: [249, 115, 22, 0.2], // Very light Stantec orange
-        textColor: 51, // Dark gray text
+        fillColor: [249, 115, 22, 0.2] as any, // Very light Stantec orange
+        textColor: [51, 51, 51] as any, // Dark gray text
         fontStyle: 'bold',
         cellPadding: 4
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245, 0.5] // Very light gray with transparency
+        fillColor: [245, 245, 245, 0.5] as any // Very light gray with transparency
       },
       margin: { left: 10, right: 10 },
       styles: {
         fontSize: 9,
         cellPadding: 4,
-        lineColor: [220, 220, 220], // Lighter grid lines
+        lineColor: [220, 220, 220] as any, // Lighter grid lines
         lineWidth: 0.1 // Thinner lines for a cleaner look
       },
       columnStyles: {
@@ -66,4 +66,3 @@ export const addEmergencyServicesSection = (
   
   return yPosition;
 };
-
