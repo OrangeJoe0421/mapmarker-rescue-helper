@@ -8,6 +8,7 @@ import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
 import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import Point from '@arcgis/core/geometry/Point';
 import Stop from '@arcgis/core/rest/support/Stop';
+import Polyline from '@arcgis/core/geometry/Polyline';
 
 // Queue for managing API requests to prevent rate limiting
 const requestQueue: (() => Promise<void>)[] = [];
@@ -149,16 +150,18 @@ export async function fetchRouteWithDirections(
     
     // Create stops for the route
     const stops = new FeatureSet();
-    stops.features = [
-      new Stop({
-        geometry: startPoint,
-        attributes: { Name: "Start Point" }
-      }) as any,
-      new Stop({
-        geometry: endPoint,
-        attributes: { Name: "End Point" }
-      }) as any
-    ];
+    
+    // Fixed: Remove attributes which doesn't exist in StopProperties
+    const startStop = new Stop({
+      geometry: startPoint
+    });
+    
+    const endStop = new Stop({
+      geometry: endPoint
+    });
+    
+    // Type assertion to work around strict typing
+    stops.features = [startStop as any, endStop as any];
     
     // Set up route parameters
     const routeParams = new RouteParameters({
@@ -179,10 +182,15 @@ export async function fetchRouteWithDirections(
       }
       
       const routeResult = result.routeResults[0].route;
-      const routePath = routeResult.geometry;
+      const geometry = routeResult.geometry;
+      
+      // Fixed: Check if geometry is a Polyline before accessing paths
+      if (!(geometry instanceof Polyline)) {
+        throw new Error('Unexpected geometry type');
+      }
       
       // Extract path coordinates
-      const points = routePath.paths[0].map(coord => {
+      const points = geometry.paths[0].map(coord => {
         // ArcGIS returns [lng, lat], but we need [lat, lng] for leaflet
         return [coord[1], coord[0]] as [number, number];
       });
@@ -193,8 +201,11 @@ export async function fetchRouteWithDirections(
       
       // Extract directions if available
       let directions = undefined;
-      if (result.directions && result.directions.length > 0) {
-        directions = result.directions[0].features.map(feature => {
+      
+      // Fixed: Check if directionsFeatures exists before trying to extract directions
+      if (result.routeResults[0].directions && 
+          result.routeResults[0].directions.features) {
+        directions = result.routeResults[0].directions.features.map(feature => {
           return {
             text: feature.attributes.text,
             distance: feature.attributes.length,
@@ -212,12 +223,12 @@ export async function fetchRouteWithDirections(
     } catch (arcgisError) {
       console.error("ArcGIS routing error:", arcgisError);
       // Fall back to OSRM if ArcGIS fails
-      return fetchRoutePath(startLat, startLon, endLat, endLon);
+      return fetchOSRMRoute(startLat, startLon, endLat, endLon);
     }
   } catch (error) {
     console.error("Error in route calculation:", error);
     // Use OSRM as a fallback
-    return fetchRoutePath(startLat, startLon, endLat, endLon);
+    return fetchOSRMRoute(startLat, startLon, endLat, endLon);
   }
 }
 
@@ -225,7 +236,7 @@ export async function fetchRouteWithDirections(
 const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
 
 // Use OSRM API to get route as fallback
-export async function fetchRoutePath(
+export async function fetchOSRMRoute(
   startLat: number,
   startLon: number,
   endLat: number,
@@ -282,3 +293,4 @@ export async function fetchRoutePath(
     };
   }
 }
+

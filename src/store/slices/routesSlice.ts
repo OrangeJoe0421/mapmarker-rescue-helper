@@ -1,9 +1,8 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService, RouteDirection } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
-import { fetchRouteWithDirections } from '@/services/emergencyService';
+import { fetchRouteWithDirections, fetchOSRMRoute } from '@/services/emergencyService';
 import { mapCaptureService } from '@/components/MapCapture';
 
 export interface RoutesState {
@@ -222,7 +221,7 @@ export const createRoutesSlice: StateCreator<
         };
         
         // Call the enhanced routing service to get a real route
-        const routeData = await fetchRoutePath(
+        const routeData = await fetchOSRMRoute(
           startCoords.latitude,
           startCoords.longitude,
           endCoords.latitude,
