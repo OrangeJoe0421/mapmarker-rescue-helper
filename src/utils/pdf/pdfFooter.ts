@@ -9,8 +9,8 @@ export const addPdfFooter = (doc: jsPDF): void => {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     
-    // Add footer background
-    doc.setFillColor(34, 34, 34); // Dark background
+    // Add footer background with Stantec orange
+    doc.setFillColor(249, 115, 22); // Stantec orange
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     
     // Add page numbers

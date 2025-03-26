@@ -12,11 +12,18 @@ export * from './types';
 // Add logo to PDF
 const addStantecLogo = (doc: jsPDF, pageWidth: number) => {
   try {
-    // Try to add the Stantec logo (ensure it's available in public assets)
+    // Try to add the Stantec logo
     doc.addImage('/stantec-logo-orange.png', 'PNG', 10, 10, 30, 30);
   } catch (error) {
-    console.error('Error adding Stantec logo:', error);
+    console.error('Error adding Stantec logo to PDF:', error);
     // If logo not found, continue without it
+    try {
+      // Attempt to use the SVG fallback
+      doc.addImage('https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg', 'SVG', 10, 10, 30, 30);
+    } catch (svgError) {
+      console.error('Failed to add SVG fallback logo:', svgError);
+      // Continue without logo if both attempts fail
+    }
   }
 };
 
@@ -29,8 +36,8 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     if (!capturedImage) {
       // Add a message if no map was captured
       doc.addPage();
-      doc.setFillColor(34, 34, 34); // Dark background
-      doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+      doc.setFillColor(249, 115, 22); // Stantec orange
+      doc.rect(0, 0, pageWidth, 20, 'F'); // Orange header
       doc.setTextColor(255, 255, 255); // White text
       doc.setFontSize(16);
       doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
@@ -44,9 +51,9 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     // Add a new page for the map
     doc.addPage();
     
-    // Modern dark header
-    doc.setFillColor(34, 34, 34); // Dark background
-    doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+    // Stantec orange header
+    doc.setFillColor(249, 115, 22); // Stantec orange
+    doc.rect(0, 0, pageWidth, 20, 'F'); // Orange header
     doc.setTextColor(255, 255, 255); // White text
     doc.setFontSize(16);
     doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
@@ -78,8 +85,8 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     console.error('Error adding captured map to PDF:', error);
     // Add a page with an error message if map capture fails
     doc.addPage();
-    doc.setFillColor(34, 34, 34); // Dark background
-    doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+    doc.setFillColor(249, 115, 22); // Stantec orange
+    doc.rect(0, 0, pageWidth, 20, 'F'); // Orange header
     doc.setTextColor(255, 255, 255); // White text
     doc.setFontSize(16);
     doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
