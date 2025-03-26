@@ -53,8 +53,9 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
               if (el.getElement()) {
                 const pathElement = el.getElement();
                 if (pathElement) {
+                  pathElement.setAttribute('data-route-id', route.id);
                   pathElement.setAttribute('data-route-line', 'true');
-                  pathElement.setAttribute('class', (pathElement.getAttribute('class') || '') + ' route-line');
+                  pathElement.setAttribute('class', 'route-line');
                 }
               }
             }

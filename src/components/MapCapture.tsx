@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Camera, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMapStore } from '../store/useMapStore';
+import html2canvas from 'html2canvas';
 
 // Create a service to store the captured image
 export const mapCaptureService = {
@@ -56,7 +57,7 @@ const MapCapture = () => {
       setCapturing(true);
       
       // Find the map element
-      const mapElement = document.querySelector('.leaflet-container') as HTMLElement;
+      const mapElement = document.querySelector('[data-map-container="true"]') as HTMLElement;
       
       if (!mapElement) {
         toast.error('Map element not found');
@@ -64,14 +65,7 @@ const MapCapture = () => {
         return;
       }
 
-      // Find the container for all layers (base tile layer + overlays)
-      const mapPanes = mapElement.querySelector('.leaflet-map-pane') as HTMLElement;
-      if (!mapPanes) {
-        toast.error('Map panes not found');
-        setCapturing(false);
-        return;
-      }
-      
+      // Ensure the map routes are in a visible state
       // Apply special styling to make routes more visible during capture
       const routeLines = document.querySelectorAll('.leaflet-overlay-pane path');
       routeLines.forEach(line => {
@@ -79,133 +73,39 @@ const MapCapture = () => {
         (line as HTMLElement).style.stroke = '#FF3B30';
         (line as HTMLElement).style.opacity = '1';
       });
+
+      // Wait a moment for styles to apply
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Get the dimensions of the map
-      const rect = mapElement.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
-      
-      // Create an SVG representation of the map
-      const svgNS = "http://www.w3.org/2000/svg";
-      const svg = document.createElementNS(svgNS, "svg");
-      svg.setAttribute("width", String(width));
-      svg.setAttribute("height", String(height));
-      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-      
-      // Clone the tile images and convert to embedded images in the SVG
-      const tileImages = mapElement.querySelectorAll('.leaflet-tile-container img');
-      
-      const promises = Array.from(tileImages).map(img => {
-        return new Promise<void>((resolve) => {
-          try {
-            const imgEl = img as HTMLImageElement;
-            const imgRect = imgEl.getBoundingClientRect();
-            const relativeX = imgRect.left - rect.left;
-            const relativeY = imgRect.top - rect.top;
-            
-            // Create an image element in the SVG
-            const svgImage = document.createElementNS(svgNS, "image");
-            svgImage.setAttribute("x", String(relativeX));
-            svgImage.setAttribute("y", String(relativeY));
-            svgImage.setAttribute("width", String(imgRect.width));
-            svgImage.setAttribute("height", String(imgRect.height));
-            svgImage.setAttribute("href", imgEl.src);
-            svg.appendChild(svgImage);
-            resolve();
-          } catch (err) {
-            console.error("Error processing tile:", err);
-            resolve();
-          }
-        });
+      // Use html2canvas for direct screen capture
+      const canvas = await html2canvas(mapElement, {
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: null,
+        scale: 2, // Higher resolution
       });
       
-      // Wait for all images to be processed
-      await Promise.all(promises);
+      // Convert canvas to image data
+      const imageData = canvas.toDataURL('image/png');
       
-      // Clone route lines
-      const routePaths = mapElement.querySelectorAll('.leaflet-overlay-pane path');
-      routePaths.forEach(path => {
-        const pathEl = path as SVGPathElement;
-        const clone = pathEl.cloneNode(true) as SVGPathElement;
-        // Make sure route is clearly visible in the capture
-        clone.setAttribute('stroke', '#FF3B30');
-        clone.setAttribute('stroke-width', '6');
-        clone.setAttribute('opacity', '1');
-        svg.appendChild(clone);
+      // Store the captured image
+      mapCaptureService.setCapturedImage(imageData);
+      
+      // Reset route styling
+      routeLines.forEach(line => {
+        (line as HTMLElement).style.removeProperty('stroke-width');
+        (line as HTMLElement).style.removeProperty('stroke');
+        (line as HTMLElement).style.removeProperty('opacity');
       });
       
-      // Add markers
-      const markers = mapElement.querySelectorAll('.leaflet-marker-pane .leaflet-marker-icon');
-      markers.forEach(marker => {
-        const markerEl = marker as HTMLImageElement;
-        const markerRect = markerEl.getBoundingClientRect();
-        const relativeX = markerRect.left - rect.left;
-        const relativeY = markerRect.top - rect.top;
-        
-        // Create an image element in the SVG for the marker
-        const svgImage = document.createElementNS(svgNS, "image");
-        svgImage.setAttribute("x", String(relativeX));
-        svgImage.setAttribute("y", String(relativeY));
-        svgImage.setAttribute("width", String(markerRect.width));
-        svgImage.setAttribute("height", String(markerRect.height));
-        svgImage.setAttribute("href", markerEl.src);
-        svg.appendChild(svgImage);
-      });
+      toast.success('Map captured successfully');
+      setNeedsCapture(false);
+      setCapturing(false);
       
-      // Convert SVG to a data URL
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const svgBlob = new Blob([svgData], { type: "image/svg+xml" });
-      const svgUrl = URL.createObjectURL(svgBlob);
-      
-      // Create a canvas to render the SVG
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        toast.error('Failed to create canvas context');
-        setCapturing(false);
-        URL.revokeObjectURL(svgUrl);
-        return;
+      if (routes.length === 0) {
+        toast.info('No routes found on map. Add routes before exporting for better results.');
       }
-      
-      // Create an image from the SVG and draw it on the canvas
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(svgUrl);
-        
-        // Convert canvas to a data URL
-        const imageData = canvas.toDataURL('image/png');
-        
-        // Store the captured image
-        mapCaptureService.setCapturedImage(imageData);
-        
-        // Reset route styling
-        routeLines.forEach(line => {
-          (line as HTMLElement).style.removeProperty('stroke-width');
-          (line as HTMLElement).style.removeProperty('stroke');
-          (line as HTMLElement).style.removeProperty('opacity');
-        });
-        
-        toast.success('Map captured successfully');
-        setNeedsCapture(false);
-        setCapturing(false);
-        
-        if (routes.length === 0) {
-          toast.info('No routes found on map. Add routes before exporting for better results.');
-        }
-      };
-      
-      img.onerror = (err) => {
-        console.error('Error loading SVG image:', err);
-        toast.error('Failed to capture map');
-        URL.revokeObjectURL(svgUrl);
-        setCapturing(false);
-      };
-      
-      img.src = svgUrl;
       
     } catch (error) {
       console.error('Error capturing map:', error);
