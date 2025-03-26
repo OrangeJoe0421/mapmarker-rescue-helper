@@ -34,6 +34,12 @@ export const mapCaptureService = {
   
   isCaptureStale() {
     return this.isStale;
+  },
+  
+  clearCapture() {
+    this.capturedImage = null;
+    this.capturedAt = null;
+    this.isStale = false;
   }
 };
 
@@ -51,65 +57,102 @@ const MapCapture = () => {
       setNeedsCapture(false);
     }
   }, [routes, mapCaptureService.isCaptureStale()]);
+
+  // Debug function to check capture state
+  const logCaptureState = () => {
+    console.info("Capture state:", {
+      hasImage: !!mapCaptureService.getCapturedImage(),
+      captureTimestamp: mapCaptureService.getCaptureTimestamp(),
+      isStale: mapCaptureService.isCaptureStale(),
+      needsCapture,
+      routesCount: routes.length
+    });
+  };
   
   const captureMap = async () => {
     try {
       setCapturing(true);
+      console.info("Starting map capture process...");
+      logCaptureState();
       
-      // Find the map element
-      const mapElement = document.querySelector('[data-map-container="true"]') as HTMLElement;
+      // Clear any previous capture first
+      mapCaptureService.clearCapture();
+      
+      // Find the map element - targeting the actual Leaflet container
+      const mapElement = document.querySelector('.leaflet-container') as HTMLElement;
       
       if (!mapElement) {
+        console.error("Map element not found", document.querySelectorAll('[data-map-container]'));
         toast.error('Map element not found');
         setCapturing(false);
         return;
       }
 
+      console.info("Map element found:", mapElement);
+
       // Ensure the map routes are in a visible state
-      // Apply special styling to make routes more visible during capture
       const routeLines = document.querySelectorAll('.leaflet-overlay-pane path');
-      routeLines.forEach(line => {
-        (line as HTMLElement).style.strokeWidth = '6px';
+      console.info(`Found ${routeLines.length} route lines`);
+      
+      routeLines.forEach((line, index) => {
+        console.info(`Enhancing route line ${index}`);
+        (line as HTMLElement).style.strokeWidth = '8px';
         (line as HTMLElement).style.stroke = '#FF3B30';
         (line as HTMLElement).style.opacity = '1';
       });
 
       // Wait a moment for styles to apply
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Use html2canvas for direct screen capture
+      // Use html2canvas for direct screen capture with improved settings
+      console.info("Starting html2canvas capture");
       const canvas = await html2canvas(mapElement, {
         useCORS: true,
         allowTaint: true,
-        logging: false,
+        logging: true, // Enable logging for debugging
         backgroundColor: null,
         scale: 2, // Higher resolution
+        ignoreElements: (element) => {
+          // Don't ignore any elements related to the map
+          return false;
+        },
+        onclone: (documentClone, element) => {
+          // This gets triggered before the capture, allowing us to modify the cloned DOM
+          console.info("Preparing cloned document for capture");
+          const routeLinesInClone = documentClone.querySelectorAll('.leaflet-overlay-pane path');
+          routeLinesInClone.forEach((line) => {
+            (line as HTMLElement).style.strokeWidth = '8px';
+            (line as HTMLElement).style.stroke = '#FF3B30';
+            (line as HTMLElement).style.opacity = '1';
+          });
+        }
       });
       
       // Convert canvas to image data
       const imageData = canvas.toDataURL('image/png');
+      console.info("Canvas generated, image size:", imageData.length);
+      
+      // Verify the image data is valid (not empty or just a header)
+      if (imageData.length < 1000) {
+        console.error("Generated image is too small, likely empty");
+        toast.error('Failed to capture map - empty image');
+        setCapturing(false);
+        return;
+      }
       
       // Store the captured image
       mapCaptureService.setCapturedImage(imageData);
-      
-      // Reset route styling
-      routeLines.forEach(line => {
-        (line as HTMLElement).style.removeProperty('stroke-width');
-        (line as HTMLElement).style.removeProperty('stroke');
-        (line as HTMLElement).style.removeProperty('opacity');
-      });
+      console.info("Capture saved to service");
       
       toast.success('Map captured successfully');
       setNeedsCapture(false);
-      setCapturing(false);
       
-      if (routes.length === 0) {
-        toast.info('No routes found on map. Add routes before exporting for better results.');
-      }
-      
+      // Log the state after capture
+      logCaptureState();
     } catch (error) {
       console.error('Error capturing map:', error);
       toast.error('Failed to capture map');
+    } finally {
       setCapturing(false);
     }
   };

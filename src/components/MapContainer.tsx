@@ -1,44 +1,85 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import LeafletMapMarkers from './LeafletMapMarkers';
 import { useMapStore } from '../store/useMapStore';
 import MapCapture from './MapCapture';
 import { mapCaptureService } from './MapCapture';
-import { Info, AlertTriangle } from 'lucide-react';
+import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 const MapContainer = () => {
   const { routes } = useMapStore();
+  const [captureStatus, setCaptureStatus] = useState({
+    text: 'Map not captured yet. Use "Capture Map" before exporting.',
+    icon: <Info className="h-4 w-4" />,
+    class: "text-gray-500"
+  });
+  const [showPreview, setShowPreview] = useState(false);
   
-  // Determine if a map was captured and when
-  const capturedImage = mapCaptureService.getCapturedImage();
-  const captureTime = mapCaptureService.getCaptureTimestamp();
-  const isStale = mapCaptureService.isCaptureStale();
-  
-  // Determine capture status message and styling
-  let captureStatus = 'Map not captured yet. Use "Capture Map" before exporting.';
-  let statusIcon = <Info className="h-4 w-4" />;
-  let statusClass = "text-gray-500";
-  
-  if (capturedImage) {
-    if (isStale) {
-      captureStatus = `Map view has changed since last capture (${captureTime?.toLocaleString() || 'unknown time'}). Please recapture.`;
-      statusIcon = <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      statusClass = "text-amber-500";
+  // Update capture status whenever relevant state changes
+  useEffect(() => {
+    const capturedImage = mapCaptureService.getCapturedImage();
+    const captureTime = mapCaptureService.getCaptureTimestamp();
+    const isStale = mapCaptureService.isCaptureStale();
+    
+    if (capturedImage) {
+      if (isStale) {
+        setCaptureStatus({
+          text: `Map view has changed since last capture (${captureTime?.toLocaleString() || 'unknown time'}). Please recapture.`,
+          icon: <AlertTriangle className="h-4 w-4 text-amber-500" />,
+          class: "text-amber-500"
+        });
+      } else {
+        setCaptureStatus({
+          text: `Map captured on: ${captureTime?.toLocaleString() || 'unknown time'}`,
+          icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+          class: "text-green-500"
+        });
+      }
+    } else if (routes.length > 0) {
+      setCaptureStatus({
+        text: 'Map not captured yet. Use "Capture Map" before exporting.',
+        icon: <AlertTriangle className="h-4 w-4 text-amber-500" />,
+        class: "text-amber-500"
+      });
     } else {
-      captureStatus = `Map captured on: ${captureTime?.toLocaleString() || 'unknown time'}`;
-      statusClass = "text-green-500";
+      setCaptureStatus({
+        text: 'No routes to capture. Add routes first.',
+        icon: <Info className="h-4 w-4" />,
+        class: "text-gray-500"
+      });
     }
-  } else if (routes.length > 0) {
-    statusIcon = <AlertTriangle className="h-4 w-4 text-amber-500" />;
-    statusClass = "text-amber-500";
-  }
+  }, [routes, mapCaptureService.getCapturedImage(), mapCaptureService.isCaptureStale()]);
+
+  // Handler to open preview if we have a captured image
+  const handlePreviewClick = () => {
+    const image = mapCaptureService.getCapturedImage();
+    if (image) {
+      setShowPreview(true);
+    }
+  };
   
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <div className={`flex items-center text-sm ${statusClass} gap-1`}>
-          {statusIcon}
-          <span>{captureStatus}</span>
+        <div 
+          className={`flex items-center text-sm ${captureStatus.class} gap-1 cursor-pointer`}
+          onClick={handlePreviewClick}
+        >
+          {captureStatus.icon}
+          <span>{captureStatus.text}</span>
+          {mapCaptureService.getCapturedImage() && (
+            <Button variant="ghost" size="sm" className="ml-1 h-6 px-2">
+              View Capture
+            </Button>
+          )}
         </div>
         <MapCapture />
       </div>
@@ -55,6 +96,28 @@ const MapContainer = () => {
           OpenStreetMap: Click markers to see route options
         </div>
       </div>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Map Capture Preview</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 border rounded-md overflow-hidden">
+            {mapCaptureService.getCapturedImage() ? (
+              <img 
+                src={mapCaptureService.getCapturedImage()!} 
+                alt="Captured Map" 
+                className="w-full"
+              />
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                No capture available
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

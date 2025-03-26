@@ -59,6 +59,7 @@ export const createRoutesSlice: StateCreator<
     
     // Mark any existing captures as stale immediately when calculating a new route
     mapCaptureService.markCaptureStaleDueToRouteChange();
+    console.info('Calculating new route, marking capture as stale');
 
     toast.info('Calculating route...');
 
@@ -72,6 +73,8 @@ export const createRoutesSlice: StateCreator<
       const endCoords = toUserLocation 
         ? { latitude: state.userLocation!.latitude, longitude: state.userLocation!.longitude }
         : { latitude: 0, longitude: 0 }; // Will be replaced with actual destination
+      
+      console.info(`Fetching route from [${startCoords.latitude}, ${startCoords.longitude}] to [${endCoords.latitude}, ${endCoords.longitude}]`);
       
       // Call the enhanced routing service to get a real route
       const routeData = await fetchRoutePath(
@@ -94,6 +97,7 @@ export const createRoutesSlice: StateCreator<
       // Create a unique ID for the route that includes a timestamp
       // This helps in detecting if routes were added after a capture
       const routeId = `route-${Date.now()}`;
+      console.info(`Created new route with ID: ${routeId}, points: ${routePoints.length}`);
       
       // Create the route object
       const newRoute: Route = {
@@ -168,5 +172,7 @@ export const createRoutesSlice: StateCreator<
   clearRoutes: () => {
     set({ routes: [] });
     toast.info('All routes cleared');
+    // Also clear any capture when routes are cleared
+    mapCaptureService.clearCapture();
   },
 });

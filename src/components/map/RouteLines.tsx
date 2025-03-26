@@ -49,13 +49,16 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
             if (el) {
               routeRefs.current[index] = el;
               
-              // Apply additional attributes that help with capture
+              // Apply additional attributes for capture - enhanced for better visibility
               if (el.getElement()) {
                 const pathElement = el.getElement();
                 if (pathElement) {
                   pathElement.setAttribute('data-route-id', route.id);
                   pathElement.setAttribute('data-route-line', 'true');
-                  pathElement.setAttribute('class', 'route-line');
+                  pathElement.setAttribute('class', 'route-line-highlighted');
+                  pathElement.style.stroke = '#FF3B30';
+                  pathElement.style.strokeWidth = '6px';
+                  pathElement.style.opacity = '1';
                 }
               }
             }
