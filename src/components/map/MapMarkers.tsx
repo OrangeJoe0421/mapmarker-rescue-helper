@@ -1,49 +1,13 @@
 
 import React from 'react';
 import { useMapStore } from '../../store/useMapStore';
-import UserLocationMarker from './UserLocationMarker';
-import EmergencyServiceMarkers from './EmergencyServiceMarkers';
-import CustomMarkers from './CustomMarkers';
-import RouteLines from './RouteLines';
 
+// Since we're not using Leaflet anymore, this component isn't needed
+// We're just providing a placeholder that doesn't render anything
+// The actual markers are now handled directly in the ArcGISMap component
 const MapMarkers = () => {
-  const {
-    userLocation,
-    emergencyServices,
-    customMarkers,
-    selectService,
-    selectMarker,
-    updateCustomMarker,
-    calculateRoute,
-    routes
-  } = useMapStore();
-
-  return (
-    <>
-      {/* User location marker */}
-      {userLocation && (
-        <UserLocationMarker userLocation={userLocation} />
-      )}
-
-      {/* Emergency services markers */}
-      <EmergencyServiceMarkers 
-        services={emergencyServices} 
-        selectService={selectService} 
-        calculateRoute={calculateRoute} 
-      />
-
-      {/* Custom markers */}
-      <CustomMarkers 
-        markers={customMarkers} 
-        selectMarker={selectMarker} 
-        updateCustomMarker={updateCustomMarker} 
-        calculateRoute={calculateRoute} 
-      />
-
-      {/* Route polylines */}
-      <RouteLines routes={routes} />
-    </>
-  );
+  console.log('MapMarkers component is no longer used with ArcGIS');
+  return null;
 };
 
 export default MapMarkers;
