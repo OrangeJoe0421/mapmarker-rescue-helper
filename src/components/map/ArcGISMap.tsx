@@ -27,9 +27,6 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   const graphicsLayerRef = useRef<GraphicsLayer | null>(null);
   const routeLayerRef = useRef<GraphicsLayer | null>(null);
   const clickHandleRef = useRef<__esri.Handle | null>(null);
-  const draggingRef = useRef<boolean>(false);
-  const currentMarkerRef = useRef<string | null>(null);
-  const isCtrlPressed = useRef<boolean>(false);
   
   const { 
     mapCenter, 
@@ -39,9 +36,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     customMarkers,
     routes,
     calculateRoute,
-    selectService,
-    setDraggingMarker,
-    updateMarkerPosition
+    selectService
   } = useMapStore();
   
   useEffect(() => {
@@ -292,34 +287,19 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           id: marker.id,
           type: "custom",
           name: marker.name,
-          metadata: JSON.stringify(marker.metadata || {}),
-          draggable: "true"
+          metadata: JSON.stringify(marker.metadata || {})
         }
       });
       
       graphicsLayer.add(graphic);
     });
     
-    let dragHandler: __esri.Handle;
-    let dragStartHandler: __esri.Handle;
-    let dragEndHandler: __esri.Handle;
-    let mapNavigationEnabled = true;
-
-    if (dragHandler) dragHandler.remove();
-    if (dragStartHandler) dragStartHandler.remove();
-    if (dragEndHandler) dragEndHandler.remove();
-    
-    dragStartHandler = view.on("pointer-down", (event) => {
-      if (draggingRef.current) return;
-      
+    view.on("click", (event) => {
       view.hitTest(event).then(response => {
         if (response.results.length > 0) {
           const graphicResults = response.results.filter(result => {
             const hitResult = result as any;
-            return hitResult.graphic && 
-                   hitResult.graphic.layer === graphicsLayer && 
-                   hitResult.graphic.attributes && 
-                   hitResult.graphic.attributes.type === "custom";
+            return hitResult.graphic && hitResult.graphic.layer === graphicsLayer;
           });
           
           if (graphicResults.length === 0) return;
@@ -332,77 +312,59 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           const id = graphic.attributes.id;
           if (!id) return;
           
-          draggingRef.current = true;
-          currentMarkerRef.current = id;
-          setDraggingMarker(id);
+          const isService = graphic.attributes.type === 'service';
+          const isCustom = graphic.attributes.type === 'custom';
           
-          if (isCtrlPressed.current && view.navigation) {
-            mapNavigationEnabled = view.navigation ? true : false;
-            view.navigation.mouseWheelZoomEnabled = false;
-            view.navigation.browserTouchPanEnabled = false;
-            mapDiv.current!.style.cursor = 'grabbing';
+          if (isService) {
+            const service = emergencyServices.find(s => s.id === id);
+            if (service) {
+              selectService(service);
+              const tabsElement = document.querySelector('[value="results"]') as HTMLButtonElement;
+              if (tabsElement) {
+                tabsElement.click();
+              }
+              view.popup.close();
+            }
+          } else if (isCustom || id === 'user-location') {
+            let marker;
+            let title = '';
+            let details = '';
+            
+            if (id === 'user-location') {
+              title = 'Project Location';
+              details = userLocation?.metadata ? 
+                `<p>Project Number: ${userLocation.metadata.projectNumber || 'N/A'}</p>
+                 <p>Region: ${userLocation.metadata.region || 'N/A'}</p>
+                 <p>Project Type: ${userLocation.metadata.projectType || 'N/A'}</p>` : '';
+            } else {
+              marker = customMarkers.find(m => m.id === id);
+              if (marker) {
+                title = marker.name;
+                details = marker.metadata ? 
+                  `<p>Project Number: ${marker.metadata.projectNumber || 'N/A'}</p>
+                   <p>Region: ${marker.metadata.region || 'N/A'}</p>
+                   <p>Project Type: ${marker.metadata.projectType || 'N/A'}</p>` : '';
+              }
+            }
+            
+            const popupContent = `
+              <div class="esri-popup-content custom-popup">
+                <h3 class="font-bold text-lg">${title}</h3>
+                ${details}
+              </div>
+            `;
+            
+            view.popup.open({
+              location: event.mapPoint,
+              content: popupContent
+            });
           }
-          
-          event.stopPropagation();
+        } else {
+          view.popup.close();
         }
       });
     });
-    
-    dragHandler = view.on("pointer-move", (event) => {
-      if (!draggingRef.current || !currentMarkerRef.current) return;
-      
-      const screenPoint = { x: event.x, y: event.y };
-      const point = view.toMap(screenPoint);
-      
-      graphicsLayer.graphics.forEach(graphic => {
-        if (graphic.attributes?.id === currentMarkerRef.current) {
-          graphic.geometry = point;
-        }
-      });
-      
-      if (isCtrlPressed.current) {
-        event.stopPropagation();
-      }
-    });
-    
-    dragEndHandler = view.on("pointer-up", (event) => {
-      if (!draggingRef.current || !currentMarkerRef.current) return;
-      
-      const screenPoint = { x: event.x, y: event.y };
-      const point = view.toMap(screenPoint);
-      
-      updateMarkerPosition(
-        currentMarkerRef.current,
-        point.latitude,
-        point.longitude
-      );
-      
-      draggingRef.current = false;
-      currentMarkerRef.current = null;
-      
-      if (isCtrlPressed.current && view.navigation) {
-        view.navigation.mouseWheelZoomEnabled = true;
-        view.navigation.browserTouchPanEnabled = true;
-      }
-      
-      mapDiv.current!.style.cursor = 'auto';
-      
-      if (isCtrlPressed.current) {
-        event.stopPropagation();
-      }
-    });
-    
-    return () => {
-      if (dragHandler) dragHandler.remove();
-      if (dragStartHandler) dragStartHandler.remove();
-      if (dragEndHandler) dragEndHandler.remove();
-      
-      if (viewRef.current && viewRef.current.navigation) {
-        viewRef.current.navigation.mouseWheelZoomEnabled = true;
-        viewRef.current.navigation.browserTouchPanEnabled = true;
-      }
-    };
-  }, [customMarkers, userLocation, emergencyServices, setDraggingMarker, updateMarkerPosition]);
+  }, [customMarkers, userLocation, emergencyServices, selectService]);
   
   useEffect(() => {
     if (!routeLayerRef.current) return;
@@ -475,13 +437,11 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control') {
-        isCtrlPressed.current = true;
       }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control') {
-        isCtrlPressed.current = false;
       }
     };
     
