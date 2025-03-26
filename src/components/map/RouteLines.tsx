@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Polyline, useMap } from 'react-leaflet';
 import { Route } from '../../types/mapTypes';
 import { mapCaptureService } from '../MapCapture';
@@ -11,6 +11,7 @@ interface RouteLinesProps {
 const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
   const map = useMap();
   const routeRefs = useRef<Array<L.Polyline | null>>([]);
+  const [isVisible, setIsVisible] = useState(true);
   
   // When routes change, ensure they're visible and properly centered
   useEffect(() => {
@@ -25,22 +26,42 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
       
       if (allPoints.length > 0) {
         try {
-          // Add more padding to the bounds to ensure routes are fully visible
-          map.fitBounds(allPoints as [number, number][], { padding: [100, 100] });
+          // Use a different padding approach with larger values for better visibility
+          const paddingOptions = { 
+            paddingTopLeft: [150, 150],
+            paddingBottomRight: [150, 150],
+            maxZoom: 18
+          };
+          
+          map.fitBounds(allPoints as [number, number][], paddingOptions);
           
           // Signal to the capture service that the map view has changed
           mapCaptureService.markCaptureStaleDueToRouteChange();
           
-          // Force a repaint after bounds change
+          // Force multiple redraws for better consistency
+          // First immediate redraw
+          map.invalidateSize();
+          
+          // Then toggle visibility briefly to force a complete redraw
+          setIsVisible(false);
           setTimeout(() => {
+            setIsVisible(true);
             map.invalidateSize();
-          }, 300);
+            
+            // Fit bounds again after visibility is restored
+            setTimeout(() => {
+              map.fitBounds(allPoints as [number, number][], paddingOptions);
+              map.invalidateSize();
+            }, 100);
+          }, 50);
         } catch (error) {
           console.error("Error fitting bounds to routes:", error);
         }
       }
     }
   }, [routes, map]);
+  
+  if (!isVisible) return null;
   
   return (
     <>
@@ -49,35 +70,20 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
           key={route.id}
           positions={route.points.map(point => [point.latitude, point.longitude])}
           ref={(el) => {
-            // Store reference to the Polyline instance
             if (el) {
               routeRefs.current[index] = el;
-              
-              // Apply additional attributes for capture with SVG attributes
-              if (el.getElement()) {
-                const pathElement = el.getElement();
-                if (pathElement) {
-                  // Add data attributes for identifying routes in capture
-                  pathElement.setAttribute('data-route-id', route.id);
-                  pathElement.setAttribute('data-route-line', 'true');
-                  pathElement.setAttribute('class', 'route-line-highlighted');
-                  
-                  // Use SVG specific attributes for styling
-                  pathElement.setAttribute('stroke', '#FF3B30');
-                  pathElement.setAttribute('stroke-width', '6');
-                  pathElement.setAttribute('opacity', '1');
-                  pathElement.setAttribute('stroke-linecap', 'round');
-                  pathElement.setAttribute('stroke-linejoin', 'round');
-                  pathElement.setAttribute('vector-effect', 'non-scaling-stroke');
-                }
+              const pathElement = el.getElement();
+              if (pathElement) {
+                // Use a custom class that we'll target with CSS
+                pathElement.setAttribute('class', 'capture-route-line');
+                pathElement.setAttribute('data-route-id', route.id);
               }
             }
           }}
           pathOptions={{
-            color: '#FF3B30', // Bright red for better visibility
-            weight: 6, // Thicker lines
-            opacity: 1, // Full opacity
-            className: 'route-path',
+            color: '#FF3B30',
+            weight: 6,
+            opacity: 1,
             lineCap: 'round',
             lineJoin: 'round',
           }}

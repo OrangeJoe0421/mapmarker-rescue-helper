@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Camera, RefreshCw } from 'lucide-react';
@@ -68,22 +67,38 @@ const MapCapture = () => {
       routesCount: routes.length
     });
   };
-  
-  // Helper function to enhance SVG elements for capture
-  const enhanceSvgForCapture = (svg: SVGElement) => {
-    svg.setAttribute('stroke', '#FF3B30');
-    svg.setAttribute('stroke-width', '8');
-    svg.setAttribute('opacity', '1');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    svg.setAttribute('vector-effect', 'non-scaling-stroke');
+
+  // Create a stylesheet for route capture styling
+  const createCaptureStylesheet = () => {
+    // Remove any existing capture stylesheet
+    const existingSheet = document.getElementById('capture-styles');
+    if (existingSheet) {
+      existingSheet.remove();
+    }
+    
+    // Create a new stylesheet
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'capture-styles';
+    styleSheet.innerHTML = `
+      .capture-route-line {
+        stroke: #FF3B30 !important;
+        stroke-width: 8px !important;
+        stroke-opacity: 1 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
+        vector-effect: non-scaling-stroke !important;
+        stroke-dasharray: none !important;
+        pointer-events: none !important;
+      }
+    `;
+    document.head.appendChild(styleSheet);
+    return styleSheet;
   };
   
   const captureMap = async () => {
     try {
       setCapturing(true);
-      console.info("Starting map capture process...");
-      logCaptureState();
+      console.info("Starting map capture process with new approach...");
       
       // Clear any previous capture first
       mapCaptureService.clearCapture();
@@ -92,70 +107,72 @@ const MapCapture = () => {
       const mapElement = document.querySelector('.leaflet-container') as HTMLElement;
       
       if (!mapElement) {
-        console.error("Map element not found", document.querySelectorAll('[data-map-container]'));
+        console.error("Map element not found");
         toast.error('Map element not found');
         setCapturing(false);
         return;
       }
 
-      console.info("Map element found:", mapElement);
+      console.info("Map element found, preparing for capture");
 
-      // Force a repaint of the map before capture
+      // Add stylesheet for capture
+      const captureStyles = createCaptureStylesheet();
+      
+      // Force a complete map re-render before capture
       const map = mapElement.querySelector('.leaflet-map-pane') as HTMLElement;
       if (map) {
-        map.style.transform = map.style.transform;
+        // Save original transform
+        const originalTransform = map.style.transform;
+        
+        // Apply a slight nudge to force redraw
+        map.style.transform = 'translate3d(0px, 0px, 0px)';
+        
+        // Restore original transform
+        setTimeout(() => {
+          map.style.transform = originalTransform;
+        }, 10);
       }
-
-      // Ensure the map routes are in a visible state before capture
-      const routeLines = document.querySelectorAll('.leaflet-overlay-pane path');
-      console.info(`Found ${routeLines.length} route lines`);
       
-      // Apply SVG attributes directly for better capture compatibility
-      routeLines.forEach((line, index) => {
-        console.info(`Enhancing route line ${index}`);
-        const svgElement = line as SVGElement;
-        enhanceSvgForCapture(svgElement);
-      });
-
-      // Wait a moment for styles to apply and map to stabilize
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait longer for the map to stabilize and styles to apply
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Use html2canvas for direct screen capture with improved settings
       console.info("Starting html2canvas capture");
       const canvas = await html2canvas(mapElement, {
         useCORS: true,
         allowTaint: true,
-        logging: true, // Enable logging for debugging
+        logging: true,
         backgroundColor: null,
-        scale: 2, // Higher resolution
+        scale: 2,
         ignoreElements: (element) => {
-          // Don't ignore any elements related to the map
-          return false;
+          return false; // Don't ignore any elements
         },
         onclone: (documentClone, element) => {
-          // This gets triggered before the capture, allowing us to modify the cloned DOM
           console.info("Preparing cloned document for capture");
-          const routeLinesInClone = documentClone.querySelectorAll('.leaflet-overlay-pane path');
-          console.info(`Found ${routeLinesInClone.length} route lines in clone`);
           
-          routeLinesInClone.forEach((line, index) => {
-            // Using setAttribute which works for SVG elements
+          // Add our capture styles to the cloned document
+          const cloneHead = documentClone.head;
+          const cloneStyle = documentClone.createElement('style');
+          cloneStyle.innerHTML = captureStyles.innerHTML;
+          cloneHead.appendChild(cloneStyle);
+          
+          // Find all route lines in the clone and mark them
+          const routeLines = documentClone.querySelectorAll('.leaflet-overlay-pane path');
+          console.info(`Found ${routeLines.length} route lines in clone`);
+          
+          routeLines.forEach((line, index) => {
             const svgElement = line as SVGElement;
-            enhanceSvgForCapture(svgElement);
+            svgElement.classList.add('capture-route-line');
             console.info(`Enhanced route line ${index} in clone`);
           });
-          
-          // Force SVG redrawing in the clone
-          const mapPaneInClone = documentClone.querySelector('.leaflet-map-pane') as HTMLElement;
-          if (mapPaneInClone) {
-            mapPaneInClone.style.transform = mapPaneInClone.style.transform;
-          }
         }
       });
       
       // Convert canvas to image data
       const imageData = canvas.toDataURL('image/png');
       console.info("Canvas generated, image size:", imageData.length);
+      
+      // Remove the temporary stylesheet
+      captureStyles.remove();
       
       // Verify the image data is valid (not empty or just a header)
       if (imageData.length < 1000) {
