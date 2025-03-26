@@ -8,20 +8,19 @@ export const addProjectLocationSection = (
   userLocation: UserLocation | null,
   yPosition: number
 ): number => {
-  // Add a modern section header with gradient effect
-  doc.setFillColor(60, 60, 60, 0.9); // Dark background with transparency
+  // Use a more subtle, professional header style
+  doc.setFillColor(249, 115, 22, 0.1); // Light Stantec orange with low opacity
   doc.rect(10, yPosition - 5, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
-  doc.setTextColor(255, 255, 255); // White text
+  doc.setTextColor(51, 51, 51); // Dark gray text for better readability
   doc.setFontSize(14);
   doc.text('Project Location', 14, yPosition);
-  doc.setTextColor(51, 51, 51); // Dark gray text for content
   yPosition += 10;
   
   if (userLocation) {
     // Create location data, including metadata if available
     const userLocationData = [
-      ['Latitude', userLocation.latitude.toFixed(6)],
-      ['Longitude', userLocation.longitude.toFixed(6)]
+      ['Latitude', userLocation.latitude?.toFixed(6) || 'N/A'],
+      ['Longitude', userLocation.longitude?.toFixed(6) || 'N/A']
     ];
     
     // Add metadata fields if they exist
@@ -44,8 +43,8 @@ export const addProjectLocationSection = (
       body: userLocationData,
       theme: 'grid',
       headStyles: { 
-        fillColor: [249, 115, 22, 0.85], // Stantec orange with transparency
-        textColor: 255,
+        fillColor: [249, 115, 22, 0.2], // Very light Stantec orange
+        textColor: 51, // Dark gray text
         fontStyle: 'bold',
         cellPadding: 4
       },
@@ -74,3 +73,4 @@ export const addProjectLocationSection = (
   
   return yPosition;
 };
+

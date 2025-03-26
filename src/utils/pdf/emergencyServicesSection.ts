@@ -8,35 +8,35 @@ export const addEmergencyServicesSection = (
   emergencyServices: EmergencyService[],
   yPosition: number
 ): number => {
-  // Add a modern section header - more subtle with gradient effect
-  doc.setFillColor(60, 60, 60, 0.9); // Dark background with transparency
+  // Use a more subtle, professional header style
+  doc.setFillColor(249, 115, 22, 0.1); // Light Stantec orange with low opacity
   doc.rect(10, yPosition - 5, doc.internal.pageSize.getWidth() - 20, 10, 'F'); // Section header
-  doc.setTextColor(255, 255, 255); // White text
+  doc.setTextColor(51, 51, 51); // Dark gray text for better readability
   doc.setFontSize(14);
   doc.text('Emergency Services', 14, yPosition);
-  doc.setTextColor(51, 51, 51); // Reset to dark gray text
+  
   yPosition += 10;
   
   if (emergencyServices.length > 0) {
     const emergencyServicesData = emergencyServices.map(service => [
-      service.name,
-      service.type,
-      service.road_distance ? `${service.road_distance.toFixed(2)} km` : 'N/A',
+      service.name || 'N/A',
+      service.type || 'N/A',
+      service.road_distance !== undefined ? `${service.road_distance.toFixed(2)} km` : 'N/A',
       service.verification?.hasEmergencyRoom ? 'Yes' : 'No',
       service.phone || 'N/A',
       service.address || 'N/A',
       service.hours || 'N/A'
     ]);
     
-    // More modern table styling
+    // More modern, subtle table styling
     autoTable(doc, {
       startY: yPosition,
       head: [['Name', 'Type', 'Distance', 'ER Available', 'Phone', 'Address', 'Hours']],
       body: emergencyServicesData,
       theme: 'grid',
       headStyles: { 
-        fillColor: [249, 115, 22, 0.85], // Stantec orange with transparency
-        textColor: 255,
+        fillColor: [249, 115, 22, 0.2], // Very light Stantec orange
+        textColor: 51, // Dark gray text
         fontStyle: 'bold',
         cellPadding: 4
       },
@@ -66,3 +66,4 @@ export const addEmergencyServicesSection = (
   
   return yPosition;
 };
+
