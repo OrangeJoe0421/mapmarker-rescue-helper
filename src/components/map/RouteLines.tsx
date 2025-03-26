@@ -31,42 +31,11 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
           // Signal to the capture service that the map view has changed
           // and any existing capture is now stale
           mapCaptureService.markCaptureStaleDueToRouteChange();
-          
-          // Wait for map to finish moving before applying styles
-          const applyRouteStyles = () => {
-            // Force a repaint of route elements with delay to ensure they're rendered
-            setTimeout(() => {
-              routeRefs.current.forEach(routeRef => {
-                if (routeRef && routeRef.getElement()) {
-                  const el = routeRef.getElement();
-                  if (el) {
-                    // Type assertion to ensure the element is treated as HTMLElement
-                    const htmlElement = el as HTMLElement;
-                    htmlElement.style.stroke = '#FF3B30';
-                    htmlElement.style.strokeWidth = '6px';
-                    htmlElement.style.opacity = '1';
-                    htmlElement.classList.add('route-line-visible');
-                  }
-                }
-              });
-            }, 300);
-          };
-          
-          // Use moveend event to ensure styles are applied after map movement
-          map.on('moveend', applyRouteStyles);
-          
-          // Call immediately in case map is not moving
-          applyRouteStyles();
         } catch (error) {
           console.error("Error fitting bounds to routes:", error);
         }
       }
     }
-
-    // Cleanup event listener
-    return () => {
-      map.off('moveend');
-    };
   }, [routes, map]);
   
   return (
@@ -86,13 +55,6 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
                 if (pathElement) {
                   pathElement.setAttribute('data-route-line', 'true');
                   pathElement.setAttribute('class', (pathElement.getAttribute('class') || '') + ' route-line');
-                  
-                  // Type assertion to ensure the element is treated as HTMLElement
-                  const htmlElement = pathElement as HTMLElement;
-                  // Apply inline styles for better visibility during capture
-                  htmlElement.style.stroke = '#FF3B30';  // Bright red
-                  htmlElement.style.strokeWidth = '6px'; // Thicker lines
-                  htmlElement.style.opacity = '1';       // Full opacity
                 }
               }
             }
