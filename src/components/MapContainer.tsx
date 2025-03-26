@@ -4,7 +4,7 @@ import LeafletMapMarkers from './LeafletMapMarkers';
 import { useMapStore } from '../store/useMapStore';
 import MapCapture from './MapCapture';
 import { mapCaptureService } from './MapCapture';
-import { Info } from 'lucide-react';
+import { Info, AlertTriangle } from 'lucide-react';
 
 const MapContainer = () => {
   const { routes } = useMapStore();
@@ -12,15 +12,32 @@ const MapContainer = () => {
   // Determine if a map was captured and when
   const capturedImage = mapCaptureService.getCapturedImage();
   const captureTime = mapCaptureService.getCaptureTimestamp();
-  const captureStatus = capturedImage 
-    ? `Map captured on: ${captureTime?.toLocaleString() || 'unknown time'}` 
-    : 'Map not captured yet. Use "Capture Map" before exporting.';
+  const isStale = mapCaptureService.isCaptureStale();
+  
+  // Determine capture status message and styling
+  let captureStatus = 'Map not captured yet. Use "Capture Map" before exporting.';
+  let statusIcon = <Info className="h-4 w-4" />;
+  let statusClass = "text-gray-500";
+  
+  if (capturedImage) {
+    if (isStale) {
+      captureStatus = `Map view has changed since last capture (${captureTime?.toLocaleString() || 'unknown time'}). Please recapture.`;
+      statusIcon = <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      statusClass = "text-amber-500";
+    } else {
+      captureStatus = `Map captured on: ${captureTime?.toLocaleString() || 'unknown time'}`;
+      statusClass = "text-green-500";
+    }
+  } else if (routes.length > 0) {
+    statusIcon = <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    statusClass = "text-amber-500";
+  }
   
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <div className="flex items-center text-sm text-gray-500 gap-1">
-          <Info className="h-4 w-4" />
+        <div className={`flex items-center text-sm ${statusClass} gap-1`}>
+          {statusIcon}
           <span>{captureStatus}</span>
         </div>
         <MapCapture />

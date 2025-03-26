@@ -18,31 +18,26 @@ const ExportButton = () => {
       // Check if a map was captured
       const capturedImage = mapCaptureService.getCapturedImage();
       const routesExist = routes.length > 0;
+      const isStale = mapCaptureService.isCaptureStale();
       
       if (routesExist && !capturedImage) {
-        // No capture but routes exist - warn user
+        // No capture but routes exist - warn user with more prominent message
         toast.warning(
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
             <span>No map capture found. The PDF will not include a map view. Use the "Capture Map" button first.</span>
           </div>, 
           { duration: 5000 }
         );
-      } else if (routesExist && capturedImage) {
-        // Routes exist and there is a capture - check if capture is older than routes
-        const captureTime = mapCaptureService.getCaptureTimestamp() || new Date(0);
-        
-        // Check if routes were likely added after the capture
-        // This is a heuristic since we don't store route creation time
-        if (routes.some(route => !route.id.includes(captureTime.getTime().toString()))) {
-          toast.info(
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              <span>You may want to re-capture the map to ensure all routes are included in the PDF.</span>
-            </div>, 
-            { duration: 5000 }
-          );
-        }
+      } else if (routesExist && capturedImage && isStale) {
+        // Routes exist and capture is stale
+        toast.warning(
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <span>Your map view has changed since the last capture. Please recapture the map before exporting.</span>
+          </div>, 
+          { duration: 5000 }
+        );
       }
       
       // Ensure map is fully rendered with routes before exporting

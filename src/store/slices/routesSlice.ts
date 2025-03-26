@@ -4,6 +4,7 @@ import { StateCreator } from 'zustand';
 import { Route, RoutePoint } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
 import { fetchRoutePath } from '@/services/emergencyService';
+import { mapCaptureService } from '@/components/MapCapture';
 
 export interface RoutesState {
   routes: Route[];
@@ -55,6 +56,9 @@ export const createRoutesSlice: StateCreator<
     set(state => ({
       routes: state.routes.filter(route => route.fromId !== fromId)
     }));
+    
+    // Mark any existing captures as stale immediately when calculating a new route
+    mapCaptureService.markCaptureStaleDueToRouteChange();
 
     toast.info('Calculating route...');
 
@@ -87,7 +91,8 @@ export const createRoutesSlice: StateCreator<
         longitude: point[1]
       }));
       
-      // Create a unique ID for the route
+      // Create a unique ID for the route that includes a timestamp
+      // This helps in detecting if routes were added after a capture
       const routeId = `route-${Date.now()}`;
       
       // Create the route object
