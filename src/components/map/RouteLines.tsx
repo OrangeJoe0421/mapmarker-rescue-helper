@@ -25,12 +25,16 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
       
       if (allPoints.length > 0) {
         try {
-          // Add some padding to the bounds to ensure routes are visible
-          map.fitBounds(allPoints as [number, number][], { padding: [50, 50] });
+          // Add more padding to the bounds to ensure routes are fully visible
+          map.fitBounds(allPoints as [number, number][], { padding: [100, 100] });
           
           // Signal to the capture service that the map view has changed
-          // and any existing capture is now stale
           mapCaptureService.markCaptureStaleDueToRouteChange();
+          
+          // Force a repaint after bounds change
+          setTimeout(() => {
+            map.invalidateSize();
+          }, 300);
         } catch (error) {
           console.error("Error fitting bounds to routes:", error);
         }
@@ -49,26 +53,30 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
             if (el) {
               routeRefs.current[index] = el;
               
-              // Apply additional attributes for capture - enhanced for better visibility
+              // Apply additional attributes for capture with SVG attributes
               if (el.getElement()) {
                 const pathElement = el.getElement();
                 if (pathElement) {
+                  // Add data attributes for identifying routes in capture
                   pathElement.setAttribute('data-route-id', route.id);
                   pathElement.setAttribute('data-route-line', 'true');
                   pathElement.setAttribute('class', 'route-line-highlighted');
-                  // Use setAttribute for styling instead of style property
+                  
+                  // Use SVG specific attributes for styling
                   pathElement.setAttribute('stroke', '#FF3B30');
                   pathElement.setAttribute('stroke-width', '6');
                   pathElement.setAttribute('opacity', '1');
+                  pathElement.setAttribute('stroke-linecap', 'round');
+                  pathElement.setAttribute('stroke-linejoin', 'round');
+                  pathElement.setAttribute('vector-effect', 'non-scaling-stroke');
                 }
               }
             }
           }}
-          color="#FF3B30" // Bright red for better visibility
-          weight={6} // Thicker lines
-          opacity={1} // Full opacity
-          className="route-line"
           pathOptions={{
+            color: '#FF3B30', // Bright red for better visibility
+            weight: 6, // Thicker lines
+            opacity: 1, // Full opacity
             className: 'route-path',
             lineCap: 'round',
             lineJoin: 'round',
