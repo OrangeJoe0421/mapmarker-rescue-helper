@@ -26,32 +26,38 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
       
       if (allPoints.length > 0) {
         try {
-          // Use a different padding approach with larger values for better visibility
+          // Use explicit PointTuple arrays for padding to fix type errors
           const paddingOptions = { 
-            paddingTopLeft: [150, 150],
-            paddingBottomRight: [150, 150],
+            // Explicitly define as [number, number] tuples to fix type errors
+            paddingTopLeft: [150, 150] as [number, number],
+            paddingBottomRight: [150, 150] as [number, number],
             maxZoom: 18
           };
           
+          // First, we'll do a hard reset of the map view
+          map.invalidateSize({ pan: false });
+          
+          // Then fit bounds with our padding
           map.fitBounds(allPoints as [number, number][], paddingOptions);
           
           // Signal to the capture service that the map view has changed
           mapCaptureService.markCaptureStaleDueToRouteChange();
           
-          // Force multiple redraws for better consistency
-          // First immediate redraw
-          map.invalidateSize();
-          
-          // Then toggle visibility briefly to force a complete redraw
-          setIsVisible(false);
+          // Force multiple redraws with slight delays between them
           setTimeout(() => {
-            setIsVisible(true);
-            map.invalidateSize();
+            // Force a redraw by toggling visibility
+            setIsVisible(false);
             
-            // Fit bounds again after visibility is restored
+            // After a short delay, restore visibility and redraw map
             setTimeout(() => {
-              map.fitBounds(allPoints as [number, number][], paddingOptions);
-              map.invalidateSize();
+              setIsVisible(true);
+              map.invalidateSize({ pan: false });
+              
+              // Fit bounds again after visibility is restored
+              setTimeout(() => {
+                map.fitBounds(allPoints as [number, number][], paddingOptions);
+                map.invalidateSize({ pan: false });
+              }, 200);
             }, 100);
           }, 50);
         } catch (error) {
@@ -74,9 +80,18 @@ const RouteLines: React.FC<RouteLinesProps> = ({ routes }) => {
               routeRefs.current[index] = el;
               const pathElement = el.getElement();
               if (pathElement) {
-                // Use a custom class that we'll target with CSS
-                pathElement.setAttribute('class', 'capture-route-line');
-                pathElement.setAttribute('data-route-id', route.id);
+                // Add a unique class for targeting with CSS
+                pathElement.classList.add('capture-route-line');
+                // Add data attributes for enhanced styling
+                pathElement.dataset.routeId = route.id;
+                pathElement.dataset.pointsCount = route.points.length.toString();
+                
+                // Add inline SVG styling directly
+                pathElement.setAttribute('stroke', '#FF3B30');
+                pathElement.setAttribute('stroke-width', '6');
+                pathElement.setAttribute('stroke-opacity', '1');
+                pathElement.setAttribute('stroke-linecap', 'round');
+                pathElement.setAttribute('stroke-linejoin', 'round');
               }
             }
           }}
