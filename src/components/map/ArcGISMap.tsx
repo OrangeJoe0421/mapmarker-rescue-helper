@@ -11,6 +11,8 @@ import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import * as route from '@arcgis/core/rest/route';
 import { useMapStore } from '../../store/useMapStore';
 import '@arcgis/core/assets/esri/themes/light/main.css';
+import EmergencyRoomVerification from '../EmergencyRoomVerification';
+import ReactDOMServer from 'react-dom/server';
 
 // ArcGIS API key
 const API_KEY = "AAPTxy8BH1VEsoebNVZXo8HurCbu3PSv3KJX_DDuDrGaWyOyZnym1CFeYHigp3dhVT4zBgjJbDsJUCe7vqw1hQGldb_lzf_oL_0CpilyHp1uyF0r1yQ1IHIpP72F5YK8UvUPS4oZ94EIsi3fAf4_GaRAZ6mr_hhxSP08zDf8Cpv4DHJWtKSgFW-osce6JCuJ650apzqq7Ajb0SYralTMuDtL6bUXyLBiVIaUAlqznUoV1dQ.AT1_aTQtmsBa";
@@ -34,7 +36,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     emergencyServices, 
     customMarkers,
     routes,
-    calculateRoute 
+    calculateRoute,
+    verifyEmergencyRoom
   } = useMapStore();
   
   // Initialize map
@@ -123,32 +126,135 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           const isService = graphic.attributes.type === 'service';
           const isCustom = graphic.attributes.type === 'custom';
           
-          // If it's a service or custom marker, show popup with route option
-          if ((isService || isCustom) && userLocation) {
-            view.popup.open({
-              features: [graphic],
-              location: event.mapPoint
-            });
-            
-            // Clear existing actions
-            view.popup.actions.removeAll();
-            
-            // Create a proper ActionButton instance
-            const routeAction = {
-              title: "Route to Project Location",
-              id: "route-to-project",
-              className: "esri-icon-directions"
-            };
-            
-            // Add the action to the popup
-            view.popup.actions.add(routeAction as any);
-            
-            // Set up click handler for the action
-            view.popup.on("trigger-action", (event) => {
-              if (event.action.id === "route-to-project") {
-                calculateRoute(id, true);
-                view.popup.close();
+          // Handle service marker click
+          if (isService) {
+            const service = emergencyServices.find(s => s.id === id);
+            if (service) {
+              // Create custom popup content with verification checkbox for hospitals
+              let popupContent = `
+                <div class="esri-popup-content custom-popup">
+                  <h3 class="font-bold text-lg">${service.name}</h3>
+                  <p class="text-sm">${service.type}</p>
+              `;
+              
+              if (service.road_distance) {
+                popupContent += `<p class="text-xs mt-1">${service.road_distance.toFixed(2)} km away</p>`;
               }
+              
+              if (service.address) {
+                popupContent += `<p class="text-xs mt-1">${service.address}</p>`;
+              }
+              
+              if (service.phone) {
+                popupContent += `<p class="text-xs mt-1">Phone: ${service.phone}</p>`;
+              }
+              
+              if (service.hours) {
+                popupContent += `<p class="text-xs mt-1">Hours: ${service.hours}</p>`;
+              }
+              
+              // Add the verification component for hospitals
+              if (service.type.toLowerCase().includes('hospital')) {
+                // Create a container for verification UI
+                popupContent += `
+                  <div class="mt-2 bg-gray-100 p-2 rounded">
+                    <div class="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        id="er-verification-${service.id}" 
+                        ${service.verification?.hasEmergencyRoom ? 'checked' : ''}
+                        onclick="window.verifyEmergencyRoom('${service.id}', this.checked)"
+                        class="mr-2"
+                      />
+                      <label for="er-verification-${service.id}" class="text-sm">
+                        Verified Emergency Room
+                      </label>
+                    </div>
+                `;
+                
+                if (service.verification?.verifiedAt) {
+                  const date = new Date(service.verification.verifiedAt);
+                  popupContent += `
+                    <div class="text-xs text-gray-500 mt-1">
+                      Verified on ${date.toLocaleDateString()}
+                    </div>
+                  `;
+                }
+                
+                popupContent += '</div>';
+              }
+              
+              // Add route button
+              popupContent += `
+                <div class="mt-3">
+                  <button 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs"
+                    onclick="window.calculateRouteToProject('${service.id}')"
+                  >
+                    Route to Project
+                  </button>
+                </div>
+              `;
+              
+              popupContent += '</div>';
+              
+              // Set up global functions for the verification and routing
+              (window as any).verifyEmergencyRoom = (serviceId: string, checked: boolean) => {
+                verifyEmergencyRoom(serviceId, checked);
+                // Close and reopen the popup to refresh content
+                view.popup.close();
+                setTimeout(() => {
+                  view.popup.open({
+                    location: event.mapPoint,
+                    content: popupContent
+                  });
+                }, 100);
+              };
+              
+              (window as any).calculateRouteToProject = (serviceId: string) => {
+                calculateRoute(serviceId, true);
+                view.popup.close();
+              };
+              
+              // Show the popup
+              view.popup.open({
+                location: event.mapPoint,
+                content: popupContent
+              });
+            }
+          } else if (isCustom || id === 'user-location') {
+            // Handle custom marker or user location click
+            let marker;
+            let title = '';
+            let details = '';
+            
+            if (id === 'user-location') {
+              title = 'Project Location';
+              details = userLocation?.metadata ? 
+                `<p>Project Number: ${userLocation.metadata.projectNumber || 'N/A'}</p>
+                 <p>Region: ${userLocation.metadata.region || 'N/A'}</p>
+                 <p>Project Type: ${userLocation.metadata.projectType || 'N/A'}</p>` : '';
+            } else {
+              marker = customMarkers.find(m => m.id === id);
+              if (marker) {
+                title = marker.name;
+                details = marker.metadata ? 
+                  `<p>Project Number: ${marker.metadata.projectNumber || 'N/A'}</p>
+                   <p>Region: ${marker.metadata.region || 'N/A'}</p>
+                   <p>Project Type: ${marker.metadata.projectType || 'N/A'}</p>` : '';
+              }
+            }
+            
+            const popupContent = `
+              <div class="esri-popup-content custom-popup">
+                <h3 class="font-bold text-lg">${title}</h3>
+                ${details}
+              </div>
+            `;
+            
+            view.popup.open({
+              location: event.mapPoint,
+              content: popupContent
             });
           }
         }
@@ -162,6 +268,10 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
         if ((window as any).__arcgisView === viewRef.current) {
           (window as any).__arcgisView = null;
         }
+        
+        // Clean up global functions
+        delete (window as any).verifyEmergencyRoom;
+        delete (window as any).calculateRouteToProject;
         
         viewRef.current.destroy();
         viewRef.current = null;
@@ -269,18 +379,13 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
           id: service.id,
           type: "service",
           name: service.name,
-          serviceType: service.type
-        },
-        popupTemplate: {
-          title: "{name}",
-          content: [
-            {
-              type: "fields",
-              fieldInfos: [
-                { fieldName: "serviceType", label: "Type" }
-              ]
-            }
-          ]
+          serviceType: service.type,
+          address: service.address || '',
+          phone: service.phone || '',
+          hours: service.hours || '',
+          distance: service.road_distance ? `${service.road_distance.toFixed(2)} km` : 'Unknown',
+          hasEmergencyRoom: service.verification?.hasEmergencyRoom ? 'Yes' : 'No',
+          verifiedAt: service.verification?.verifiedAt ? new Date(service.verification.verifiedAt).toLocaleDateString() : 'Not verified'
         }
       });
       
@@ -296,7 +401,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       
       const markerSymbol = {
         type: "simple-marker" as "simple-marker",
-        color: marker.color || [59, 130, 246], // Use marker color or default blue
+        color: marker.color ? marker.color.replace('#', '').match(/.{1,2}/g)?.map(hex => parseInt(hex, 16)) || [59, 130, 246] : [59, 130, 246],
         outline: {
           color: [255, 255, 255], // White
           width: 1
@@ -310,18 +415,8 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
         attributes: {
           id: marker.id,
           type: "custom",
-          name: marker.name
-        },
-        popupTemplate: {
-          title: "{name}",
-          content: [
-            {
-              type: "fields",
-              fieldInfos: [
-                { fieldName: "name", label: "Name" }
-              ]
-            }
-          ]
+          name: marker.name,
+          metadata: JSON.stringify(marker.metadata || {})
         }
       });
       
@@ -346,7 +441,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       
       const routeSymbol = {
         type: "simple-line" as "simple-line",
-        color: [59, 130, 246], // Blue
+        color: [255, 59, 48], // Red
         width: 4
       };
       
@@ -423,3 +518,4 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
 };
 
 export default ArcGISMap;
+
