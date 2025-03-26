@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Camera, RefreshCw } from 'lucide-react';
@@ -235,7 +236,7 @@ const MapCapture = () => {
       console.error('Error during html2canvas capture:', error);
       toast.error('Failed to capture map');
     } finally {
-      setCapturing(false);
+      setCapturing(false);  // Ensure we reset capturing state even on errors
     }
   };
   

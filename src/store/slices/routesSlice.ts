@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
@@ -190,24 +189,21 @@ export const createRoutesSlice: StateCreator<
     // Mark any existing captures as stale
     mapCaptureService.markCaptureStaleDueToRouteChange();
     
-    // Count how many services are of EMS type
-    const emsServices = state.emergencyServices.filter(service => 
-      service.type.toLowerCase().includes('ems') || 
-      service.type.toLowerCase().includes('ambulance') ||
-      service.type.toLowerCase().includes('hospital')
-    );
+    // Include all emergency services for routing
+    // We're not filtering by type anymore to include all services
+    const servicesToRoute = state.emergencyServices;
     
-    if (emsServices.length === 0) {
-      toast.warning('No EMS services found to route');
+    if (servicesToRoute.length === 0) {
+      toast.warning('No emergency services found to route');
       return;
     }
     
-    toast.info(`Calculating routes for ${emsServices.length} emergency medical services...`);
+    toast.info(`Calculating routes for ${servicesToRoute.length} emergency services...`);
     
-    // Calculate routes for all EMS services
+    // Calculate routes for all services
     let successCount = 0;
     
-    for (const service of emsServices) {
+    for (const service of servicesToRoute) {
       try {
         // Get start and end coordinates
         const startCoords = {

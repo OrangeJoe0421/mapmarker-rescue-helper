@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Toaster } from 'sonner';
 import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
@@ -10,6 +10,7 @@ import { useMapStore } from '@/store/useMapStore';
 const Index = () => {
   const { toast } = useToast();
   const { userLocation, emergencyServices, calculateRoutesForAllEMS } = useMapStore();
+  const routesCalculatedRef = useRef(false);
 
   useEffect(() => {
     // Welcome toast
@@ -22,15 +23,21 @@ const Index = () => {
 
   // Effect to automatically calculate routes when emergency services are loaded
   useEffect(() => {
-    if (userLocation && emergencyServices.length > 0) {
+    if (userLocation && emergencyServices.length > 0 && !routesCalculatedRef.current) {
       // Slight delay to ensure the UI has updated
       const timer = setTimeout(() => {
         calculateRoutesForAllEMS();
-      }, 1000);
+        routesCalculatedRef.current = true;
+      }, 1500);
       
       return () => clearTimeout(timer);
     }
   }, [userLocation, emergencyServices.length, calculateRoutesForAllEMS]);
+
+  // Reset the calculation flag when the user location changes
+  useEffect(() => {
+    routesCalculatedRef.current = false;
+  }, [userLocation?.latitude, userLocation?.longitude]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4">
