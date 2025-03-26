@@ -18,7 +18,7 @@ const CustomMarkers: React.FC<CustomMarkersProps> = ({
   updateCustomMarker, 
   calculateRoute 
 }) => {
-  // Function to handle marker click - no longer calculates route automatically
+  // Make sure markers are interactive
   const handleMarkerClick = (marker: CustomMarker) => {
     selectMarker(marker);
   };

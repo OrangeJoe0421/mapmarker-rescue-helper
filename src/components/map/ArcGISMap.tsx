@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
@@ -451,22 +450,12 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
         attributes: {
           id: route.id,
           distance: route.distance,
-          duration: route.duration
-        },
-        popupTemplate: {
-          title: "Route",
-          content: [
-            {
-              type: "fields",
-              fieldInfos: [
-                { fieldName: "distance", label: "Distance (km)" },
-                { fieldName: "duration", label: "Duration (min)" }
-              ]
-            }
-          ]
+          duration: route.duration,
+          type: 'route' // Add a type to differentiate from markers
         }
       });
       
+      // Routes don't need popups to make them non-interactive
       routeLayer.add(graphic);
     });
   }, [routes]);
@@ -518,4 +507,3 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
 };
 
 export default ArcGISMap;
-
