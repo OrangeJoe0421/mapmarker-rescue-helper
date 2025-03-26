@@ -394,7 +394,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       if (!draggingRef.current || !currentMarkerRef.current) return;
       
       // Get map point from screen point
-      const point = view.toMap(event.x, event.y);
+      const point = view.toMap({x: event.x, y: event.y});
       
       // Update the marker's position
       graphicsLayer.graphics.forEach(graphic => {
@@ -409,7 +409,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       if (!draggingRef.current || !currentMarkerRef.current) return;
       
       // Get final map point
-      const point = view.toMap(event.x, event.y);
+      const point = view.toMap({x: event.x, y: event.y});
       
       // Update marker position in the store
       updateMarkerPosition(
