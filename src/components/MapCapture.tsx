@@ -71,6 +71,21 @@ export const mapCaptureService = {
   }
 };
 
+// Subscribe to store changes to clear capture data when app is reset
+useMapStore.subscribe((state, prevState) => {
+  // Check if the app has been reset (all data cleared)
+  if (
+    prevState.emergencyServices.length > 0 && 
+    state.emergencyServices.length === 0 &&
+    prevState.customMarkers.length > 0 &&
+    state.customMarkers.length === 0 &&
+    prevState.userLocation && 
+    !state.userLocation
+  ) {
+    mapCaptureService.clearCapture();
+  }
+});
+
 const MapCapture = () => {
   const [capturing, setCapturing] = useState(false);
   const { routes } = useMapStore();

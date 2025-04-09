@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
 import ExportButton from '@/components/ExportButton';
+import { ClearButton } from '@/components/ui/clear-button';
 import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
 
@@ -63,7 +64,10 @@ const Index = () => {
               </p>
             </div>
           </div>
-          <ExportButton />
+          <div className="flex gap-2">
+            <ClearButton />
+            <ExportButton />
+          </div>
         </header>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

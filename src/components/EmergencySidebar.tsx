@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { ClearButton } from '@/components/ui/clear-button';
 import { 
   Search, 
   MapPin, 
@@ -130,12 +132,11 @@ const EmergencySidebar = () => {
   };
 
   const handleClearAllData = () => {
-    if (window.confirm("Are you sure you want to clear all data?")) {
-      clearAll();
-      setLatitude("");
-      setLongitude("");
-      setActiveTab("search");
-    }
+    clearAll();
+    setLatitude("");
+    setLongitude("");
+    setActiveTab("search");
+    toast.success("All data has been cleared");
   };
 
   const getServiceColor = (service) => {
@@ -158,6 +159,17 @@ const EmergencySidebar = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] w-full gap-4">
+      {/* Clear button at the top of the sidebar */}
+      <div className="flex justify-end">
+        <ClearButton 
+          onClear={() => {
+            setLatitude("");
+            setLongitude("");
+            setActiveTab("search");
+          }}
+        />
+      </div>
+      
       <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="search">Search</TabsTrigger>
