@@ -79,12 +79,12 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     if (!capturedImage) {
       // Add a message if no map was captured
       doc.addPage();
-      doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
-      doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
-      doc.setTextColor(255, 255, 255); // White text
+      doc.setFillColor(51, 51, 51, 0.8);
+      doc.rect(0, 0, pageWidth, 20, 'F');
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
-      doc.setTextColor(51, 51, 51); // Dark gray text
+      doc.setTextColor(51, 51, 51);
       doc.setFontSize(12);
       doc.text('No map capture available. Use the "Capture Map" button before exporting.', 
         pageWidth / 2, 40, { align: 'center', maxWidth: pageWidth - 40 });
@@ -97,25 +97,53 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     // Dark header with white text
     doc.setFillColor(51, 51, 51, 0.8);
     doc.rect(0, 0, pageWidth, 20, 'F');
-    doc.setTextColor(255, 255, 255); // White text
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
     
-    // Calculate dimensions to fit on the page while maintaining aspect ratio
-    const imgWidth = pageWidth - 40; // More margin for a cleaner look
+    // Calculate precise dimensions
+    const margins = 40; // Total margin on both sides
+    const imgWidth = pageWidth - margins;
+    const imgHeight = 200; // Fixed height for consistency
     
-    // Use a fixed height to avoid scaling issues
-    const imgHeight = 180; // Fixed reasonable height that works well for most maps
+    // Create a new image to ensure consistent aspect ratio
+    const img = new Image();
+    img.src = capturedImage;
     
-    // Add the map image to the PDF with fixed dimensions and move it down a bit to make room for the timestamp
-    doc.addImage(capturedImage, 'PNG', 20, 35, imgWidth, imgHeight);
+    // Use canvas to resize and crop the image
+    const canvas = document.createElement('canvas');
+    canvas.width = imgWidth;
+    canvas.height = imgHeight;
+    const ctx = canvas.getContext('2d');
+    
+    if (ctx) {
+      // Calculate scaling and cropping to maintain aspect ratio
+      const scale = Math.max(imgWidth / img.width, imgHeight / img.height);
+      const scaledWidth = img.width * scale;
+      const scaledHeight = img.height * scale;
+      
+      // Center crop
+      const sx = (scaledWidth - imgWidth) / 2;
+      const sy = (scaledHeight - imgHeight) / 2;
+      
+      ctx.drawImage(
+        img, 
+        sx, sy, imgWidth, imgHeight,  // Source rectangle
+        0, 0, imgWidth, imgHeight     // Destination rectangle
+      );
+      
+      const croppedImage = canvas.toDataURL('image/png');
+      
+      // Add the cropped, resized map image
+      doc.addImage(croppedImage, 'PNG', 20, 35, imgWidth, imgHeight);
+    }
     
     // Add a note about the map capture with more subtle styling
     doc.setFontSize(9);
-    doc.setTextColor(120, 120, 120); // Lighter gray text color for notes
+    doc.setTextColor(120, 120, 120);
     doc.text('Note: Map reflects the view at time of capture. To update the map view, use "Capture Map" again.', 
       pageWidth / 2, imgHeight + 45, { align: 'center', maxWidth: pageWidth - 40 });
-    doc.setTextColor(51, 51, 51); // Reset text color to standard
+    doc.setTextColor(51, 51, 51);
     
   } catch (error) {
     console.error('Error adding captured map to PDF:', error);
