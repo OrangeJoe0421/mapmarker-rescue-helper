@@ -31,14 +31,42 @@ export const resizeAndCropImage = (
         try {
           // Use canvas to resize and crop the image
           const canvas = document.createElement('canvas');
+          const tempCanvas = document.createElement('canvas');
+          
+          // First, render the full image to a temporary canvas at higher resolution
+          // This helps with anti-aliasing during the resize
+          const scale = 2; // Use 2x scale for better quality
+          tempCanvas.width = img.width * scale;
+          tempCanvas.height = img.height * scale;
+          const tempCtx = tempCanvas.getContext('2d', { alpha: false });
+          
+          if (!tempCtx) {
+            reject('Could not get canvas context for image processing');
+            return;
+          }
+
+          // Set final canvas dimensions
           canvas.width = targetWidth;
           canvas.height = targetHeight;
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext('2d', { 
+            alpha: false,
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high'
+          });
           
           if (!ctx) {
             reject('Could not get canvas context for image processing');
             return;
           }
+          
+          // Enable high quality image smoothing on both contexts
+          tempCtx.imageSmoothingEnabled = true;
+          tempCtx.imageSmoothingQuality = 'high';
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          
+          // Draw the image at higher resolution on the temp canvas
+          tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
           
           // Calculate aspect ratios to determine scaling approach
           const sourceAspect = img.width / img.height;
@@ -65,21 +93,32 @@ export const resizeAndCropImage = (
             sourceY = (img.height - sourceHeight) / 2;
           }
           
-          // Draw the image with proper cropping to maintain aspect ratio
+          // Scale source coordinates for the temp canvas
+          sourceX *= scale;
+          sourceY *= scale;
+          sourceWidth *= scale;
+          sourceHeight *= scale;
+          
+          // Draw the image from the temp canvas to the final canvas with proper quality settings
           ctx.drawImage(
-            img,
+            tempCanvas,
             sourceX, sourceY, sourceWidth, sourceHeight,  // Source rectangle
             0, 0, targetWidth, targetHeight               // Destination rectangle
           );
           
-          // Get the processed image data
-          const processedImage = canvas.toDataURL('image/png');
+          // Get the processed image data with highest quality
+          const processedImage = canvas.toDataURL('image/png', 1.0);
           resolve(processedImage);
         } catch (err) {
           console.error('Error processing image:', err);
           reject('Error during image processing');
         }
       };
+      
+      // Enable crossOrigin if the image is from external source
+      if (imageSource.startsWith('http') && !imageSource.includes(window.location.hostname)) {
+        img.crossOrigin = 'anonymous';
+      }
       
       // Set the source to begin loading
       img.src = imageSource;
