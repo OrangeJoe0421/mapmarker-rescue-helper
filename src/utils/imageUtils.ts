@@ -40,23 +40,36 @@ export const resizeAndCropImage = (
             return;
           }
           
-          // Calculate scaling and cropping to maintain aspect ratio
-          const scale = Math.max(targetWidth / img.width, targetHeight / img.height);
-          const scaledWidth = img.width * scale;
-          const scaledHeight = img.height * scale;
+          // Calculate aspect ratios to determine scaling approach
+          const sourceAspect = img.width / img.height;
+          const targetAspect = targetWidth / targetHeight;
           
-          // Center crop
-          const sx = (scaledWidth - targetWidth) / 2;
-          const sy = (scaledHeight - targetHeight) / 2;
+          let sourceWidth, sourceHeight, sourceX, sourceY;
           
-          // Clear the canvas and draw the resized and cropped image
+          // Clear the canvas with a white background
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(0, 0, targetWidth, targetHeight);
           
+          // Determine if we need to crop width or height to maintain aspect ratio
+          if (sourceAspect > targetAspect) {
+            // Source is wider than target - crop width
+            sourceHeight = img.height;
+            sourceWidth = img.height * targetAspect;
+            sourceX = (img.width - sourceWidth) / 2;
+            sourceY = 0;
+          } else {
+            // Source is taller than target - crop height
+            sourceWidth = img.width;
+            sourceHeight = img.width / targetAspect;
+            sourceX = 0;
+            sourceY = (img.height - sourceHeight) / 2;
+          }
+          
+          // Draw the image with proper cropping to maintain aspect ratio
           ctx.drawImage(
-            img, 
-            sx, sy, targetWidth, targetHeight,  // Source rectangle
-            0, 0, targetWidth, targetHeight     // Destination rectangle
+            img,
+            sourceX, sourceY, sourceWidth, sourceHeight,  // Source rectangle
+            0, 0, targetWidth, targetHeight               // Destination rectangle
           );
           
           // Get the processed image data
