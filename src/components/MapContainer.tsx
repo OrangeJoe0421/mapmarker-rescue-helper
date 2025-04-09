@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useMapStore } from '../store/useMapStore';
 import MapCapture from './MapCapture';
-import { mapCaptureService } from './MapCapture';
+import { mapCaptureService } from '../services/mapCaptureService';
 import ArcGISMap from './map/ArcGISMap';
 import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { 
