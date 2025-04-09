@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
@@ -107,8 +108,10 @@ const addCapturedMapToPdf = async (doc: jsPDF, pageWidth: number) => {
     const imgHeight = 200; // Fixed height for consistency
     
     try {
-      // Use the extracted utility function to process the image
+      // Use the enhanced image processing utility
+      console.log('Processing map image for PDF export...');
       const processedImage = await resizeAndCropImage(capturedImage, imgWidth, imgHeight);
+      console.log('Map image processed successfully');
       
       // Add the processed image to the PDF
       doc.addImage(processedImage, 'PNG', 20, 35, imgWidth, imgHeight);

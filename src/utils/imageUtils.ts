@@ -35,24 +35,20 @@ export const resizeAndCropImage = (
           
           // First, render the full image to a temporary canvas at higher resolution
           // This helps with anti-aliasing during the resize
-          const scale = 2; // Use 2x scale for better quality
+          const scale = 4; // Increase scale for better quality
           tempCanvas.width = img.width * scale;
           tempCanvas.height = img.height * scale;
-          const tempCtx = tempCanvas.getContext('2d', { alpha: false });
+          const tempCtx = tempCanvas.getContext('2d', { alpha: true }) as CanvasRenderingContext2D;
           
           if (!tempCtx) {
             reject('Could not get canvas context for image processing');
             return;
           }
 
-          // Set final canvas dimensions
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          const ctx = canvas.getContext('2d', { 
-            alpha: false,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high'
-          });
+          // Set final canvas dimensions with higher resolution
+          canvas.width = targetWidth * 2;  // Double final resolution
+          canvas.height = targetHeight * 2;
+          const ctx = canvas.getContext('2d', { alpha: true }) as CanvasRenderingContext2D;
           
           if (!ctx) {
             reject('Could not get canvas context for image processing');
@@ -65,7 +61,9 @@ export const resizeAndCropImage = (
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
           
-          // Draw the image at higher resolution on the temp canvas
+          // Draw the image at higher resolution on the temp canvas with clear background first
+          tempCtx.fillStyle = '#FFFFFF';
+          tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
           tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
           
           // Calculate aspect ratios to determine scaling approach
@@ -76,7 +74,7 @@ export const resizeAndCropImage = (
           
           // Clear the canvas with a white background
           ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, targetWidth, targetHeight);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           
           // Determine if we need to crop width or height to maintain aspect ratio
           if (sourceAspect > targetAspect) {
@@ -103,11 +101,29 @@ export const resizeAndCropImage = (
           ctx.drawImage(
             tempCanvas,
             sourceX, sourceY, sourceWidth, sourceHeight,  // Source rectangle
-            0, 0, targetWidth, targetHeight               // Destination rectangle
+            0, 0, canvas.width, canvas.height            // Destination rectangle
           );
           
+          // Create a final smaller canvas for proper sizing
+          const finalCanvas = document.createElement('canvas');
+          finalCanvas.width = targetWidth;
+          finalCanvas.height = targetHeight;
+          const finalCtx = finalCanvas.getContext('2d', { alpha: true }) as CanvasRenderingContext2D;
+          
+          if (!finalCtx) {
+            reject('Could not get canvas context for final processing');
+            return;
+          }
+          
+          // Enable high quality image smoothing
+          finalCtx.imageSmoothingEnabled = true;
+          finalCtx.imageSmoothingQuality = 'high';
+          
+          // Draw from higher resolution canvas to final size
+          finalCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
+          
           // Get the processed image data with highest quality
-          const processedImage = canvas.toDataURL('image/png', 1.0);
+          const processedImage = finalCanvas.toDataURL('image/png', 1.0);
           resolve(processedImage);
         } catch (err) {
           console.error('Error processing image:', err);
