@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Camera, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -71,24 +71,29 @@ export const mapCaptureService = {
   }
 };
 
-// Subscribe to store changes to clear capture data when app is reset
-useMapStore.subscribe((state, prevState) => {
-  // Check if the app has been reset (all data cleared)
-  if (
-    prevState.emergencyServices.length > 0 && 
-    state.emergencyServices.length === 0 &&
-    prevState.customMarkers.length > 0 &&
-    state.customMarkers.length === 0 &&
-    prevState.userLocation && 
-    !state.userLocation
-  ) {
-    mapCaptureService.clearCapture();
-  }
-});
-
 const MapCapture = () => {
   const [capturing, setCapturing] = useState(false);
   const { routes } = useMapStore();
+  
+  // Monitor store changes to clear capture data when app is reset
+  useEffect(() => {
+    const unsubscribe = useMapStore.subscribe((state, prevState) => {
+      // Check if the app has been reset (all data cleared)
+      if (
+        prevState.emergencyServices.length > 0 && 
+        state.emergencyServices.length === 0 &&
+        prevState.customMarkers.length > 0 &&
+        state.customMarkers.length === 0 &&
+        prevState.userLocation && 
+        !state.userLocation
+      ) {
+        mapCaptureService.clearCapture();
+      }
+    });
+    
+    // Clean up subscription on component unmount
+    return () => unsubscribe();
+  }, []);
   
   // Check if recapture is needed
   const needsCapture = routes.length > 0 && 
