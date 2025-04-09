@@ -5,6 +5,7 @@ import { addEmergencyServicesSection } from './emergencyServicesSection';
 import { addDetailedRouteInformation } from './routesSection';
 import { addPdfFooter } from './pdfFooter';
 import { mapCaptureService } from '../../components/MapCapture';
+import { resizeAndCropImage } from '../imageUtils';
 
 export * from './types';
 
@@ -61,7 +62,7 @@ export const exportToPdf = async (data: ExportData) => {
   }
   
   // Add captured map to PDF with improved implementation
-  addCapturedMapToPdf(doc, pageWidth);
+  await addCapturedMapToPdf(doc, pageWidth);
   
   // Add footer
   addPdfFooter(doc);
@@ -70,11 +71,10 @@ export const exportToPdf = async (data: ExportData) => {
   doc.save('emergency-response-plan.pdf');
 };
 
-// Update addCapturedMapToPdf function to use white text for headers
-const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
+// Update addCapturedMapToPdf function to use the extracted image processing utility
+const addCapturedMapToPdf = async (doc: jsPDF, pageWidth: number) => {
   try {
     const capturedImage = mapCaptureService.getCapturedImage();
-    const captureTime = mapCaptureService.getCaptureTimestamp();
     
     if (!capturedImage) {
       // Add a message if no map was captured
@@ -101,49 +101,31 @@ const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
     doc.setFontSize(16);
     doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
     
-    // Calculate precise dimensions
+    // Calculate dimensions
     const margins = 40; // Total margin on both sides
     const imgWidth = pageWidth - margins;
     const imgHeight = 200; // Fixed height for consistency
     
-    // Create a new image to ensure consistent aspect ratio
-    const img = new Image();
-    img.src = capturedImage;
-    
-    // Use canvas to resize and crop the image
-    const canvas = document.createElement('canvas');
-    canvas.width = imgWidth;
-    canvas.height = imgHeight;
-    const ctx = canvas.getContext('2d');
-    
-    if (ctx) {
-      // Calculate scaling and cropping to maintain aspect ratio
-      const scale = Math.max(imgWidth / img.width, imgHeight / img.height);
-      const scaledWidth = img.width * scale;
-      const scaledHeight = img.height * scale;
+    try {
+      // Use the extracted utility function to process the image
+      const processedImage = await resizeAndCropImage(capturedImage, imgWidth, imgHeight);
       
-      // Center crop
-      const sx = (scaledWidth - imgWidth) / 2;
-      const sy = (scaledHeight - imgHeight) / 2;
+      // Add the processed image to the PDF
+      doc.addImage(processedImage, 'PNG', 20, 35, imgWidth, imgHeight);
       
-      ctx.drawImage(
-        img, 
-        sx, sy, imgWidth, imgHeight,  // Source rectangle
-        0, 0, imgWidth, imgHeight     // Destination rectangle
-      );
+      // Add a note about the map capture with more subtle styling
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Note: Map reflects the view at time of capture. To update the map view, use "Capture Map" again.', 
+        pageWidth / 2, imgHeight + 45, { align: 'center', maxWidth: pageWidth - 40 });
+      doc.setTextColor(51, 51, 51);
       
-      const croppedImage = canvas.toDataURL('image/png');
-      
-      // Add the cropped, resized map image
-      doc.addImage(croppedImage, 'PNG', 20, 35, imgWidth, imgHeight);
+    } catch (processingError) {
+      console.error('Error processing map image:', processingError);
+      doc.setTextColor(51, 51, 51);
+      doc.setFontSize(12);
+      doc.text('Error processing map image', pageWidth / 2, 60, { align: 'center' });
     }
-    
-    // Add a note about the map capture with more subtle styling
-    doc.setFontSize(9);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Note: Map reflects the view at time of capture. To update the map view, use "Capture Map" again.', 
-      pageWidth / 2, imgHeight + 45, { align: 'center', maxWidth: pageWidth - 40 });
-    doc.setTextColor(51, 51, 51);
     
   } catch (error) {
     console.error('Error adding captured map to PDF:', error);
