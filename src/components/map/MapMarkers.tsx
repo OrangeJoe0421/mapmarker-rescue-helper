@@ -1,12 +1,9 @@
 
 import React from 'react';
-import { useMapStore } from '../../store/useMapStore';
 
 // Since we're not using Leaflet anymore, this component isn't needed
-// We're just providing a placeholder that doesn't render anything
-// The actual markers are now handled directly in the ArcGISMap component
+// We're providing a clean placeholder that doesn't render anything
 const MapMarkers = () => {
-  console.log('MapMarkers component is no longer used with ArcGIS');
   return null;
 };
 
