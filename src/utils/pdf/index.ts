@@ -72,7 +72,7 @@ export const exportToPdf = async (data: ExportData) => {
   doc.save('emergency-response-plan.pdf');
 };
 
-// Update addCapturedMapToPdf function to use the extracted image processing utility
+// Revert to simpler implementation to avoid pixelation
 const addCapturedMapToPdf = async (doc: jsPDF, pageWidth: number) => {
   try {
     const capturedImage = mapCaptureService.getCapturedImage();
@@ -108,10 +108,8 @@ const addCapturedMapToPdf = async (doc: jsPDF, pageWidth: number) => {
     const imgHeight = 200; // Fixed height for consistency
     
     try {
-      // Use the enhanced image processing utility
-      console.log('Processing map image for PDF export...');
+      // Process the image using the simpler function
       const processedImage = await resizeAndCropImage(capturedImage, imgWidth, imgHeight);
-      console.log('Map image processed successfully');
       
       // Add the processed image to the PDF
       doc.addImage(processedImage, 'PNG', 20, 35, imgWidth, imgHeight);
