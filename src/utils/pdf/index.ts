@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
@@ -6,7 +5,6 @@ import { addEmergencyServicesSection } from './emergencyServicesSection';
 import { addDetailedRouteInformation } from './routesSection';
 import { addPdfFooter } from './pdfFooter';
 import { mapCaptureService } from '../../components/MapCapture';
-import { resizeAndCropImage } from '../imageUtils';
 
 export * from './types';
 
@@ -63,7 +61,7 @@ export const exportToPdf = async (data: ExportData) => {
   }
   
   // Add captured map to PDF with improved implementation
-  await addCapturedMapToPdf(doc, pageWidth);
+  addCapturedMapToPdf(doc, pageWidth);
   
   // Add footer
   addPdfFooter(doc);
@@ -72,20 +70,21 @@ export const exportToPdf = async (data: ExportData) => {
   doc.save('emergency-response-plan.pdf');
 };
 
-// Revert to simpler implementation to avoid pixelation
-const addCapturedMapToPdf = async (doc: jsPDF, pageWidth: number) => {
+// Update addCapturedMapToPdf function to use white text for headers
+const addCapturedMapToPdf = (doc: jsPDF, pageWidth: number) => {
   try {
     const capturedImage = mapCaptureService.getCapturedImage();
+    const captureTime = mapCaptureService.getCaptureTimestamp();
     
     if (!capturedImage) {
       // Add a message if no map was captured
       doc.addPage();
-      doc.setFillColor(51, 51, 51, 0.8);
-      doc.rect(0, 0, pageWidth, 20, 'F');
-      doc.setTextColor(255, 255, 255);
+      doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
+      doc.rect(0, 0, pageWidth, 20, 'F'); // Dark header
+      doc.setTextColor(255, 255, 255); // White text
       doc.setFontSize(16);
       doc.text('Map View', pageWidth / 2, 15, { align: 'center' });
-      doc.setTextColor(51, 51, 51);
+      doc.setTextColor(51, 51, 51); // Dark gray text
       doc.setFontSize(12);
       doc.text('No map capture available. Use the "Capture Map" button before exporting.', 
         pageWidth / 2, 40, { align: 'center', maxWidth: pageWidth - 40 });
@@ -98,35 +97,25 @@ const addCapturedMapToPdf = async (doc: jsPDF, pageWidth: number) => {
     // Dark header with white text
     doc.setFillColor(51, 51, 51, 0.8);
     doc.rect(0, 0, pageWidth, 20, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(255, 255, 255); // White text
     doc.setFontSize(16);
     doc.text('Map View with Routes', pageWidth / 2, 15, { align: 'center' });
     
-    // Calculate dimensions
-    const margins = 40; // Total margin on both sides
-    const imgWidth = pageWidth - margins;
-    const imgHeight = 200; // Fixed height for consistency
+    // Calculate dimensions to fit on the page while maintaining aspect ratio
+    const imgWidth = pageWidth - 40; // More margin for a cleaner look
     
-    try {
-      // Process the image using the simpler function
-      const processedImage = await resizeAndCropImage(capturedImage, imgWidth, imgHeight);
-      
-      // Add the processed image to the PDF
-      doc.addImage(processedImage, 'PNG', 20, 35, imgWidth, imgHeight);
-      
-      // Add a note about the map capture with more subtle styling
-      doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
-      doc.text('Note: Map reflects the view at time of capture. To update the map view, use "Capture Map" again.', 
-        pageWidth / 2, imgHeight + 45, { align: 'center', maxWidth: pageWidth - 40 });
-      doc.setTextColor(51, 51, 51);
-      
-    } catch (processingError) {
-      console.error('Error processing map image:', processingError);
-      doc.setTextColor(51, 51, 51);
-      doc.setFontSize(12);
-      doc.text('Error processing map image', pageWidth / 2, 60, { align: 'center' });
-    }
+    // Use a fixed height to avoid scaling issues
+    const imgHeight = 180; // Fixed reasonable height that works well for most maps
+    
+    // Add the map image to the PDF with fixed dimensions and move it down a bit to make room for the timestamp
+    doc.addImage(capturedImage, 'PNG', 20, 35, imgWidth, imgHeight);
+    
+    // Add a note about the map capture with more subtle styling
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120); // Lighter gray text color for notes
+    doc.text('Note: Map reflects the view at time of capture. To update the map view, use "Capture Map" again.', 
+      pageWidth / 2, imgHeight + 45, { align: 'center', maxWidth: pageWidth - 40 });
+    doc.setTextColor(51, 51, 51); // Reset text color to standard
     
   } catch (error) {
     console.error('Error adding captured map to PDF:', error);
