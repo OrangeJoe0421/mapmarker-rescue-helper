@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -8,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { ClearButton } from '@/components/ui/clear-button';
 import { 
   Search, 
   MapPin, 
@@ -58,7 +56,6 @@ const EmergencySidebar = () => {
     deleteCustomMarker,
     selectService,
     selectMarker,
-    clearAll,
     calculateRoute,
     calculateRoutesForAllEMS
   } = useMapStore();
@@ -131,14 +128,6 @@ const EmergencySidebar = () => {
     }
   };
 
-  const handleClearAllData = () => {
-    clearAll();
-    setLatitude("");
-    setLongitude("");
-    setActiveTab("search");
-    toast.success("All data has been cleared");
-  };
-
   const getServiceColor = (service) => {
     const type = service.type.toLowerCase();
     if (type.includes('hospital')) return 'bg-red-600';
@@ -159,17 +148,6 @@ const EmergencySidebar = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-2rem)] w-full gap-4">
-      {/* Clear button at the top of the sidebar */}
-      <div className="flex justify-end">
-        <ClearButton 
-          onClear={() => {
-            setLatitude("");
-            setLongitude("");
-            setActiveTab("search");
-          }}
-        />
-      </div>
-      
       <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="search">Search</TabsTrigger>
@@ -636,17 +614,6 @@ const EmergencySidebar = () => {
                 <Plus className="h-4 w-4 mr-1" />
                 Add Marker
               </Button>
-              {customMarkers.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={handleClearAllData}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Clear All
-                </Button>
-              )}
             </CardFooter>
           </Card>
         </TabsContent>
