@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
@@ -7,20 +7,26 @@ import ExportButton from '@/components/ExportButton';
 import { ClearButton } from '@/components/ui/clear-button';
 import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
+import PasswordGate from '@/components/PasswordGate';
 
 const Index = () => {
   const { toast } = useToast();
   const { userLocation, emergencyServices, calculateRoutesForAllEMS } = useMapStore();
   const routesCalculatedRef = useRef(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("auth") === "true";
+  });
 
   useEffect(() => {
-    // Welcome toast
-    toast({
-      title: "Welcome to Emergency Response Planner",
-      description: "Search for a location to find nearby emergency services",
-      duration: 5000,
-    });
-  }, [toast]);
+    if (isAuthenticated) {
+      // Welcome toast
+      toast({
+        title: "Welcome to Emergency Response Planner",
+        description: "Search for a location to find nearby emergency services",
+        duration: 5000,
+      });
+    }
+  }, [isAuthenticated, toast]);
 
   // Effect to automatically calculate routes when emergency services are loaded
   useEffect(() => {
@@ -39,6 +45,10 @@ const Index = () => {
   useEffect(() => {
     routesCalculatedRef.current = false;
   }, [userLocation?.latitude, userLocation?.longitude]);
+
+  if (!isAuthenticated) {
+    return <PasswordGate onCorrectPassword={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
