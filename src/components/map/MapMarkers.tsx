@@ -1,8 +1,8 @@
 
 import React from 'react';
 
-// Since we're not using Leaflet anymore, this component isn't needed
-// We're providing a clean placeholder that doesn't render anything
+// This component has been deprecated and is no longer used with ArcGIS
+// It's kept as a placeholder to prevent import errors
 const MapMarkers = () => {
   return null;
 };
