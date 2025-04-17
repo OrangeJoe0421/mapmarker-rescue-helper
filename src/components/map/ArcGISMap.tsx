@@ -1,17 +1,18 @@
+
 import React, { useEffect, useRef } from 'react';
-import Map from '@arcgis/core/Map';
-import MapView from '@arcgis/core/views/MapView';
-import Graphic from '@arcgis/core/Graphic';
-import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
-import Point from '@arcgis/core/geometry/Point';
-import Polyline from '@arcgis/core/geometry/Polyline';
-import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
-import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
-import * as route from '@arcgis/core/rest/route';
+// Import ArcGIS modules more explicitly with full paths
+import Map from '@arcgis/core/Map.js';
+import MapView from '@arcgis/core/views/MapView.js';
+import Graphic from '@arcgis/core/Graphic.js';
+import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer.js';
+import Point from '@arcgis/core/geometry/Point.js';
+import Polyline from '@arcgis/core/geometry/Polyline.js';
+import RouteParameters from '@arcgis/core/rest/support/RouteParameters.js';
+import FeatureSet from '@arcgis/core/rest/support/FeatureSet.js';
+import * as route from '@arcgis/core/rest/route.js';
 import { useMapStore } from '../../store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import '@arcgis/core/assets/esri/themes/light/main.css';
-import ReactDOMServer from 'react-dom/server';
 
 // ArcGIS API key
 const API_KEY = "AAPTxy8BH1VEsoebNVZXo8HurCbu3PSv3KJX_DDuDrGaWyOyZnym1CFeYHigp3dhVT4zBgjJbDsJUCe7vqw1hQGldb_lzf_oL_0CpilyHp1uyF0r1yQ1IHIpP72F5YK8UvUPS4oZ94EIsi3fAf4_GaRAZ6mr_hhxSP08zDf8Cpv4DHJWtKSgFW-osce6JCuJ650apzqq7Ajb0SYralTMuDtL6bUXyLBiVIaUAlqznUoV1dQ.AT1_aTQtmsBa";
@@ -39,20 +40,24 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     selectService
   } = useMapStore();
   
+  // Initial map setup - only runs once
   useEffect(() => {
     if (!mapDiv.current || mapRef.current) return;
     
-    import('@arcgis/core/assets/esri/themes/light/main.css');
+    // Configure esriConfig first, before any other operations
+    if (!(window as any).esriConfig) {
+      (window as any).esriConfig = {
+        apiKey: API_KEY
+      };
+    }
     
-    (window as any).esriConfig = {
-      apiKey: API_KEY
-    };
-    
+    // Create map instance
     const map = new Map({
       basemap: "streets-navigation-vector"
     });
     mapRef.current = map;
     
+    // Add graphics layers
     const graphicsLayer = new GraphicsLayer();
     const routeLayer = new GraphicsLayer();
     map.add(routeLayer);
@@ -60,6 +65,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     graphicsLayerRef.current = graphicsLayer;
     routeLayerRef.current = routeLayer;
     
+    // Create and configure the view
     const view = new MapView({
       container: mapDiv.current,
       map: map,
@@ -73,8 +79,10 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     
     viewRef.current = view;
     
+    // Expose view for screenshot capability
     (window as any).__arcgisView = view;
     
+    // Enable screenshot functionality when view is ready
     view.when(() => {
       try {
         (view as any).allLayersVisibleForScreenshot = true;
@@ -84,87 +92,17 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       }
     });
     
-    const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
-    
-    view.on("click", (event) => {
-      view.hitTest(event).then(response => {
-        if (response.results.length > 0) {
-          const graphicResults = response.results.filter(result => {
-            const hitResult = result as any;
-            return hitResult.graphic && hitResult.graphic.layer === graphicsLayer;
-          });
-          
-          if (graphicResults.length === 0) return;
-          
-          const hitResult = graphicResults[0] as any;
-          const graphic = hitResult.graphic;
-          
-          if (!graphic || !graphic.attributes) return;
-          
-          const id = graphic.attributes.id;
-          if (!id) return;
-          
-          const isService = graphic.attributes.type === 'service';
-          const isCustom = graphic.attributes.type === 'custom';
-          
-          if (isService) {
-            const service = emergencyServices.find(s => s.id === id);
-            if (service) {
-              selectService(service);
-              const tabsElement = document.querySelector('[value="results"]') as HTMLButtonElement;
-              if (tabsElement) {
-                tabsElement.click();
-              }
-              view.popup.close();
-            }
-          } else if (isCustom || id === 'user-location') {
-            let marker;
-            let title = '';
-            let details = '';
-            
-            if (id === 'user-location') {
-              title = 'Project Location';
-              details = userLocation?.metadata ? 
-                `<p>Project Number: ${userLocation.metadata.projectNumber || 'N/A'}</p>
-                 <p>Region: ${userLocation.metadata.region || 'N/A'}</p>
-                 <p>Project Type: ${userLocation.metadata.projectType || 'N/A'}</p>` : '';
-            } else {
-              marker = customMarkers.find(m => m.id === id);
-              if (marker) {
-                title = marker.name;
-                details = marker.metadata ? 
-                  `<p>Project Number: ${marker.metadata.projectNumber || 'N/A'}</p>
-                   <p>Region: ${marker.metadata.region || 'N/A'}</p>
-                   <p>Project Type: ${marker.metadata.projectType || 'N/A'}</p>` : '';
-              }
-            }
-            
-            const popupContent = `
-              <div class="esri-popup-content custom-popup">
-                <h3 class="font-bold text-lg">${title}</h3>
-                ${details}
-              </div>
-            `;
-            
-            view.popup.open({
-              location: event.mapPoint,
-              content: popupContent
-            });
-          }
-        } else {
-          view.popup.close();
-        }
-      });
-    });
-    
+    // Cleanup function
     return () => {
       if (viewRef.current) {
         if ((window as any).__arcgisView === viewRef.current) {
           (window as any).__arcgisView = null;
         }
         
-        delete (window as any).verifyEmergencyRoom;
-        delete (window as any).calculateRouteToProject;
+        if (clickHandleRef.current) {
+          clickHandleRef.current.remove();
+          clickHandleRef.current = null;
+        }
         
         viewRef.current.destroy();
         viewRef.current = null;
@@ -175,25 +113,36 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     };
   }, []);
   
+  // Update map center and zoom when they change
   useEffect(() => {
     if (!viewRef.current) return;
+    
+    // Use a safer approach to update map view
     try {
-      viewRef.current.goTo({
-        center: [mapCenter[1], mapCenter[0]],
-        zoom: mapZoom
-      });
+      const view = viewRef.current;
+      if (view?.ready) {
+        view.goTo({
+          center: [mapCenter[1], mapCenter[0]],
+          zoom: mapZoom
+        }, {
+          duration: 500
+        }).catch(err => {
+          console.warn("Map navigation was interrupted:", err);
+        });
+      }
     } catch (error) {
       console.error("Error updating map center/zoom:", error);
     }
   }, [mapCenter, mapZoom]);
   
+  // Update markers when data changes
   useEffect(() => {
     if (!graphicsLayerRef.current || !viewRef.current) return;
     
     const graphicsLayer = graphicsLayerRef.current;
-    const view = viewRef.current;
     graphicsLayer.removeAll();
     
+    // Add user location marker
     if (userLocation) {
       const point = new Point({
         longitude: userLocation.longitude,
@@ -223,6 +172,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       graphicsLayer.add(graphic);
     }
     
+    // Add emergency service markers
     emergencyServices.forEach(service => {
       const point = new Point({
         longitude: service.longitude,
@@ -264,6 +214,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       graphicsLayer.add(graphic);
     });
     
+    // Add custom markers
     customMarkers.forEach(marker => {
       const point = new Point({
         longitude: marker.longitude,
@@ -294,7 +245,17 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       graphicsLayer.add(graphic);
     });
     
-    view.on("click", (event) => {
+    // Setup click handlers for map markers
+    const view = viewRef.current;
+    
+    // Remove previous click handler if it exists
+    if (clickHandleRef.current) {
+      clickHandleRef.current.remove();
+      clickHandleRef.current = null;
+    }
+    
+    // Add new click handler
+    clickHandleRef.current = view.on("click", (event) => {
       view.hitTest(event).then(response => {
         if (response.results.length > 0) {
           const graphicResults = response.results.filter(result => {
@@ -366,6 +327,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     });
   }, [customMarkers, userLocation, emergencyServices, selectService]);
   
+  // Update routes when they change
   useEffect(() => {
     if (!routeLayerRef.current) return;
     
@@ -400,6 +362,7 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
     });
   }, [routes]);
   
+  // Handle marker adding mode
   useEffect(() => {
     if (!viewRef.current) return;
     
@@ -433,26 +396,6 @@ const ArcGISMap: React.FC<ArcGISMapProps> = ({ className }) => {
       };
     }
   }, [useMapStore.getState().addingMarker]);
-  
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Control') {
-      }
-    };
-    
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control') {
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
   
   return (
     <div 
