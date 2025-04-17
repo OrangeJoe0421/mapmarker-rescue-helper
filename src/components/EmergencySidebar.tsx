@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -45,7 +44,10 @@ const EmergencySidebar = () => {
   const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
   const [isEditingLocationMetadata, setIsEditingLocationMetadata] = useState<boolean>(false);
   const [selectedRouteMarkerId, setSelectedRouteMarkerId] = useState<string | null>(null);
-  
+  const [showAddMarkerForm, setShowAddMarkerForm] = useState(false);
+  const [newMarkerLatitude, setNewMarkerLatitude] = useState("");
+  const [newMarkerLongitude, setNewMarkerLongitude] = useState("");
+
   const { 
     userLocation,
     emergencyServices, 
@@ -61,13 +63,13 @@ const EmergencySidebar = () => {
     selectService,
     selectMarker,
     calculateRoute,
-    calculateRoutesForAllEMS
+    calculateRoutesForAllEMS,
+    addCustomMarker
   } = useMapStore();
 
   const markerBeingEdited = editingMarkerId ? 
     customMarkers.find(marker => marker.id === editingMarkerId) : null;
 
-  // Get only hospital services for the routing dropdown
   const hospitals = emergencyServices.filter(service => 
     service.type.toLowerCase().includes('hospital')
   );
@@ -134,6 +136,41 @@ const EmergencySidebar = () => {
       );
     } else {
       toast.error("Geolocation is not supported by your browser");
+    }
+  };
+
+  const handleAddMarkerByCoordinates = () => {
+    if (!newMarkerLatitude || !newMarkerLongitude) {
+      toast.error("Please enter both latitude and longitude");
+      return;
+    }
+
+    try {
+      const lat = parseFloat(newMarkerLatitude);
+      const lon = parseFloat(newMarkerLongitude);
+
+      if (isNaN(lat) || isNaN(lon)) {
+        toast.error("Please enter valid numbers for coordinates");
+        return;
+      }
+
+      if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+        toast.error("Coordinates out of range");
+        return;
+      }
+
+      addCustomMarker({
+        name: 'New Marker',
+        latitude: lat,
+        longitude: lon,
+        color: '#3B82F6',
+      });
+
+      setNewMarkerLatitude("");
+      setNewMarkerLongitude("");
+      setShowAddMarkerForm(false);
+    } catch (error) {
+      toast.error("Invalid coordinates");
     }
   };
 
@@ -240,7 +277,7 @@ const EmergencySidebar = () => {
                 Add your own markers to the map
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Button 
                 onClick={toggleAddingMarker} 
                 variant={addingMarker ? "destructive" : "default"}
@@ -254,10 +291,65 @@ const EmergencySidebar = () => {
                 ) : (
                   <span className="flex items-center gap-2">
                     <PlusCircle className="h-4 w-4" />
-                    Add Custom Marker
+                    Add by Clicking Map
                   </span>
                 )}
               </Button>
+
+              <div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowAddMarkerForm(!showAddMarkerForm)}
+                >
+                  {showAddMarkerForm ? (
+                    <span className="flex items-center gap-2">
+                      <X className="h-4 w-4" />
+                      Hide Coordinate Form
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Input className="h-4 w-4" />
+                      Add by Coordinates
+                    </span>
+                  )}
+                </Button>
+
+                {showAddMarkerForm && (
+                  <div className="mt-4 space-y-4">
+                    <div className="space-y-2">
+                      <label htmlFor="marker-latitude" className="text-sm font-medium">
+                        Latitude
+                      </label>
+                      <Input
+                        id="marker-latitude"
+                        type="text"
+                        placeholder="e.g. 34.0522"
+                        value={newMarkerLatitude}
+                        onChange={(e) => setNewMarkerLatitude(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="marker-longitude" className="text-sm font-medium">
+                        Longitude
+                      </label>
+                      <Input
+                        id="marker-longitude"
+                        type="text"
+                        placeholder="e.g. -118.2437"
+                        value={newMarkerLongitude}
+                        onChange={(e) => setNewMarkerLongitude(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleAddMarkerByCoordinates}
+                      className="w-full"
+                    >
+                      Add Marker
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
