@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -27,12 +28,14 @@ import {
   Phone,
   Clock,
   Navigation,
-  CheckCircle
+  CheckCircle,
+  Hospital
 } from 'lucide-react';
 import MarkerMetadataForm from './MarkerMetadataForm';
 import LocationMetadataForm from './LocationMetadataForm';
 import EmergencyRoomVerification from './EmergencyRoomVerification';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 
 const EmergencySidebar = () => {
   const [latitude, setLatitude] = useState<string>("");
@@ -41,6 +44,7 @@ const EmergencySidebar = () => {
   const [activeTab, setActiveTab] = useState<string>("search");
   const [editingMarkerId, setEditingMarkerId] = useState<string | null>(null);
   const [isEditingLocationMetadata, setIsEditingLocationMetadata] = useState<boolean>(false);
+  const [selectedRouteMarkerId, setSelectedRouteMarkerId] = useState<string | null>(null);
   
   const { 
     userLocation,
@@ -62,6 +66,11 @@ const EmergencySidebar = () => {
 
   const markerBeingEdited = editingMarkerId ? 
     customMarkers.find(marker => marker.id === editingMarkerId) : null;
+
+  // Get only hospital services for the routing dropdown
+  const hospitals = emergencyServices.filter(service => 
+    service.type.toLowerCase().includes('hospital')
+  );
 
   const handleSearch = async () => {
     if (!latitude || !longitude) {
@@ -546,8 +555,77 @@ const EmergencySidebar = () => {
                                 )}
                               </div>
                             )}
+
+                            {/* Route buttons for mobile drawer */}
+                            <div className="flex mt-2 pt-2 border-t gap-1 md:hidden">
+                              <Drawer>
+                                <DrawerTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="h-7 text-xs flex-1"
+                                  >
+                                    <Route className="h-3 w-3 mr-1" />
+                                    Route Options
+                                  </Button>
+                                </DrawerTrigger>
+                                <DrawerContent>
+                                  <DrawerHeader className="text-left">
+                                    <DrawerTitle>Routing Options for {marker.name}</DrawerTitle>
+                                  </DrawerHeader>
+                                  <div className="p-4 space-y-2">
+                                    {userLocation && (
+                                      <Button 
+                                        size="sm" 
+                                        className="w-full"
+                                        onClick={() => calculateRoute(marker.id, true)}
+                                      >
+                                        <Navigation className="h-4 w-4 mr-2" />
+                                        Route to Project Location
+                                      </Button>
+                                    )}
+                                    
+                                    {hospitals.length > 0 && (
+                                      <div className="space-y-1 mt-2">
+                                        <p className="text-xs font-medium">Route to nearest hospitals:</p>
+                                        <div className="max-h-32 overflow-y-auto space-y-1">
+                                          {hospitals.slice(0, 5).map(hospital => (
+                                            <Button
+                                              key={hospital.id}
+                                              size="sm"
+                                              variant="outline"
+                                              className="w-full text-xs"
+                                              onClick={() => calculateRoute(marker.id, false, hospital.id)}
+                                            >
+                                              <Hospital className="h-3 w-3 mr-1" />
+                                              {hospital.name}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <DrawerFooter>
+                                    <Button variant="outline" size="sm">Close</Button>
+                                  </DrawerFooter>
+                                </DrawerContent>
+                              </Drawer>
+                            </div>
                           </div>
                           <div className="flex gap-1">
+                            {/* Desktop routing button */}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 w-7 p-0 hidden md:flex"
+                              title="Routing options"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedRouteMarkerId(marker.id);
+                              }}
+                            >
+                              <Route className="h-3.5 w-3.5" />
+                            </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
@@ -635,6 +713,55 @@ const EmergencySidebar = () => {
         <DialogContent className="sm:max-w-md">
           <DialogTitle>Edit Location Metadata</DialogTitle>
           <LocationMetadataForm onClose={() => setIsEditingLocationMetadata(false)} />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Routing Dialog for Desktop */}
+      <Dialog open={!!selectedRouteMarkerId} onOpenChange={(open) => !open && setSelectedRouteMarkerId(null)}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogTitle>Routing Options</DialogTitle>
+          <div className="space-y-3 py-2">
+            {userLocation && (
+              <Button 
+                size="sm" 
+                className="w-full"
+                onClick={() => {
+                  if (selectedRouteMarkerId) {
+                    calculateRoute(selectedRouteMarkerId, true);
+                    setSelectedRouteMarkerId(null);
+                  }
+                }}
+              >
+                <Navigation className="h-4 w-4 mr-2" />
+                Route to Project Location
+              </Button>
+            )}
+            
+            {hospitals.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium">Route to nearest hospitals:</p>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {hospitals.slice(0, 5).map(hospital => (
+                    <Button
+                      key={hospital.id}
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs h-8"
+                      onClick={() => {
+                        if (selectedRouteMarkerId) {
+                          calculateRoute(selectedRouteMarkerId, false, hospital.id);
+                          setSelectedRouteMarkerId(null);
+                        }
+                      }}
+                    >
+                      <Hospital className="h-3 w-3 mr-1" />
+                      {hospital.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

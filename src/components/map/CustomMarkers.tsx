@@ -4,7 +4,7 @@ import { Marker, Popup } from 'react-leaflet';
 import { customIcon } from './MapIcons';
 import { Button } from '../ui/button';
 import { CustomMarker } from '../../types/mapTypes';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Info } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 
 interface CustomMarkersProps {
@@ -84,6 +84,11 @@ const CustomMarkers: React.FC<CustomMarkersProps> = ({
                   </div>
                 </div>
               )}
+              
+              <div className="flex items-center bg-blue-50 text-blue-700 rounded p-1 mt-1 text-xs">
+                <Info className="h-3 w-3 mr-1 flex-shrink-0" />
+                <span>More routing options available in the Markers tab</span>
+              </div>
             </div>
             
             <div className="mt-2 bg-muted/30 p-1 rounded flex items-center text-xs text-muted-foreground">
