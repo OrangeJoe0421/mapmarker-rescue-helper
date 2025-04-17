@@ -5,21 +5,26 @@ import { customIcon } from './MapIcons';
 import { Button } from '../ui/button';
 import { CustomMarker } from '../../types/mapTypes';
 import { GripVertical } from 'lucide-react';
+import { useMapStore } from '@/store/useMapStore';
 
 interface CustomMarkersProps {
   markers: CustomMarker[];
   selectMarker: (marker: CustomMarker) => void;
   updateCustomMarker: (id: string, updates: Partial<CustomMarker>) => void;
-  calculateRoute: (markerId: string, toUserLocation: boolean) => void;
 }
 
 const CustomMarkers: React.FC<CustomMarkersProps> = ({ 
   markers, 
   selectMarker, 
-  updateCustomMarker, 
-  calculateRoute 
+  updateCustomMarker
 }) => {
-  // Make marker clicks interactive
+  const { emergencyServices, calculateRoute } = useMapStore();
+  
+  // Get only hospital services for the dropdown
+  const hospitals = emergencyServices.filter(service => 
+    service.type.toLowerCase().includes('hospital')
+  );
+
   const handleMarkerClick = (marker: CustomMarker) => {
     selectMarker(marker);
   };
@@ -52,10 +57,33 @@ const CustomMarkers: React.FC<CustomMarkersProps> = ({
               </div>
             )}
             
-            <div className="flex mt-3 gap-2">
-              <Button size="sm" onClick={() => calculateRoute(marker.id, true)}>
-                Route to Project
+            <div className="flex flex-col gap-2 mt-3">
+              <Button 
+                size="sm" 
+                onClick={() => calculateRoute(marker.id, true)}
+                className="w-full"
+              >
+                Route to Project Location
               </Button>
+              
+              {hospitals.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">Route to nearest hospitals:</p>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {hospitals.slice(0, 3).map(hospital => (
+                      <Button
+                        key={hospital.id}
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs h-7"
+                        onClick={() => calculateRoute(marker.id, false, hospital.id)}
+                      >
+                        {hospital.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="mt-2 bg-muted/30 p-1 rounded flex items-center text-xs text-muted-foreground">

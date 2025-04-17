@@ -9,7 +9,7 @@ export interface RoutesState {
   routes: Route[];
   
   // Actions
-  calculateRoute: (fromId: string, toUserLocation: boolean) => Promise<void>;
+  calculateRoute: (fromId: string, toUserLocation: boolean, toHospitalId?: string) => Promise<void>;
   calculateRoutesForAllEMS: () => Promise<void>;
   clearRoutes: () => void;
 }
@@ -23,7 +23,7 @@ export const createRoutesSlice: StateCreator<
 > = (set, get) => ({
   routes: [],
 
-  calculateRoute: async (fromId, toUserLocation) => {
+  calculateRoute: async (fromId, toUserLocation, toHospitalId) => {
     const state = get();
     
     // Validate necessary data
@@ -45,9 +45,19 @@ export const createRoutesSlice: StateCreator<
       return;
     }
 
-    const destination = toUserLocation ? state.userLocation : null;
+    // If routing to a hospital, find the destination hospital
+    let destinationMarker;
+    if (toHospitalId) {
+      destinationMarker = state.emergencyServices?.find(service => service.id === toHospitalId);
+      if (!destinationMarker) {
+        toast.error('Destination hospital not found');
+        return;
+      }
+    }
     
-    if (!destination && !toUserLocation) {
+    const destination = toUserLocation ? state.userLocation : destinationMarker;
+    
+    if (!destination) {
       toast.error('Destination not set');
       return;
     }
@@ -70,9 +80,10 @@ export const createRoutesSlice: StateCreator<
         longitude: sourceMarker.longitude
       };
       
-      const endCoords = toUserLocation 
-        ? { latitude: state.userLocation!.latitude, longitude: state.userLocation!.longitude }
-        : { latitude: 0, longitude: 0 }; // Will be replaced with actual destination
+      const endCoords = { 
+        latitude: destination.latitude, 
+        longitude: destination.longitude 
+      };
       
       console.info(`Fetching route from [${startCoords.latitude}, ${startCoords.longitude}] to [${endCoords.latitude}, ${endCoords.longitude}]`);
       
@@ -95,7 +106,6 @@ export const createRoutesSlice: StateCreator<
       }));
       
       // Create a unique ID for the route that includes a timestamp
-      // This helps in detecting if routes were added after a capture
       const routeId = `route-${Date.now()}`;
       console.info(`Created new route with ID: ${routeId}, points: ${routePoints.length}`);
       
@@ -104,7 +114,7 @@ export const createRoutesSlice: StateCreator<
         id: routeId,
         points: routePoints,
         fromId: sourceMarker.id,
-        toId: toUserLocation ? null : "destination-id",
+        toId: toHospitalId || null,
         distance: routeData.distance,
         duration: routeData.duration
       };
