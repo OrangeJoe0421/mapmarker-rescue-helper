@@ -189,21 +189,22 @@ export const createRoutesSlice: StateCreator<
     // Mark any existing captures as stale
     mapCaptureService.markCaptureStaleDueToRouteChange();
     
-    // Include all emergency services for routing
-    // We're not filtering by type anymore to include all services
-    const servicesToRoute = state.emergencyServices;
+    // Filter to only include hospital services
+    const hospitalsToRoute = state.emergencyServices.filter(service => 
+      service.type.toLowerCase().includes('hospital')
+    );
     
-    if (servicesToRoute.length === 0) {
-      toast.warning('No emergency services found to route');
+    if (hospitalsToRoute.length === 0) {
+      toast.warning('No hospitals found to route');
       return;
     }
     
-    toast.info(`Calculating routes for ${servicesToRoute.length} emergency services...`);
+    toast.info(`Calculating routes for ${hospitalsToRoute.length} hospitals...`);
     
-    // Calculate routes for all services
+    // Calculate routes for hospitals only
     let successCount = 0;
     
-    for (const service of servicesToRoute) {
+    for (const service of hospitalsToRoute) {
       try {
         // Get start and end coordinates
         const startCoords = {
@@ -260,7 +261,7 @@ export const createRoutesSlice: StateCreator<
     }
     
     if (successCount > 0) {
-      toast.success(`Successfully calculated ${successCount} routes to your location`);
+      toast.success(`Successfully calculated routes for ${successCount} hospitals`);
     } else {
       toast.error('Failed to calculate any routes');
     }
