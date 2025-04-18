@@ -46,6 +46,11 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
     ? hasER
     : serviceObject.verification?.hasEmergencyRoom || false;
 
+  // Format the verification date if it exists
+  const formattedDate = serviceObject.verification?.verifiedAt 
+    ? format(new Date(serviceObject.verification.verifiedAt), 'MMM d, yyyy')
+    : null;
+
   return (
     <Card className="mt-2 bg-muted/50">
       <CardContent className="p-3">
@@ -65,11 +70,11 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
             </Label>
           </div>
           
-          {serviceObject.verification?.verifiedAt && (
+          {formattedDate && (
             <div className="flex items-center text-xs text-muted-foreground">
               <Calendar className="h-3 w-3 mr-1" />
               <span>
-                Verified on {format(new Date(serviceObject.verification.verifiedAt), 'MMM d, yyyy')}
+                Verified on {formattedDate}
               </span>
             </div>
           )}

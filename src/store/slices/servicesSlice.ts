@@ -34,7 +34,7 @@ export const createServicesSlice: StateCreator<
           ...service,
           verification: {
             hasEmergencyRoom: verification.has_emergency_room,
-            verifiedAt: verification.verified_at
+            verifiedAt: verification.verified_at ? new Date(verification.verified_at) : null
           }
         };
       }
