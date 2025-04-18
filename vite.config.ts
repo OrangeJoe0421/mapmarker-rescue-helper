@@ -18,32 +18,13 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Add explicit alias for ArcGIS dependencies
-      "@arcgis/core": path.resolve(__dirname, "./node_modules/@arcgis/core"),
     },
-    // Preserve for proper esm handling
-    mainFields: ['module', 'jsnext:main', 'jsnext', 'main'],
-    // Ensure all file extensions are properly handled
-    extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
   },
   optimizeDeps: {
-    // Force inclusion of ArcGIS core and its sub-dependencies
-    include: [
-      '@arcgis/core/Map',
-      '@arcgis/core/views/MapView',
-      '@arcgis/core/layers/GraphicsLayer',
-      '@arcgis/core/Graphic',
-      '@arcgis/core/geometry/Point',
-      '@arcgis/core/geometry/Polyline',
-      '@arcgis/core/rest/support/RouteParameters',
-      '@arcgis/core/rest/support/FeatureSet',
-      '@arcgis/core/rest/route'
-    ],
-    // Exclude certain problematic packages from optimization
+    include: [],
     exclude: []
   },
   build: {
-    // Increase memory limits for build
     chunkSizeWarningLimit: 1500,
     minify: 'terser',
     terserOptions: {
@@ -61,24 +42,11 @@ export default defineConfig(({ mode }) => ({
     },
     cssCodeSplit: true,
     sourcemap: false,
-    // Set a reasonable max chunk size
     assetsInlineLimit: 4096,
     rollupOptions: {
-      // External modules that should not be bundled
       external: [],
       output: {
-        // More targeted chunk splitting to handle ArcGIS size
         manualChunks: (id) => {
-          // ArcGIS modules go to their own chunks
-          if (id.includes('@arcgis/core')) {
-            if (id.includes('/views/')) return 'arcgis-views';
-            if (id.includes('/geometry/')) return 'arcgis-geometry';
-            if (id.includes('/layers/')) return 'arcgis-layers';
-            if (id.includes('/rest/')) return 'arcgis-rest';
-            if (id.includes('/widgets/')) return 'arcgis-widgets';
-            return 'arcgis-core';
-          }
-          
           // UI Component libraries
           if (id.includes('@radix-ui/')) {
             if (id.includes('react-dialog') || id.includes('react-dropdown-menu')) {
@@ -98,6 +66,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('react-router-dom')) return 'router';
           if (id.includes('@tanstack/react-query')) return 'query';
           if (id.includes('zustand')) return 'store';
+          
+          // Google Maps
+          if (id.includes('@react-google-maps/api')) return 'google-maps';
           
           // Return undefined for default chunking behavior
           return undefined;

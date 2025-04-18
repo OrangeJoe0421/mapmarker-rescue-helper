@@ -53,14 +53,14 @@ export function useMapCapture() {
 
       console.info("Map element found, preparing for capture");
       
-      // Check if we're using ArcGIS
+      // Check what map type we're using
       const mapType = mapElement.getAttribute('data-map-type');
       
       // Wait for the map to be fully rendered
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (mapType === 'arcgis') {
-        await captureArcGISMap(mapElement);
+      if (mapType === 'google') {
+        await captureGoogleMap(mapElement);
       } else {
         // For other map types, use html2canvas
         await fallbackToHtml2Canvas(mapElement);
@@ -72,47 +72,22 @@ export function useMapCapture() {
     }
   };
   
-  const captureArcGISMap = async (mapElement: HTMLElement) => {
-    console.info("Detected ArcGIS map, using specialized capture method");
-    // For ArcGIS maps, we need to use the view's takeScreenshot method
-    // Look for the ArcGIS view instance
-    // It's stored in the window.__arcgisView property by our ArcGISMap component
-    const arcgisView = (window as any).__arcgisView;
+  const captureGoogleMap = async (mapElement: HTMLElement) => {
+    console.info("Detected Google Map, attempting to capture");
     
-    if (arcgisView && arcgisView.takeScreenshot) {
-      try {
-        console.info("Taking ArcGIS screenshot");
-        const screenshot = await arcgisView.takeScreenshot({
-          width: mapElement.clientWidth * 2,  // Higher resolution
-          height: mapElement.clientHeight * 2,
-          format: "png"
-        });
-        
-        // The screenshot is returned as a data URL
-        const imageData = screenshot.dataUrl;
-        
-        // Store the captured image and route snapshot
-        mapCaptureService.setCapturedImage(imageData);
-        mapCaptureService.notifyRouteAdded(routes);
-        console.info("ArcGIS capture saved to service");
-        
-        toast.success('Map captured successfully');
-        setCapturing(false);
-      } catch (arcgisError) {
-        console.error("Error taking ArcGIS screenshot:", arcgisError);
-        // Fallback to html2canvas if ArcGIS screenshot fails
-        await fallbackToHtml2Canvas(mapElement);
-      }
-    } else {
-      console.warn("ArcGIS view not found or doesn't support screenshots, falling back to html2canvas");
-      // Fallback to html2canvas
+    // For Google Maps we can try to use html2canvas directly
+    try {
       await fallbackToHtml2Canvas(mapElement);
+    } catch (error) {
+      console.error("Error capturing Google Map:", error);
+      toast.error('Failed to capture map');
+      setCapturing(false);
     }
   };
   
   const fallbackToHtml2Canvas = async (mapElement: HTMLElement) => {
     try {
-      console.info("Using html2canvas as fallback");
+      console.info("Using html2canvas for capture");
       // Use html2canvas with improved settings
       const canvas = await html2canvas(mapElement, {
         useCORS: true,
@@ -120,10 +95,6 @@ export function useMapCapture() {
         logging: true,
         scale: 2, // Higher scale for better quality
         backgroundColor: '#ffffff',
-        ignoreElements: (element) => {
-          // Don't ignore any elements that might contain routes
-          return false;
-        },
         onclone: (documentClone, element) => {
           // Find the cloned map element in the cloned document
           const clonedMapElement = documentClone.querySelector('[data-map-container="true"]') as HTMLElement;
@@ -142,31 +113,6 @@ export function useMapCapture() {
                 el.style.opacity = '1';
               }
             });
-            
-            // Specifically target route lines in SVG
-            const routeLines = clonedMapElement.querySelectorAll('.esri-layer-graphics path');
-            console.info(`Found ${routeLines.length} route lines in the clone`);
-            
-            routeLines.forEach(line => {
-              line.setAttribute('stroke', '#FF3B30');
-              line.setAttribute('stroke-width', '8');
-              line.setAttribute('stroke-opacity', '1');
-              line.setAttribute('stroke-linecap', 'round');
-              line.setAttribute('stroke-linejoin', 'round');
-              if (line instanceof HTMLElement) {
-                line.style.display = 'block';
-                line.style.visibility = 'visible';
-              }
-            });
-            
-            // Target the overall graphics layer
-            const overlayPane = clonedMapElement.querySelector('.esri-layer-graphics');
-            if (overlayPane && overlayPane instanceof HTMLElement) {
-              overlayPane.style.visibility = 'visible';
-              overlayPane.style.display = 'block';
-              overlayPane.style.opacity = '1';
-              overlayPane.style.zIndex = '1000';
-            }
           }
         }
       });
