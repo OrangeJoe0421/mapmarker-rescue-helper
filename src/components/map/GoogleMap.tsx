@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
@@ -12,7 +11,7 @@ const containerStyle = {
   height: '100%'
 };
 
-// Map styling to match dark theme
+// Map styling to match dark theme and hide default places
 const mapOptions = {
   styles: [
     {
@@ -28,9 +27,14 @@ const mapOptions = {
       "stylers": [{ "color": "#242f3e" }]
     },
     {
-      "featureType": "administrative.locality",
-      "elementType": "labels.text.fill",
-      "stylers": [{ "color": "#d59563" }]
+      "featureType": "poi",
+      "elementType": "all",
+      "stylers": [{ "visibility": "off" }]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "all",
+      "stylers": [{ "visibility": "off" }]
     },
     {
       "featureType": "road",
