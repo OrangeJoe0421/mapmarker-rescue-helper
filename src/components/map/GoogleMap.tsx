@@ -5,7 +5,7 @@ import { useMapStore } from '../../store/useMapStore';
 import { Route, EmergencyService } from '@/types/mapTypes';
 
 // Google Maps API key
-const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY"; // Replace with your API key
+const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4"; // Replace with your API key
 
 const containerStyle = {
   width: '100%',
