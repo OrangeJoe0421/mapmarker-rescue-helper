@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { Checkbox } from './ui/checkbox';
@@ -15,6 +15,7 @@ interface EmergencyRoomVerificationProps {
 
 const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ service, hasER }) => {
   const { verifyEmergencyRoom, emergencyServices } = useMapStore();
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Handle both service object and service ID
   const serviceId = typeof service === 'string' ? service : service.id;
@@ -25,12 +26,16 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
   // If we couldn't resolve the service, return null
   if (!serviceObject) return null;
   
-  const handleVerificationChange = (checked: boolean) => {
-    verifyEmergencyRoom(serviceId, checked);
+  const handleVerificationChange = async (checked: boolean) => {
+    setIsVerifying(true);
+    try {
+      await verifyEmergencyRoom(serviceId, checked);
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   // Only render for Hospital service types
-  // Make sure to check for undefined before calling toLowerCase
   const serviceType = serviceObject.type || '';
   if (!serviceType.toLowerCase().includes('hospital')) {
     return null;
@@ -50,12 +55,13 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
               id={`er-verification-${serviceId}`}
               checked={isERVerified}
               onCheckedChange={handleVerificationChange}
+              disabled={isVerifying}
             />
             <Label 
               htmlFor={`er-verification-${serviceId}`}
               className="text-sm font-medium cursor-pointer"
             >
-              Verified Emergency Room
+              {isVerifying ? 'Saving...' : 'Verified Emergency Room'}
             </Label>
           </div>
           

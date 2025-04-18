@@ -2,6 +2,7 @@
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { EmergencyService } from '@/types/mapTypes';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ServicesState {
   emergencyServices: EmergencyService[];
@@ -10,7 +11,7 @@ export interface ServicesState {
   // Actions
   setEmergencyServices: (services: EmergencyService[]) => void;
   selectService: (service: EmergencyService | null) => void;
-  verifyEmergencyRoom: (serviceId: string, hasEmergencyRoom: boolean) => void;
+  verifyEmergencyRoom: (serviceId: string, hasEmergencyRoom: boolean) => Promise<void>;
 }
 
 export const createServicesSlice: StateCreator<
@@ -19,8 +20,28 @@ export const createServicesSlice: StateCreator<
   emergencyServices: [],
   selectedService: null,
 
-  setEmergencyServices: (services) => {
-    set({ emergencyServices: services });
+  setEmergencyServices: async (services) => {
+    // Fetch the latest verifications for all services
+    const { data: verifications } = await supabase
+      .from('latest_hospital_verifications')
+      .select('*');
+    
+    // Map verifications to services
+    const servicesWithVerification = services.map(service => {
+      const verification = verifications?.find(v => v.service_id === service.id);
+      if (verification) {
+        return {
+          ...service,
+          verification: {
+            hasEmergencyRoom: verification.has_emergency_room,
+            verifiedAt: verification.verified_at
+          }
+        };
+      }
+      return service;
+    });
+
+    set({ emergencyServices: servicesWithVerification });
     toast.success(`Found ${services.length} emergency services`);
   },
 
@@ -31,39 +52,55 @@ export const createServicesSlice: StateCreator<
     });
   },
 
-  verifyEmergencyRoom: (serviceId, hasEmergencyRoom) => {
-    set((state) => {
-      const updatedServices = state.emergencyServices.map(service => {
-        if (service.id === serviceId) {
-          return {
-            ...service,
+  verifyEmergencyRoom: async (serviceId, hasEmergencyRoom) => {
+    try {
+      // Insert the new verification into Supabase
+      const { error } = await supabase
+        .from('hospital_verifications')
+        .insert({
+          service_id: serviceId,
+          has_emergency_room: hasEmergencyRoom,
+        });
+
+      if (error) throw error;
+
+      // Update the local state
+      set((state) => {
+        const updatedServices = state.emergencyServices.map(service => {
+          if (service.id === serviceId) {
+            return {
+              ...service,
+              verification: {
+                hasEmergencyRoom,
+                verifiedAt: new Date()
+              }
+            };
+          }
+          return service;
+        });
+
+        // Also update the selected service if it's the one being verified
+        let updatedSelectedService = state.selectedService;
+        if (state.selectedService?.id === serviceId) {
+          updatedSelectedService = {
+            ...state.selectedService,
             verification: {
               hasEmergencyRoom,
               verifiedAt: new Date()
             }
           };
         }
-        return service;
-      });
 
-      // Also update the selected service if it's the one being verified
-      let updatedSelectedService = state.selectedService;
-      if (state.selectedService?.id === serviceId) {
-        updatedSelectedService = {
-          ...state.selectedService,
-          verification: {
-            hasEmergencyRoom,
-            verifiedAt: new Date()
-          }
+        toast.success(`Verification updated for ${updatedServices.find(s => s.id === serviceId)?.name}`);
+        
+        return {
+          emergencyServices: updatedServices,
+          selectedService: updatedSelectedService
         };
-      }
-
-      toast.success(`Verification updated for ${updatedServices.find(s => s.id === serviceId)?.name}`);
-      
-      return {
-        emergencyServices: updatedServices,
-        selectedService: updatedSelectedService
-      };
-    });
+      });
+    } catch (error) {
+      console.error('Error saving verification:', error);
+      toast.error('Failed to save verification');
+    }
   },
 });

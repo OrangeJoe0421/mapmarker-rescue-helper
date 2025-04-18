@@ -9,10 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      hospital_verifications: {
+        Row: {
+          created_at: string | null
+          has_emergency_room: boolean
+          id: string
+          service_id: string
+          verified_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_emergency_room: boolean
+          id?: string
+          service_id: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_emergency_room?: boolean
+          id?: string
+          service_id?: string
+          verified_at?: string
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      latest_hospital_verifications: {
+        Row: {
+          has_emergency_room: boolean | null
+          service_id: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
