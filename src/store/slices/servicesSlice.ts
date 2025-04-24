@@ -22,27 +22,44 @@ export const createServicesSlice: StateCreator<
 
   setEmergencyServices: async (services) => {
     // Fetch the latest verifications for all services
-    const { data: verifications } = await supabase
-      .from('latest_hospital_verifications')
-      .select('*');
-    
-    // Map verifications to services
-    const servicesWithVerification = services.map(service => {
-      const verification = verifications?.find(v => v.service_id === service.id);
-      if (verification) {
-        return {
-          ...service,
-          verification: {
-            hasEmergencyRoom: verification.has_emergency_room,
-            verifiedAt: verification.verified_at ? new Date(verification.verified_at) : null
-          }
-        };
-      }
-      return service;
-    });
+    if (services && services.length > 0) {
+      // Get all service IDs
+      const serviceIds = services
+        .filter(s => s.type.toLowerCase().includes('hospital'))
+        .map(s => s.id);
 
-    set({ emergencyServices: servicesWithVerification });
-    toast.success(`Found ${services.length} emergency services`);
+      if (serviceIds.length > 0) {
+        const { data: verifications } = await supabase
+          .from('latest_hospital_verifications')
+          .select('*')
+          .in('service_id', serviceIds);
+      
+        // Map verifications to services
+        const servicesWithVerification = services.map(service => {
+          const verification = verifications?.find(v => v.service_id === service.id);
+          if (verification && service.type.toLowerCase().includes('hospital')) {
+            return {
+              ...service,
+              verification: {
+                hasEmergencyRoom: verification.has_emergency_room,
+                verifiedAt: verification.verified_at ? new Date(verification.verified_at) : null
+              }
+            };
+          }
+          return service;
+        });
+
+        set({ emergencyServices: servicesWithVerification });
+      } else {
+        set({ emergencyServices: services });
+      }
+    } else {
+      set({ emergencyServices: [] });
+    }
+    
+    if (services.length > 0) {
+      toast.success(`Found ${services.length} emergency services`);
+    }
   },
 
   selectService: (service) => {

@@ -1,13 +1,14 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateHaversineDistance } from '../utils/mapUtils';
 
 const EMERGENCY_SERVICE_TYPES = {
-  HOSPITAL: ['hospital'],
-  FIRE_STATION: ['fire_station'],
-  POLICE: ['police'],
-  EMS: ['doctor'] // Note: EMS stations don't have a specific Google Places type
+  HOSPITAL: 'hospital',
+  FIRE_STATION: 'fire_station',
+  POLICE: 'police',
+  EMS: 'doctor' // Note: EMS stations don't have a specific Google Places type
 };
 
 // OSRM API for routing (open source routing machine)
@@ -48,7 +49,7 @@ function queueRequest(request: () => Promise<void>) {
 async function searchNearbyPlaces(
   latitude: number, 
   longitude: number, 
-  type: string[],
+  type: string,
   radius: number = 20000 // 20km radius
 ): Promise<google.maps.places.PlaceResult[]> {
   const service = new google.maps.places.PlacesService(
@@ -109,10 +110,13 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
     console.log(`Fetching services near [${latitude}, ${longitude}]`);
     const allServices: EmergencyService[] = [];
 
-    // Search for each type of emergency service
-    for (const [serviceType, placeTypes] of Object.entries(EMERGENCY_SERVICE_TYPES)) {
+    // Search for each type of emergency service - one at a time
+    for (const [serviceType, placeType] of Object.entries(EMERGENCY_SERVICE_TYPES)) {
       try {
-        const places = await searchNearbyPlaces(latitude, longitude, placeTypes);
+        console.log(`Searching for ${serviceType} places with type: ${placeType}`);
+        const places = await searchNearbyPlaces(latitude, longitude, placeType);
+        console.log(`Found ${places.length} ${serviceType} places`);
+        
         const services = await Promise.all(
           places.map(place => convertToEmergencyService(place, serviceType))
         );
