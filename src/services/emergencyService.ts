@@ -149,9 +149,22 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
       })
     );
 
-    return servicesWithDistance.sort((a, b) => 
-      (a.road_distance || Infinity) - (b.road_distance || Infinity)
-    );
+    // Sort services by distance, prioritizing hospitals with emergency rooms
+    return servicesWithDistance.sort((a, b) => {
+      // If both are hospitals and one has a verified emergency room
+      if (a.type.toLowerCase().includes('hospital') && b.type.toLowerCase().includes('hospital')) {
+        // If one has verified emergency room and the other doesn't
+        if (a.verification?.hasEmergencyRoom && !b.verification?.hasEmergencyRoom) {
+          return -1;
+        }
+        if (!a.verification?.hasEmergencyRoom && b.verification?.hasEmergencyRoom) {
+          return 1;
+        }
+      }
+      
+      // Sort by road distance
+      return (a.road_distance || Infinity) - (b.road_distance || Infinity);
+    });
   } catch (error) {
     console.error("Error fetching emergency services:", error);
     toast.error("Failed to fetch emergency services. Please try again.");

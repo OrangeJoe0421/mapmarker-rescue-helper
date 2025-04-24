@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { EmergencyService } from '@/types/mapTypes';
@@ -49,7 +48,27 @@ export const createServicesSlice: StateCreator<
           return service;
         });
 
-        set({ emergencyServices: servicesWithVerification });
+        // Sort hospitals with verified emergency rooms first
+        const sortedServices = [...servicesWithVerification].sort((a, b) => {
+          // Check if both services are hospitals
+          const aIsHospital = a.type.toLowerCase().includes('hospital');
+          const bIsHospital = b.type.toLowerCase().includes('hospital');
+          
+          // If both are hospitals, prioritize ones with emergency rooms
+          if (aIsHospital && bIsHospital) {
+            if (a.verification?.hasEmergencyRoom && !b.verification?.hasEmergencyRoom) return -1;
+            if (!a.verification?.hasEmergencyRoom && b.verification?.hasEmergencyRoom) return 1;
+          }
+          
+          // If only one is a hospital with ER, prioritize it
+          if (aIsHospital && a.verification?.hasEmergencyRoom && (!bIsHospital || !b.verification?.hasEmergencyRoom)) return -1;
+          if (bIsHospital && b.verification?.hasEmergencyRoom && (!aIsHospital || !a.verification?.hasEmergencyRoom)) return 1;
+          
+          // Otherwise sort by distance
+          return (a.road_distance || Infinity) - (b.road_distance || Infinity);
+        });
+
+        set({ emergencyServices: sortedServices });
       } else {
         set({ emergencyServices: services });
       }
@@ -58,7 +77,15 @@ export const createServicesSlice: StateCreator<
     }
     
     if (services.length > 0) {
-      toast.success(`Found ${services.length} emergency services`);
+      const hospitalsWithER = services.filter(
+        s => s.type.toLowerCase().includes('hospital') && s.verification?.hasEmergencyRoom
+      );
+      
+      if (hospitalsWithER.length > 0) {
+        toast.success(`Found ${services.length} emergency services including ${hospitalsWithER.length} hospitals with ERs`);
+      } else {
+        toast.success(`Found ${services.length} emergency services`);
+      }
     }
   },
 
@@ -108,10 +135,30 @@ export const createServicesSlice: StateCreator<
           };
         }
 
+        // Sort to prioritize hospitals with emergency rooms
+        const sortedServices = [...updatedServices].sort((a, b) => {
+          // Check if both services are hospitals
+          const aIsHospital = a.type.toLowerCase().includes('hospital');
+          const bIsHospital = b.type.toLowerCase().includes('hospital');
+          
+          // If both are hospitals, prioritize ones with emergency rooms
+          if (aIsHospital && bIsHospital) {
+            if (a.verification?.hasEmergencyRoom && !b.verification?.hasEmergencyRoom) return -1;
+            if (!a.verification?.hasEmergencyRoom && b.verification?.hasEmergencyRoom) return 1;
+          }
+          
+          // If only one is a hospital with ER, prioritize it
+          if (aIsHospital && a.verification?.hasEmergencyRoom && (!bIsHospital || !b.verification?.hasEmergencyRoom)) return -1;
+          if (bIsHospital && b.verification?.hasEmergencyRoom && (!aIsHospital || !a.verification?.hasEmergencyRoom)) return 1;
+          
+          // Otherwise sort by distance
+          return (a.road_distance || Infinity) - (b.road_distance || Infinity);
+        });
+
         toast.success(`Verification updated for ${updatedServices.find(s => s.id === serviceId)?.name}`);
         
         return {
-          emergencyServices: updatedServices,
+          emergencyServices: sortedServices,
           selectedService: updatedSelectedService
         };
       });

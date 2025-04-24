@@ -73,6 +73,18 @@ const EmergencySidebar = () => {
   const hospitals = emergencyServices.filter(service => 
     service.type.toLowerCase().includes('hospital')
   );
+  
+  const hospitalsWithER = hospitals.filter(
+    hospital => hospital.verification?.hasEmergencyRoom
+  );
+
+  const closestHospitalWithER = hospitalsWithER.length > 0 ? 
+    hospitalsWithER.reduce((closest, current) => 
+      (current.road_distance || Infinity) < (closest.road_distance || Infinity) 
+        ? current 
+        : closest
+    , hospitalsWithER[0])
+    : null;
 
   const handleSearch = async () => {
     if (!latitude || !longitude) {
@@ -106,6 +118,22 @@ const EmergencySidebar = () => {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleRouteToClosestER = () => {
+    if (!userLocation) {
+      toast.error("No location specified");
+      return;
+    }
+    
+    if (!closestHospitalWithER) {
+      toast.warning("No hospitals with verified emergency rooms found");
+      return;
+    }
+    
+    selectService(closestHospitalWithER);
+    calculateRoute(closestHospitalWithER.id, true);
+    toast.success(`Routing to ${closestHospitalWithER.name} Emergency Room`);
   };
 
   const handleRenameMarker = (id: string) => {
@@ -176,6 +204,11 @@ const EmergencySidebar = () => {
 
   const getServiceColor = (service) => {
     const type = service.type.toLowerCase();
+    
+    if (type.includes('hospital') && service.verification?.hasEmergencyRoom) {
+      return 'bg-emerald-600';
+    }
+    
     if (type.includes('hospital')) return 'bg-red-600';
     if (type.includes('fire')) return 'bg-orange-600';
     if (type.includes('police') || type.includes('law')) return 'bg-blue-800';
@@ -380,6 +413,7 @@ const EmergencySidebar = () => {
                         key={service.id}
                         className={`
                           rounded-lg border p-3 transition-all cursor-pointer
+                          ${service.verification?.hasEmergencyRoom ? 'border-emerald-500/50' : ''}
                           ${selectedService?.id === service.id ? 
                             'bg-primary/10 border-primary' : 
                             'hover:bg-secondary/50'
@@ -393,6 +427,12 @@ const EmergencySidebar = () => {
                               {getServiceIcon(service)}
                               <h4 className="font-medium">
                                 {service.name}
+                                {service.verification?.hasEmergencyRoom && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    ER
+                                  </span>
+                                )}
                               </h4>
                             </div>
                             <p className="text-sm text-muted-foreground">{service.type}</p>
@@ -455,7 +495,7 @@ const EmergencySidebar = () => {
                                   size="sm"
                                 >
                                   <Navigation className="h-4 w-4" />
-                                  Route to Project
+                                  Route to Location
                                 </Button>
                               </div>
                             )}
@@ -504,15 +544,28 @@ const EmergencySidebar = () => {
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
               {userLocation && emergencyServices.length > 0 && (
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  className="w-full"
-                  onClick={() => calculateRoutesForAllEMS()}
-                >
-                  <Ambulance className="mr-2 h-4 w-4" />
-                  Route All EMS to Location
-                </Button>
+                <>
+                  {hospitalsWithER.length > 0 && (
+                    <Button 
+                      variant="default" 
+                      className="w-full"
+                      onClick={handleRouteToClosestER}
+                    >
+                      <Hospital className="mr-2 h-4 w-4" />
+                      Route to Closest Emergency Room
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => calculateRoutesForAllEMS()}
+                  >
+                    <Ambulance className="mr-2 h-4 w-4" />
+                    Route All EMS to Location
+                  </Button>
+                </>
               )}
               
               <Button 
