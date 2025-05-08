@@ -8,7 +8,6 @@ import { ClearButton } from '@/components/ui/clear-button';
 import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
 import PasswordGate from '@/components/PasswordGate';
-import { DevButton } from '@/components/DevButton';
 
 const Index = () => {
   const { toast } = useToast();
@@ -76,7 +75,6 @@ const Index = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <DevButton />
             <ClearButton />
             <ExportButton />
           </div>

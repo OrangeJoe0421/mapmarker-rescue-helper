@@ -10,7 +10,6 @@ import { toast } from 'sonner';
 import { Progress } from './ui/progress';
 import { AlertCircle, Upload, Trash2, Check } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
-import { supabase } from '@/integrations/supabase/client';
 
 const DataImporter = () => {
   const [selectedType, setSelectedType] = useState<string>('Hospital');

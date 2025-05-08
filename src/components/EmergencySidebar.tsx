@@ -1,15 +1,12 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Map, Navigation, MapPin, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, Map, Plus, Navigation } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import ServiceDetailsCard from './ServiceDetailsCard';
+import DataImporter from './DataImporter';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { CustomMarker } from '@/types/mapTypes';
-import { Badge } from './ui/badge';
-import MarkerMetadataForm from './MarkerMetadataForm';
 
 const EmergencySidebar = () => {
   const { 
@@ -19,16 +16,8 @@ const EmergencySidebar = () => {
     userLocation,
     setUserLocation,
     calculateRoute,
-    customMarkers,
-    toggleAddingMarker,
-    addingMarker,
-    deleteCustomMarker,
-    selectMarker,
-    selectedMarker
   } = useMapStore();
-  
   const [searchQuery, setSearchQuery] = useState('');
-  const [showMetadataForm, setShowMetadataForm] = useState(false);
 
   const handleLocationSearch = () => {
     if (searchQuery.trim() === '') return;
@@ -59,19 +48,6 @@ const EmergencySidebar = () => {
     }
   };
 
-  const handleAddMarkerToggle = () => {
-    toggleAddingMarker();
-  };
-
-  const handleEditMarker = (marker: CustomMarker) => {
-    selectMarker(marker);
-    setShowMetadataForm(true);
-  };
-
-  const handleDeleteMarker = (markerId: string) => {
-    deleteCustomMarker(markerId);
-  };
-
   return (
     <Card className="h-[600px] flex flex-col">
       <CardHeader className="py-4">
@@ -87,9 +63,9 @@ const EmergencySidebar = () => {
                 <Map className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Results</span>
               </TabsTrigger>
-              <TabsTrigger value="markers">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Markers</span>
+              <TabsTrigger value="import">
+                <Plus className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Import</span>
               </TabsTrigger>
             </TabsList>
 
@@ -140,91 +116,9 @@ const EmergencySidebar = () => {
                 </div>
               )}
             </TabsContent>
-            
-            <TabsContent value="markers" className="h-[480px] overflow-auto pt-2">
-              <div className="space-y-3">
-                <Button 
-                  onClick={handleAddMarkerToggle} 
-                  className={`w-full ${addingMarker ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-                >
-                  {addingMarker ? (
-                    <>
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Cancel Placing Marker
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Custom Marker
-                    </>
-                  )}
-                </Button>
-                
-                {addingMarker && (
-                  <div className="text-sm text-amber-500 animate-pulse">
-                    Click on the map to place your marker
-                  </div>
-                )}
-                
-                <div className="text-sm font-medium mb-2">Custom Markers</div>
-                
-                {customMarkers.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">
-                    No custom markers yet.<br/>
-                    Click "Add Custom Marker" to create one.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {customMarkers.map((marker) => (
-                      <div 
-                        key={marker.id} 
-                        className="p-2 border rounded-md bg-secondary flex flex-col gap-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium">{marker.name}</div>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => handleEditMarker(marker)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteMarker(marker.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="text-xs">
-                          {marker.latitude.toFixed(5)}, {marker.longitude.toFixed(5)}
-                        </div>
-                        
-                        {marker.metadata && (
-                          <div className="flex flex-wrap gap-1">
-                            {marker.metadata.projectNumber && (
-                              <Badge variant="outline" className="text-xs">
-                                #{marker.metadata.projectNumber}
-                              </Badge>
-                            )}
-                            {marker.metadata.region && (
-                              <Badge variant="outline" className="text-xs">
-                                {marker.metadata.region}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+
+            <TabsContent value="import" className="h-[480px] overflow-auto pt-2">
+              <DataImporter />
             </TabsContent>
           </Tabs>
         </CardTitle>
@@ -242,16 +136,6 @@ const EmergencySidebar = () => {
       </CardContent>
       {selectedService && (
         <ServiceDetailsCard service={selectedService} onClose={() => selectService(null)} />
-      )}
-      
-      {selectedMarker && showMetadataForm && (
-        <MarkerMetadataForm 
-          marker={selectedMarker} 
-          onClose={() => {
-            selectMarker(null);
-            setShowMetadataForm(false);
-          }}
-        />
       )}
     </Card>
   );

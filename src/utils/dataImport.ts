@@ -81,23 +81,17 @@ export async function clearEmergencyServices(serviceType?: string): Promise<void
     let query = supabase.from('emergency_services');
     
     if (serviceType) {
-      // Use delete() method after applying filter
-      const { error } = await query.delete().eq('type', serviceType);
-      
-      if (error) {
-        console.error('Error clearing emergency services:', error);
-        toast.error('Failed to clear existing services');
-        throw error;
-      }
+      query = query.delete().eq('type', serviceType);
     } else {
-      // Delete all records
-      const { error } = await query.delete();
-      
-      if (error) {
-        console.error('Error clearing all emergency services:', error);
-        toast.error('Failed to clear existing services');
-        throw error;
-      }
+      query = query.delete();
+    }
+    
+    const { error } = await query;
+    
+    if (error) {
+      console.error('Error clearing emergency services:', error);
+      toast.error('Failed to clear existing services');
+      throw error;
     }
     
     toast.success(`${serviceType || 'All'} emergency services cleared`);
