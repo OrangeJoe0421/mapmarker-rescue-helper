@@ -1,8 +1,15 @@
 
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
-import { calculateHaversineDistance } from '../utils/mapUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { calculateHaversineDistance } from '../utils/mapUtils';
+
+const EMERGENCY_SERVICE_TYPES = {
+  HOSPITAL: 'hospital',
+  FIRE_STATION: 'fire_station',
+  POLICE: 'police',
+  EMS: 'doctor' // Note: EMS stations don't have a specific Google Places type
+};
 
 // OSRM API for routing (open source routing machine)
 const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
@@ -39,85 +46,90 @@ function queueRequest(request: () => Promise<void>) {
   processQueue();
 }
 
+async function searchNearbyPlaces(
+  latitude: number, 
+  longitude: number, 
+  type: string,
+  radius: number = 20000 // 20km radius
+): Promise<google.maps.places.PlaceResult[]> {
+  const service = new google.maps.places.PlacesService(
+    document.createElement('div')
+  );
+
+  return new Promise((resolve, reject) => {
+    const request = {
+      location: { lat: latitude, lng: longitude },
+      radius,
+      type
+    };
+
+    service.nearbySearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        resolve(results);
+      } else {
+        reject(new Error(`Places API error: ${status}`));
+      }
+    });
+  });
+}
+
+async function convertToEmergencyService(
+  place: google.maps.places.PlaceResult,
+  type: string
+): Promise<EmergencyService> {
+  const service: EmergencyService = {
+    id: place.place_id || crypto.randomUUID(),
+    name: place.name || 'Unknown',
+    type,
+    latitude: place.geometry?.location?.lat() || 0,
+    longitude: place.geometry?.location?.lng() || 0,
+    address: place.vicinity || undefined,
+  };
+
+  // If it's a hospital, fetch verification data
+  if (type.toLowerCase().includes('hospital')) {
+    const { data: verification } = await supabase
+      .from('latest_hospital_verifications')
+      .select('*')
+      .eq('service_id', service.id)
+      .single();
+
+    if (verification) {
+      service.verification = {
+        hasEmergencyRoom: verification.has_emergency_room || false,
+        verifiedAt: verification.verified_at ? new Date(verification.verified_at) : null
+      };
+    }
+  }
+
+  return service;
+}
+
 export async function fetchNearestEmergencyServices(latitude: number, longitude: number): Promise<EmergencyService[]> {
   try {
     console.log(`Fetching services near [${latitude}, ${longitude}]`);
-    
-    // Get services from Supabase database
-    const { data: allServices, error } = await supabase
-      .from('emergency_services')
-      .select('*, hospital_verifications(has_emergency_room, verified_at)')
-      .order('type');
-    
-    if (error) {
-      throw error;
-    }
-    
-    if (!allServices || allServices.length === 0) {
-      toast.warning("No emergency services found in the database. Try importing data first.");
-      return [];
-    }
-    
-    // Calculate straight-line distance from user location
-    const servicesWithDistance = allServices.map(service => {
-      // Calculate straight-line distance
-      const airDistance = calculateHaversineDistance(
-        latitude,
-        longitude,
-        service.latitude,
-        service.longitude
-      );
-      
-      // Map the database structure to our EmergencyService type
-      const mappedService: EmergencyService = {
-        id: service.id,
-        name: service.name,
-        type: service.type,
-        latitude: service.latitude,
-        longitude: service.longitude,
-        address: service.address,
-        phone: service.phone,
-        hours: service.hours,
-        road_distance: airDistance * 1.3, // Estimate initially
-        
-        // Map verification data if available
-        verification: service.hospital_verifications?.length > 0 ? {
-          hasEmergencyRoom: service.hospital_verifications[0].has_emergency_room,
-          verifiedAt: service.hospital_verifications[0].verified_at ? 
-            new Date(service.hospital_verifications[0].verified_at) : null
-        } : undefined
-      };
-      
-      return mappedService;
-    });
-    
-    // Filter to get services within 20km radius for better performance
-    let nearbyServices = servicesWithDistance.filter(s => (s.road_distance || 0) <= 20);
-    
-    // If no nearby services, use all services (up to a reasonable limit)
-    if (nearbyServices.length === 0) {
-      nearbyServices = servicesWithDistance.slice(0, 100);
-    }
-    
-    // Sort by air distance
-    const sortedServices = nearbyServices.sort((a, b) => 
-      (a.road_distance || Infinity) - (b.road_distance || Infinity)
-    );
+    const allServices: EmergencyService[] = [];
 
-    // Filter to include the closest service of each type
-    const serviceTypes = new Set(sortedServices.map(service => service.type));
-    const closestByType: EmergencyService[] = [];
-    
-    serviceTypes.forEach(type => {
-      const closestOfType = sortedServices.find(service => service.type === type);
-      if (closestOfType) {
-        closestByType.push(closestOfType);
+    // Search for each type of emergency service - one at a time
+    for (const [serviceType, placeType] of Object.entries(EMERGENCY_SERVICE_TYPES)) {
+      try {
+        console.log(`Searching for ${serviceType} places with type: ${placeType}`);
+        const places = await searchNearbyPlaces(latitude, longitude, placeType);
+        console.log(`Found ${places.length} ${serviceType} places`);
+        
+        const services = await Promise.all(
+          places.map(place => convertToEmergencyService(place, serviceType))
+        );
+        allServices.push(...services);
+      } catch (error) {
+        console.error(`Error fetching ${serviceType}:`, error);
+        toast.error(`Failed to fetch ${serviceType} locations`);
       }
-    });
-    
-    // Queue up road distance calculations (don't wait for them)
-    closestByType.forEach(service => {
-      queueRequest(async () => {
+    }
+
+    // Calculate distances
+    const servicesWithDistance = await Promise.all(
+      allServices.map(async service => {
         try {
           const roadDistance = await fetchRouteDistance(
             latitude,
@@ -126,17 +138,33 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
             service.longitude
           );
           
-          if (roadDistance !== null) {
-            // Update the service with the road distance
-            service.road_distance = roadDistance;
-          }
+          return {
+            ...service,
+            road_distance: roadDistance
+          };
         } catch (error) {
           console.warn(`Could not calculate road distance for ${service.name}:`, error);
+          return service;
         }
-      });
+      })
+    );
+
+    // Sort services by distance, prioritizing hospitals with emergency rooms
+    return servicesWithDistance.sort((a, b) => {
+      // If both are hospitals and one has a verified emergency room
+      if (a.type.toLowerCase().includes('hospital') && b.type.toLowerCase().includes('hospital')) {
+        // If one has verified emergency room and the other doesn't
+        if (a.verification?.hasEmergencyRoom && !b.verification?.hasEmergencyRoom) {
+          return -1;
+        }
+        if (!a.verification?.hasEmergencyRoom && b.verification?.hasEmergencyRoom) {
+          return 1;
+        }
+      }
+      
+      // Sort by road distance
+      return (a.road_distance || Infinity) - (b.road_distance || Infinity);
     });
-    
-    return closestByType;
   } catch (error) {
     console.error("Error fetching emergency services:", error);
     toast.error("Failed to fetch emergency services. Please try again.");
