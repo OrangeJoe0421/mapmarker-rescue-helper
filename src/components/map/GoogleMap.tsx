@@ -89,7 +89,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     content: string;
   } | null>(null);
 
-  // Load Google Maps API with Places library
+  // Load Google Maps API
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
