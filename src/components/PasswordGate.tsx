@@ -8,9 +8,15 @@ const CORRECT_PASSWORD = "Ragnar";
 
 interface PasswordGateProps {
   onCorrectPassword: () => void;
+  displayFullScreen?: boolean;
+  title?: string;
 }
 
-const PasswordGate = ({ onCorrectPassword }: PasswordGateProps) => {
+const PasswordGate = ({ 
+  onCorrectPassword, 
+  displayFullScreen = true,
+  title = "Emergency Response Planner" 
+}: PasswordGateProps) => {
   const [password, setPassword] = useState("");
   const { toast } = useToast();
 
@@ -29,6 +35,30 @@ const PasswordGate = ({ onCorrectPassword }: PasswordGateProps) => {
     }
   };
 
+  if (!displayFullScreen) {
+    return (
+      <div className="space-y-4">
+        <div className="text-center">
+          <h2 className="text-xl font-bold">Developer Access Required</h2>
+          <p className="mt-2 text-muted-foreground">Enter password to continue</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            className="text-center"
+            autoFocus
+          />
+          <Button type="submit" className="w-full">
+            Continue
+          </Button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-background/80 p-4">
       <div className="w-full max-w-md space-y-8">
@@ -38,7 +68,7 @@ const PasswordGate = ({ onCorrectPassword }: PasswordGateProps) => {
             alt="Stantec Logo" 
             className="mx-auto h-16"
           />
-          <h2 className="mt-6 text-2xl font-bold">Emergency Response Planner</h2>
+          <h2 className="mt-6 text-2xl font-bold">{title}</h2>
           <p className="mt-2 text-muted-foreground">Enter password to continue</p>
         </div>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
