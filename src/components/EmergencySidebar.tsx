@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Map, Plus, Navigation } from 'lucide-react';
+import { Search, Map, Navigation } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import ServiceDetailsCard from './ServiceDetailsCard';
 import DataImporter from './DataImporter';
@@ -54,7 +54,7 @@ const EmergencySidebar = () => {
         <CardTitle className="text-lg flex justify-between items-center">
           Emergency Services
           <Tabs defaultValue="search" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="search">
                 <Search className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Search</span>
@@ -62,10 +62,6 @@ const EmergencySidebar = () => {
               <TabsTrigger value="results">
                 <Map className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Results</span>
-              </TabsTrigger>
-              <TabsTrigger value="import">
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Import</span>
               </TabsTrigger>
             </TabsList>
 
@@ -115,10 +111,6 @@ const EmergencySidebar = () => {
                   ))}
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="import" className="h-[480px] overflow-auto pt-2">
-              <DataImporter />
             </TabsContent>
           </Tabs>
         </CardTitle>
