@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      emergency_services: {
+        Row: {
+          address: string | null
+          created_at: string
+          hours: string | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          phone: string | null
+          type: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          hours?: string | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          phone?: string | null
+          type: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          hours?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          phone?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
       hospital_verifications: {
         Row: {
           created_at: string | null
@@ -34,7 +70,15 @@ export type Database = {
           verified_at?: string
           verified_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_service_id"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "emergency_services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -45,7 +89,15 @@ export type Database = {
           verified_at: string | null
           verified_by: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_service_id"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "emergency_services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

@@ -23,12 +23,15 @@ export const createServicesSlice: StateCreator<
   setEmergencyServices: async (services) => {
     // Fetch the latest verifications for all services
     const { data: verifications } = await supabase
-      .from('latest_hospital_verifications')
-      .select('*');
+      .from('hospital_verifications')
+      .select('*')
+      .order('verified_at', { ascending: false });
     
     // Map verifications to services
     const servicesWithVerification = services.map(service => {
+      // Find the latest verification for this service
       const verification = verifications?.find(v => v.service_id === service.id);
+      
       if (verification) {
         return {
           ...service,
@@ -60,6 +63,7 @@ export const createServicesSlice: StateCreator<
         .insert({
           service_id: serviceId,
           has_emergency_room: hasEmergencyRoom,
+          verified_at: new Date().toISOString()
         });
 
       if (error) throw error;

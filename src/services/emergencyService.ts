@@ -1,8 +1,8 @@
 
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
-import { getAllEmsData, getEmsDataWithinRadius } from './sampleDataService';
 import { calculateHaversineDistance } from '../utils/mapUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 // OSRM API for routing (open source routing machine)
 const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
@@ -43,17 +43,23 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
   try {
     console.log(`Fetching services near [${latitude}, ${longitude}]`);
     
-    // Get EMS data from our sample database
-    const allServices = getAllEmsData();
+    // Get services from Supabase database
+    const { data: allServices, error } = await supabase
+      .from('emergency_services')
+      .select('*, hospital_verifications(has_emergency_room, verified_at)')
+      .order('type');
     
-    // Filter services within 20km radius for more relevant results
-    const nearbyServices = getEmsDataWithinRadius(latitude, longitude, 20);
+    if (error) {
+      throw error;
+    }
     
-    // If no nearby services, return all services
-    const services = nearbyServices.length > 0 ? nearbyServices : allServices;
+    if (!allServices || allServices.length === 0) {
+      toast.warning("No emergency services found in the database. Try importing data first.");
+      return [];
+    }
     
     // Calculate straight-line distance from user location
-    const servicesWithDistance = services.map(service => {
+    const servicesWithDistance = allServices.map(service => {
       // Calculate straight-line distance
       const airDistance = calculateHaversineDistance(
         latitude,
@@ -62,19 +68,43 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
         service.longitude
       );
       
-      return {
-        ...service,
-        // Use estimated road distance (air distance * 1.3) initially
-        road_distance: airDistance * 1.3,
+      // Map the database structure to our EmergencyService type
+      const mappedService: EmergencyService = {
+        id: service.id,
+        name: service.name,
+        type: service.type,
+        latitude: service.latitude,
+        longitude: service.longitude,
+        address: service.address,
+        phone: service.phone,
+        hours: service.hours,
+        road_distance: airDistance * 1.3, // Estimate initially
+        
+        // Map verification data if available
+        verification: service.hospital_verifications?.length > 0 ? {
+          hasEmergencyRoom: service.hospital_verifications[0].has_emergency_room,
+          verifiedAt: service.hospital_verifications[0].verified_at ? 
+            new Date(service.hospital_verifications[0].verified_at) : null
+        } : undefined
       };
+      
+      return mappedService;
     });
     
-    // Sort initially by air distance
-    const sortedServices = servicesWithDistance.sort((a, b) => 
+    // Filter to get services within 20km radius for better performance
+    let nearbyServices = servicesWithDistance.filter(s => (s.road_distance || 0) <= 20);
+    
+    // If no nearby services, use all services (up to a reasonable limit)
+    if (nearbyServices.length === 0) {
+      nearbyServices = servicesWithDistance.slice(0, 100);
+    }
+    
+    // Sort by air distance
+    const sortedServices = nearbyServices.sort((a, b) => 
       (a.road_distance || Infinity) - (b.road_distance || Infinity)
     );
 
-    // Filter to only include the closest service of each type
+    // Filter to include the closest service of each type
     const serviceTypes = new Set(sortedServices.map(service => service.type));
     const closestByType: EmergencyService[] = [];
     
@@ -85,7 +115,7 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
       }
     });
     
-    // Now queue up road distance calculations (don't wait for them)
+    // Queue up road distance calculations (don't wait for them)
     closestByType.forEach(service => {
       queueRequest(async () => {
         try {
