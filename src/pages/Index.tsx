@@ -26,8 +26,7 @@ const Index = () => {
       try {
         const { data, error } = await supabase
           .from('emergency_services')
-          .select('count(*)', { count: 'exact' })
-          .limit(1);
+          .select('count', { count: 'exact', head: true });
           
         if (error) {
           console.error("Supabase connection error:", error);
@@ -38,10 +37,10 @@ const Index = () => {
             variant: "destructive",
           });
         } else {
-          // Fix: Safely access count data, providing a fallback value
-          const countValue = data && data.length > 0 ? data[0].count || 0 : 0;
-          setDbConnectionStatus(`Connected: ${countValue} records available`);
-          console.log("Database connection successful, found records:", countValue);
+          // The count is returned as the 'count' property directly on the response
+          const count = data?.count || 0;
+          setDbConnectionStatus(`Connected: ${count} records available`);
+          console.log("Database connection successful, found records:", count);
         }
       } catch (err) {
         console.error("Database check failed:", err);
