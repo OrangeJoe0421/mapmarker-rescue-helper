@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 import { Database } from "@/types/database";
 import { Wand2, AlertCircle, Bug } from "lucide-react";
 import { EmergencyService, GeoJSONFeatureCollection, GeoJSONFeature } from "@/types/mapTypes";
+import { useEmergencyServicesApi } from "@/hooks/useEmergencyServicesApi";
 
 // Component for displaying file upload form
 const FileUploadForm = ({ 
@@ -117,6 +119,8 @@ export function DevTools() {
     ems: null,
   });
   
+  // Import the API hook at the component level
+  const { batchImportServices } = useEmergencyServicesApi();
   const { toast: uiToast } = useToast();
 
   const handleFileChange = (type: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -229,10 +233,7 @@ export function DevTools() {
         
         console.log(`Converted ${services.length} ${type} services`, services[0]);
         
-        // Import services using the batch import function from our API hook
-        const { useEmergencyServicesApi } = await import('@/hooks/useEmergencyServicesApi');
-        const { batchImportServices } = useEmergencyServicesApi();
-        
+        // Use the batch import function that's now imported directly at the component level
         const result = await batchImportServices(services);
         
         if (result.success) {
