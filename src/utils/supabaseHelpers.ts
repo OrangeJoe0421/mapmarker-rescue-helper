@@ -81,11 +81,14 @@ export function validateSupabaseCredentials(url: string, key: string): boolean {
   return true;
 }
 
+// Define the valid table names type based on the available tables in the database
+type ValidTableName = 'emergency_services' | 'hospital_verifications' | 'latest_hospital_verifications';
+
 /**
  * Attempts to get a record by ID from the specified table
  * Useful for testing specific table access
  */
-export async function testTableAccess(tableName: string, id: string) {
+export async function testTableAccess(tableName: ValidTableName, id: string) {
   try {
     const { data, error } = await supabase
       .from(tableName)
