@@ -24,8 +24,26 @@ export function useEmergencyServicesApi() {
   ): Promise<EmergencyService[]> => {
     setIsLoading(true);
     setError(null);
+    console.log(`Searching for services near ${lat}, ${lng} with radius ${radiusInKm}km`);
     
     try {
+      // First, just get all services without filtering to see if we have data
+      const { data: allServices, error: initialError } = await supabase
+        .from('emergency_services')
+        .select('*');
+      
+      if (initialError) {
+        throw new Error(`Database query error: ${initialError.message}`);
+      }
+      
+      console.log(`Found ${allServices?.length || 0} total services in database`);
+      
+      if (!allServices || allServices.length === 0) {
+        toast.warning("No emergency services found in database");
+        return [];
+      }
+      
+      // Now filter and calculate distances
       let query = supabase
         .from('emergency_services')
         .select('*');
@@ -37,14 +55,15 @@ export function useEmergencyServicesApi() {
       
       // Get all within reasonable distance first - we'll sort by actual distance later
       // This is a simple filter to reduce the data set
-      const latDiff = radiusInKm / 111; // ~111km per degree of latitude
+      // Make the bounding box a bit larger to ensure we don't miss any services
+      const latDiff = radiusInKm / 110; // ~111km per degree of latitude, use slightly smaller value
       const lngDiff = radiusInKm / (111 * Math.cos(lat * Math.PI / 180)); // Adjust for longitude differences
       
       query = query
-        .gt('latitude', lat - latDiff)
-        .lt('latitude', lat + latDiff)
-        .gt('longitude', lng - lngDiff)
-        .lt('longitude', lng + lngDiff);
+        .gte('latitude', lat - latDiff)
+        .lte('latitude', lat + latDiff)
+        .gte('longitude', lng - lngDiff)
+        .lte('longitude', lng + lngDiff);
       
       const { data, error } = await query;
       
@@ -53,6 +72,17 @@ export function useEmergencyServicesApi() {
       }
       
       if (!data || data.length === 0) {
+        console.log("No services found within coordinate bounds");
+        // Try with much larger bounds to see if there's anything in the database nearby
+        const { data: widerData } = await supabase
+          .from('emergency_services')
+          .select('*')
+          .gte('latitude', lat - (latDiff * 2))
+          .lte('latitude', lat + (latDiff * 2))
+          .gte('longitude', lng - (lngDiff * 2))
+          .lte('longitude', lng + (lngDiff * 2));
+        
+        console.log(`Wider search found ${widerData?.length || 0} services`);
         return [];
       }
       
@@ -82,6 +112,8 @@ export function useEmergencyServicesApi() {
       .filter(service => service.distance <= radiusInKm)
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
       
+      console.log(`After filtering by actual distance (${radiusInKm}km), found ${servicesWithDistance.length} services`);
+      
       // Get the closest of each service type if requested
       if (closestByType) {
         const servicesByType: Record<string, EmergencyService> = {};
@@ -105,6 +137,7 @@ export function useEmergencyServicesApi() {
         // Convert back to array
         const closestServices = Object.values(servicesByType);
         
+        console.log(`Returning ${closestServices.length} closest services by type`);
         return closestServices.sort((a, b) => (a.distance || 0) - (b.distance || 0));
       }
       
@@ -119,6 +152,7 @@ export function useEmergencyServicesApi() {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
       console.error('Error fetching emergency services:', err);
+      toast.error(`Error: ${errorMessage}`);
       return [];
     } finally {
       setIsLoading(false);

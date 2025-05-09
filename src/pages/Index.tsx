@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
 import PasswordGate from '@/components/PasswordGate';
 import { DevTools } from '@/components/DevTools';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const { toast } = useToast();
@@ -16,15 +17,38 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("auth") === "true";
   });
+  const [dbConnectionStatus, setDbConnectionStatus] = useState<string>("Checking...");
 
+  // Check database connection on startup
   useEffect(() => {
+    async function checkDbConnection() {
+      try {
+        const { data, error } = await supabase
+          .from('emergency_services')
+          .select('count(*)', { count: 'exact' })
+          .limit(1);
+          
+        if (error) {
+          console.error("Supabase connection error:", error);
+          setDbConnectionStatus("Error connecting to database");
+          toast({
+            title: "Database Connection Error",
+            description: "Unable to connect to the emergency services database",
+            variant: "destructive",
+          });
+        } else {
+          const count = data?.[0]?.count || 0;
+          setDbConnectionStatus(`Connected: ${count} records available`);
+          console.log("Database connection successful, found records:", count);
+        }
+      } catch (err) {
+        console.error("Database check failed:", err);
+        setDbConnectionStatus("Failed to check database");
+      }
+    }
+    
     if (isAuthenticated) {
-      // Welcome toast
-      toast({
-        title: "Welcome to Emergency Response Planner",
-        description: "Search for a location to find nearby emergency services",
-        duration: 5000,
-      });
+      checkDbConnection();
     }
   }, [isAuthenticated, toast]);
 
@@ -72,6 +96,11 @@ const Index = () => {
               <p className="text-muted-foreground mt-1 animate-fade-in" style={{ animationDelay: '100ms' }}>
                 Find and map emergency services near any location
               </p>
+              {dbConnectionStatus && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Database: {dbConnectionStatus}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex gap-2">

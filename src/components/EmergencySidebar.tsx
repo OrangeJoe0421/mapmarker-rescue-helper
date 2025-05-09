@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -111,6 +112,7 @@ const EmergencySidebar = () => {
       }
 
       setIsSearching(true);
+      toast.info("Searching for emergency services...");
       setUserLocation({ latitude: lat, longitude: lon });
       
       // Get the closest of each service type (Hospital, Fire, EMS, Law Enforcement)
@@ -122,6 +124,12 @@ const EmergencySidebar = () => {
         undefined, // limit - not needed as we're using closestByType
         true // closestByType - get the closest of each type
       );
+      
+      console.log("Search results:", services);
+      
+      if (services.length === 0) {
+        toast.warning("No emergency services found within 30km");
+      }
       
       setEmergencyServices(services);
       setActiveTab("results");
