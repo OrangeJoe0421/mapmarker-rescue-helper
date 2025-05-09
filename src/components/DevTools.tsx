@@ -8,7 +8,7 @@ import PasswordGate from "./PasswordGate";
 import { useToast } from "./ui/use-toast";
 import { toast } from "sonner";
 import { Database } from "@/types/database";
-import { Wand2, AlertCircle } from "lucide-react";
+import { Wand2, AlertCircle, Bug } from "lucide-react";
 import { EmergencyService, GeoJSONFeatureCollection, GeoJSONFeature } from "@/types/mapTypes";
 
 // Component for displaying file upload form
@@ -55,33 +55,62 @@ const FileUploadForm = ({
 };
 
 // Convert GeoJSON to emergency service
-function convertGeoJSONToService(feature: GeoJSONFeature, serviceType: string): EmergencyService {
-  // GeoJSON coordinates are [longitude, latitude]
-  const [longitude, latitude] = feature.geometry.coordinates;
-  
-  const address = [
-    feature.properties.ADDRESS,
-    feature.properties.CITY,
-    feature.properties.STATE,
-    feature.properties.ZIPCODE
-  ].filter(Boolean).join(', ');
-  
-  return {
-    id: feature.properties.GLOBALID || `${serviceType}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-    name: feature.properties.NAME || 'Unknown',
-    type: serviceType,
-    latitude,
-    longitude,
-    address: address || undefined,
-    phone: feature.properties.PHONE,
-    hours: feature.properties.HOURS
-  };
+function convertGeoJSONToService(feature: GeoJSONFeature, serviceType: string): EmergencyService | null {
+  try {
+    // Basic validation check
+    if (!feature.geometry || 
+        !feature.geometry.coordinates || 
+        feature.geometry.coordinates.length !== 2 ||
+        !feature.properties) {
+      console.error('Invalid feature structure:', feature);
+      return null;
+    }
+
+    // GeoJSON coordinates are [longitude, latitude]
+    const [longitude, latitude] = feature.geometry.coordinates;
+    
+    if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+      console.error('Invalid coordinates:', feature.geometry.coordinates);
+      return null;
+    }
+    
+    const props = feature.properties;
+    
+    // Check for required properties
+    if (!props.NAME && !props.name) {
+      console.warn('Feature missing NAME property:', feature);
+    }
+    
+    const address = [
+      props.ADDRESS || props.address,
+      props.CITY || props.city,
+      props.STATE || props.state,
+      props.ZIPCODE || props.zipcode
+    ].filter(Boolean).join(', ');
+    
+    return {
+      id: props.GLOBALID || props.globalid || `${serviceType}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      name: props.NAME || props.name || 'Unknown',
+      type: serviceType,
+      latitude,
+      longitude,
+      address: address || undefined,
+      phone: props.PHONE || props.phone,
+      hours: props.HOURS || props.hours
+    };
+  } catch (err) {
+    console.error('Error converting GeoJSON feature to service:', err);
+    console.error('Feature data:', JSON.stringify(feature, null, 2));
+    return null;
+  }
 }
 
 export function DevTools() {
   const [open, setOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importDebug, setImportDebug] = useState<any | null>(null);
   const [fileUploads, setFileUploads] = useState<{[key: string]: File | null}>({
     hospitals: null,
     fire: null,
@@ -97,11 +126,18 @@ export function DevTools() {
         ...prev,
         [type]: e.target.files![0]
       }));
+      // Clear previous errors when a new file is selected
+      setImportError(null);
+      setImportDebug(null);
     }
   };
 
   const processGeoJSON = (data: any): GeoJSONFeatureCollection => {
     console.log("Input data type:", typeof data);
+    
+    // Clear any previous import errors
+    setImportError(null);
+    setImportDebug(null);
     
     // If data is a string (from incomplete JSON), try to parse it
     if (typeof data === 'string') {
@@ -109,46 +145,88 @@ export function DevTools() {
         data = JSON.parse(data);
       } catch (err) {
         console.error("Failed to parse JSON string:", err);
+        setImportError("Invalid JSON format: " + (err instanceof Error ? err.message : String(err)));
         throw new Error("Invalid JSON format");
       }
     }
     
     // Check if data has the correct structure
     if (!data || typeof data !== 'object') {
-      throw new Error("Invalid data format: Not an object");
+      const errorMsg = "Invalid data format: Not an object";
+      setImportError(errorMsg);
+      setImportDebug(data);
+      throw new Error(errorMsg);
     }
+    
+    // Save a snapshot of the data for debugging
+    setImportDebug({
+      dataType: typeof data,
+      hasType: Boolean(data.type),
+      type: data.type,
+      hasFeatures: Boolean(data.features),
+      featuresIsArray: Array.isArray(data.features),
+      featuresLength: Array.isArray(data.features) ? data.features.length : 'not an array',
+      sample: data.features && Array.isArray(data.features) && data.features.length > 0 
+        ? JSON.stringify(data.features[0]).substring(0, 200) + '...' 
+        : 'No sample available'
+    });
     
     // Handle GeoJSON FeatureCollection
     if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
       return data as GeoJSONFeatureCollection;
     }
     
-    throw new Error("Unsupported data format: Expected GeoJSON FeatureCollection");
+    const errorMsg = `Unsupported data format: Expected GeoJSON FeatureCollection, got ${data.type || 'unknown type'}`;
+    setImportError(errorMsg);
+    throw new Error(errorMsg);
   };
 
   const handleImport = async (type: string, file: File) => {
     if (!file) return;
 
     setImporting(true);
+    setImportError(null);
+    setImportDebug(null);
+    
     const reader = new FileReader();
     
     reader.onload = async (e) => {
       try {
-        if (!e.target?.result) return;
+        if (!e.target?.result) {
+          setImportError("Failed to read file contents");
+          setImporting(false);
+          return;
+        }
         
         // Process the input data to get a standardized GeoJSON format
         const geoJSON = processGeoJSON(e.target.result);
         const features = geoJSON.features;
         
         console.log(`Parsed ${features.length} records from ${type} GeoJSON file`);
+        if (features.length === 0) {
+          setImportError(`No features found in the GeoJSON file`);
+          setImporting(false);
+          return;
+        }
+        
         if (features.length > 0) {
           console.log("Sample feature:", features[0]);
+          setImportDebug({
+            ...importDebug,
+            sampleFeature: features[0]
+          });
         }
         
         // Convert GeoJSON features to emergency services
-        const services: EmergencyService[] = features.map(feature => 
-          convertGeoJSONToService(feature, type)
-        );
+        const services: EmergencyService[] = features
+          .map(feature => convertGeoJSONToService(feature, type))
+          .filter((service): service is EmergencyService => service !== null);
+        
+        if (services.length === 0) {
+          setImportError(`Failed to convert any features to ${type} services`);
+          setImporting(false);
+          return;
+        }
         
         console.log(`Converted ${services.length} ${type} services`, services[0]);
         
@@ -162,6 +240,7 @@ export function DevTools() {
         
         let importedCount = 0;
         let errorCount = 0;
+        let lastError = null;
         
         for (let chunk of chunks) {
           const { error, count } = await supabase
@@ -170,7 +249,10 @@ export function DevTools() {
               chunk.map(item => ({
                 id: item.id,
                 name: item.name,
-                type: item.type,
+                type: type === 'hospitals' ? 'hospital' : 
+                      type === 'fire' ? 'fire_station' :
+                      type === 'police' ? 'police' : 
+                      type === 'ems' ? 'doctor' : type,
                 latitude: item.latitude,
                 longitude: item.longitude,
                 address: item.address || null,
@@ -182,6 +264,7 @@ export function DevTools() {
             
           if (error) {
             console.error('Error importing data:', error);
+            lastError = error;
             errorCount += chunk.length;
           } else {
             importedCount += chunk.length;
@@ -193,22 +276,26 @@ export function DevTools() {
             description: errorCount > 0 ? `${errorCount} records had errors` : undefined
           });
         } else {
-          toast.error(`Failed to import ${type} services`, {
+          const errorMessage = `Failed to import ${type} services: ${lastError?.message || 'Unknown error'}`;
+          setImportError(errorMessage);
+          toast.error(errorMessage, {
             description: 'No records were successfully imported'
           });
         }
       } catch (err) {
         console.error('Error processing data:', err);
-        toast.error(`Failed to import ${type} services`, {
-          description: err instanceof Error ? err.message : 'Unknown error'
-        });
+        const errorMessage = `Failed to import ${type} services: ${err instanceof Error ? err.message : 'Unknown error'}`;
+        setImportError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setImporting(false);
       }
     };
     
     reader.onerror = () => {
-      toast.error(`Failed to read ${type} file`);
+      const errorMessage = `Failed to read ${type} file`;
+      setImportError(errorMessage);
+      toast.error(errorMessage);
       setImporting(false);
     };
     
@@ -269,12 +356,31 @@ export function DevTools() {
                   </p>
                 </div>
               
+                {importError && (
+                  <div className="p-4 bg-slate-800/50 rounded-md text-sm text-red-300 border border-slate-700/50 border-l-4 border-l-red-500">
+                    <p className="flex items-center gap-2">
+                      <Bug className="h-4 w-4 text-red-400" />
+                      <strong>Import Error</strong>
+                    </p>
+                    <p className="mt-2 text-red-200/70 text-xs whitespace-pre-wrap">
+                      {importError}
+                    </p>
+                    
+                    {importDebug && (
+                      <div className="mt-3 p-2 bg-slate-900/50 rounded text-xs font-mono text-slate-300 overflow-auto max-h-32">
+                        <div className="font-semibold text-purple-300">Debug Info:</div>
+                        <pre className="text-xs">{JSON.stringify(importDebug, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-6">
                   <FileUploadForm
                     type="hospitals"
                     file={fileUploads.hospitals}
                     onChange={handleFileChange('hospitals')} 
-                    onImport={() => fileUploads.hospitals && handleImport('hospital', fileUploads.hospitals)}
+                    onImport={() => fileUploads.hospitals && handleImport('hospitals', fileUploads.hospitals)}
                     importing={importing}
                     color="red"
                   />
@@ -283,7 +389,7 @@ export function DevTools() {
                     type="fire"
                     file={fileUploads.fire}
                     onChange={handleFileChange('fire')} 
-                    onImport={() => fileUploads.fire && handleImport('fire_station', fileUploads.fire)}
+                    onImport={() => fileUploads.fire && handleImport('fire', fileUploads.fire)}
                     importing={importing}
                     color="orange"
                   />
@@ -301,7 +407,7 @@ export function DevTools() {
                     type="ems"
                     file={fileUploads.ems}
                     onChange={handleFileChange('ems')} 
-                    onImport={() => fileUploads.ems && handleImport('doctor', fileUploads.ems)}
+                    onImport={() => fileUploads.ems && handleImport('ems', fileUploads.ems)}
                     importing={importing}
                     color="green"
                   />
