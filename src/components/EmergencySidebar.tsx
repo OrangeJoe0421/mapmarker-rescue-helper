@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { useEmergencyServicesApi } from '@/hooks/useEmergencyServicesApi';
 import { 
   Search, 
   MapPin, 
@@ -47,6 +49,9 @@ const EmergencySidebar = () => {
   const [showAddMarkerForm, setShowAddMarkerForm] = useState(false);
   const [newMarkerLatitude, setNewMarkerLatitude] = useState("");
   const [newMarkerLongitude, setNewMarkerLongitude] = useState("");
+  
+  // Initialize the emergency services API hook
+  const emergencyServicesApi = useEmergencyServicesApi();
 
   const { 
     userLocation,
@@ -109,10 +114,8 @@ const EmergencySidebar = () => {
       setIsSearching(true);
       setUserLocation({ latitude: lat, longitude: lon });
       
-      // Use the hook's fetch function to get services from the database
-      // Limit to the closest emergency services (default 10)
-      const { fetchNearbyEmergencyServices } = useEmergencyServicesApi();
-      const services = await fetchNearbyEmergencyServices(lat, lon, 30, undefined, 10);
+      // Use the imported hook's fetch function to get services from the database
+      const services = await emergencyServicesApi.fetchNearbyEmergencyServices(lat, lon, 30, undefined, 10);
       setEmergencyServices(services);
       setActiveTab("results");
     } catch (error) {
