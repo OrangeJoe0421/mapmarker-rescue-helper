@@ -24,7 +24,8 @@ const Index = () => {
   useEffect(() => {
     async function checkDbConnection() {
       try {
-        const { data, error, count } = await supabase
+        // Use a simple count query that doesn't return actual data
+        const { error } = await supabase
           .from('emergency_services')
           .select('*', { count: 'exact', head: true });
           
@@ -37,10 +38,14 @@ const Index = () => {
             variant: "destructive",
           });
         } else {
-          // The count is returned directly in the count property of the response
-          const recordCount = count || 0;
-          setDbConnectionStatus(`Connected: ${recordCount} records available`);
-          console.log("Database connection successful, found records:", recordCount);
+          // Since we're using head: true, we don't get data back, just a count
+          // Get the count from a separate query
+          const { count: recordCount } = await supabase
+            .from('emergency_services')
+            .select('*', { count: 'exact', head: true });
+          
+          setDbConnectionStatus(`Connected: ${recordCount || 0} records available`);
+          console.log("Database connection successful, found records:", recordCount || 0);
         }
       } catch (err) {
         console.error("Database check failed:", err);
