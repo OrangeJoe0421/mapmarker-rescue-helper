@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
+import { toast } from 'sonner';
 import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
 import ExportButton from '@/components/ExportButton';
@@ -12,51 +13,73 @@ import { DevTools } from '@/components/DevTools';
 import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
-  const { toast } = useToast();
+  const { toast: shadcnToast } = useToast();
   const { userLocation, emergencyServices, calculateRoutesForAllEMS } = useMapStore();
   const routesCalculatedRef = useRef(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("auth") === "true";
   });
   const [dbConnectionStatus, setDbConnectionStatus] = useState<string>("Checking...");
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Check database connection on startup
+  // Check database connection on startup with retry mechanism
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     async function checkDbConnection() {
       try {
-        // Use a simple count query that doesn't return actual data
-        const { error } = await supabase
+        setDbConnectionStatus("Connecting...");
+        console.log("Checking database connection...");
+
+        // Simple ping query to test connection
+        const { error: pingError } = await supabase
+          .from('emergency_services')
+          .select('id', { head: true, count: 'exact' })
+          .limit(1);
+
+        if (pingError) {
+          throw pingError;
+        }
+
+        // If ping successful, get count in a separate query
+        const { count, error: countError } = await supabase
           .from('emergency_services')
           .select('*', { count: 'exact', head: true });
-          
-        if (error) {
-          console.error("Supabase connection error:", error);
-          setDbConnectionStatus("Error connecting to database");
-          toast({
-            title: "Database Connection Error",
-            description: "Unable to connect to the emergency services database",
-            variant: "destructive",
-          });
-        } else {
-          // Since we're using head: true, we don't get data back, just a count
-          // Get the count from a separate query
-          const { count: recordCount } = await supabase
-            .from('emergency_services')
-            .select('*', { count: 'exact', head: true });
-          
-          setDbConnectionStatus(`Connected: ${recordCount || 0} records available`);
-          console.log("Database connection successful, found records:", recordCount || 0);
+
+        if (countError) {
+          throw countError;
         }
+
+        const recordCount = count || 0;
+        setDbConnectionStatus(`Connected: ${recordCount} records available`);
+        console.log("Database connection successful, found records:", recordCount);
+        setRetryCount(0); // Reset retry counter on success
       } catch (err) {
         console.error("Database check failed:", err);
-        setDbConnectionStatus("Failed to check database");
+        
+        if (retryCount < 3) {
+          // Retry with exponential backoff
+          const retryDelay = Math.pow(2, retryCount) * 1000;
+          setDbConnectionStatus(`Connection failed. Retrying in ${retryDelay/1000}s...`);
+          
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, retryDelay);
+        } else {
+          // After 3 retries, show error
+          setDbConnectionStatus("Database connection failed");
+          toast.error("Unable to connect to the emergency services database");
+          shadcnToast({
+            title: "Database Connection Error",
+            description: "Unable to connect to the emergency services database after multiple attempts",
+            variant: "destructive",
+          });
+        }
       }
     }
     
-    if (isAuthenticated) {
-      checkDbConnection();
-    }
-  }, [isAuthenticated, toast]);
+    checkDbConnection();
+  }, [isAuthenticated, retryCount, shadcnToast]);
 
   // Effect to automatically calculate routes when emergency services are loaded
   useEffect(() => {
@@ -91,7 +114,6 @@ const Index = () => {
               className="mr-3 h-10 md:h-12"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                console.error("Failed to load Stantec logo:", e);
                 target.src = 'https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg';
               }}
             />
