@@ -81,30 +81,18 @@ export function validateSupabaseCredentials(url: string, key: string): boolean {
   return true;
 }
 
-// Define the valid table names type for TypeScript
-export type ValidTableName = 'emergency_services' | 'hospital_verifications' | 'latest_hospital_verifications';
-
 /**
- * Attempts to get a record by ID from the specified table
- * Useful for testing specific table access
+ * Attempts to get a record by ID from the emergency services table
  */
-export async function testTableAccess(tableName: ValidTableName, id: string) {
+export async function getEmergencyServiceById(id: string) {
   try {
-    // Handle each table specifically to satisfy TypeScript's type checking
-    if (tableName === 'emergency_services') {
-      return await queryEmergencyServices(id);
-    } else if (tableName === 'hospital_verifications') {
-      return await queryHospitalVerifications(id);
-    } else if (tableName === 'latest_hospital_verifications') {
-      return await queryLatestHospitalVerifications(id);
-    } else {
-      // This should never happen due to TypeScript, but we include it for safety
-      return { 
-        success: false, 
-        data: null, 
-        error: new Error(`Invalid table name: ${tableName}`) 
-      };
-    }
+    const { data, error } = await supabase
+      .from('emergency_services')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    return { success: !error, data, error };
   } catch (err) {
     return { 
       success: false, 
@@ -112,37 +100,6 @@ export async function testTableAccess(tableName: ValidTableName, id: string) {
       error: err instanceof Error ? err : new Error('Unknown error')
     };
   }
-}
-
-// Type-safe table query functions
-async function queryEmergencyServices(id: string) {
-  const { data, error } = await supabase
-    .from('emergency_services')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  return { success: !error, data, error };
-}
-
-async function queryHospitalVerifications(id: string) {
-  const { data, error } = await supabase
-    .from('hospital_verifications')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  return { success: !error, data, error };
-}
-
-async function queryLatestHospitalVerifications(id: string) {
-  const { data, error } = await supabase
-    .from('latest_hospital_verifications')
-    .select('*')
-    .eq('service_id', id)  // Note: using service_id here as this is a view
-    .single();
-  
-  return { success: !error, data, error };
 }
 
 /**

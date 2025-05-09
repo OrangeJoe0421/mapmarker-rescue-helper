@@ -2,10 +2,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, MapPin, Navigation, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Phone, Clock, MapPin, Navigation, X } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
-import EmergencyRoomVerification from './EmergencyRoomVerification';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -83,27 +82,6 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           <div className="flex items-center gap-2 text-sm font-medium">
             <Navigation className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span>{service.road_distance.toFixed(2)} km from project</span>
-          </div>
-        )}
-        
-        {service.type.toLowerCase().includes('hospital') && (
-          <div className="mt-2 pt-2 border-t">
-            <div className="flex items-center gap-2 mb-1">
-              {service.verification?.hasEmergencyRoom ? (
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-amber-500" />
-              )}
-              <span className="text-sm font-medium">
-                {service.verification?.hasEmergencyRoom 
-                  ? 'Verified Emergency Room' 
-                  : 'Emergency Room Status Unverified'}
-              </span>
-            </div>
-            <EmergencyRoomVerification 
-              service={service} 
-              hasER={service.verification?.hasEmergencyRoom || false} 
-            />
           </div>
         )}
       </CardContent>

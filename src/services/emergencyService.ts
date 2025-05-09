@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,22 +85,6 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
             road_distance: roadDistance
           };
           
-          // If it's a hospital, fetch verification data
-          if (service.type.toLowerCase().includes('hospital')) {
-            const { data: verification } = await supabase
-              .from('latest_hospital_verifications')
-              .select('*')
-              .eq('service_id', service.id)
-              .single();
-    
-            if (verification) {
-              emergencyService.verification = {
-                hasEmergencyRoom: verification.has_emergency_room || false,
-                verifiedAt: verification.verified_at ? new Date(verification.verified_at) : null
-              };
-            }
-          }
-          
           return emergencyService;
         } catch (error) {
           console.warn(`Could not calculate road distance for ${service.name}:`, error);
@@ -133,19 +118,8 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
       (service.road_distance || Infinity) <= radius
     );
 
-    // Sort services by distance, prioritizing hospitals with emergency rooms
+    // Sort services by distance
     const sortedServices = filteredServices.sort((a, b) => {
-      // If both are hospitals and one has a verified emergency room
-      if (a.type.toLowerCase().includes('hospital') && b.type.toLowerCase().includes('hospital')) {
-        // If one has verified emergency room and the other doesn't
-        if (a.verification?.hasEmergencyRoom && !b.verification?.hasEmergencyRoom) {
-          return -1;
-        }
-        if (!a.verification?.hasEmergencyRoom && b.verification?.hasEmergencyRoom) {
-          return 1;
-        }
-      }
-      
       // Sort by road distance
       return (a.road_distance || Infinity) - (b.road_distance || Infinity);
     });
