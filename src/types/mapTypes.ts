@@ -15,6 +15,12 @@ export interface MarkerMetadata {
   projectType?: string;
 }
 
+export interface UserLocation {
+  latitude: number;
+  longitude: number;
+  metadata?: MarkerMetadata;
+}
+
 export interface EmergencyService {
   id: string;
   name: string;
@@ -25,8 +31,8 @@ export interface EmergencyService {
   phone?: string;
   hours?: string;
   distance?: number;
-  road_distance?: number; // Added road_distance field to the type
-  verification?: Verification; // Added verification field to the type
+  road_distance?: number; 
+  verification?: Verification;
 }
 
 export interface CustomMarker {
@@ -37,7 +43,7 @@ export interface CustomMarker {
   description?: string;
   color?: string;
   icon?: string;
-  metadata?: MarkerMetadata; // Added metadata field to the type
+  metadata?: MarkerMetadata;
 }
 
 export interface RoutePoint {
@@ -61,7 +67,7 @@ export interface RouteInfo {
 }
 
 export interface MapState {
-  userLocation: Coordinates | null;
+  userLocation: UserLocation | null;
   emergencyServices: EmergencyService[];
   customMarkers: CustomMarker[];
   routes: Record<string, RouteInfo>;

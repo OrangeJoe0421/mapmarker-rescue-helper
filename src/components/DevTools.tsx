@@ -8,7 +8,7 @@ import PasswordGate from "./PasswordGate";
 import { useToast } from "./ui/use-toast";
 import { toast } from "sonner";
 import { Database } from "@/types/database";
-import { Wand } from "lucide-react";
+import { Wand2 } from "lucide-react";
 
 type EmergencyServiceImport = {
   id: string;
@@ -54,6 +54,7 @@ export function DevTools() {
         if (!e.target?.result) return;
         
         const data = JSON.parse(e.target.result as string) as EmergencyServiceImport[];
+        console.log(`Parsed ${data.length} records from ${type} JSON file`, data[0]);
         
         // Process data in chunks to avoid timeout issues
         const chunkSize = 100;
@@ -91,12 +92,20 @@ export function DevTools() {
           }
         }
         
-        toast.success(`Imported ${importedCount} ${type} services`, {
-          description: errorCount > 0 ? `${errorCount} records had errors` : undefined
-        });
+        if (importedCount > 0) {
+          toast.success(`Imported ${importedCount} ${type} services`, {
+            description: errorCount > 0 ? `${errorCount} records had errors` : undefined
+          });
+        } else {
+          toast.error(`Failed to import ${type} services`, {
+            description: 'No records were successfully imported'
+          });
+        }
       } catch (err) {
         console.error('Error parsing JSON:', err);
-        toast.error(`Failed to import ${type} services`);
+        toast.error(`Failed to import ${type} services`, {
+          description: err instanceof Error ? err.message : 'Unknown error'
+        });
       } finally {
         setImporting(false);
       }
@@ -125,7 +134,7 @@ export function DevTools() {
         className="gap-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200/20 hover:from-purple-500/20 hover:to-blue-500/20"
         onClick={() => setOpen(true)}
       >
-        <Wand className="h-4 w-4 text-purple-400" />
+        <Wand2 className="h-4 w-4 text-purple-400" />
         <span>Dev Tools</span>
       </Button>
       
@@ -133,7 +142,7 @@ export function DevTools() {
         <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border-purple-500/20">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-              <Wand className="h-5 w-5 text-purple-400" />
+              <Wand2 className="h-5 w-5 text-purple-400" />
               Developer Tools
             </DialogTitle>
           </DialogHeader>
@@ -172,7 +181,7 @@ export function DevTools() {
                         onClick={() => fileUploads.hospitals && handleImport('hospitals', fileUploads.hospitals)}
                         className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
                       >
-                        Import
+                        {importing ? 'Importing...' : 'Import'}
                       </Button>
                     </div>
                   </div>
@@ -195,7 +204,7 @@ export function DevTools() {
                         onClick={() => fileUploads.fire && handleImport('fire', fileUploads.fire)}
                         className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
                       >
-                        Import
+                        {importing ? 'Importing...' : 'Import'}
                       </Button>
                     </div>
                   </div>
@@ -218,7 +227,7 @@ export function DevTools() {
                         onClick={() => fileUploads.police && handleImport('police', fileUploads.police)}
                         className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
                       >
-                        Import
+                        {importing ? 'Importing...' : 'Import'}
                       </Button>
                     </div>
                   </div>
@@ -241,7 +250,7 @@ export function DevTools() {
                         onClick={() => fileUploads.ems && handleImport('ems', fileUploads.ems)}
                         className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
                       >
-                        Import
+                        {importing ? 'Importing...' : 'Import'}
                       </Button>
                     </div>
                   </div>
@@ -249,7 +258,7 @@ export function DevTools() {
                 
                 <div className="p-4 bg-slate-800/50 rounded-md text-sm text-slate-300 border border-slate-700/50">
                   <p className="flex items-center gap-2">
-                    <Wand className="h-4 w-4 text-purple-400" />
+                    <Wand2 className="h-4 w-4 text-purple-400" />
                     Import JSON files for emergency services. Files should contain arrays of objects with id, name, type, latitude, and longitude fields.
                   </p>
                   <p className="mt-2 text-slate-400 text-xs">
