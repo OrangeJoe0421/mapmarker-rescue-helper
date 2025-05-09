@@ -8,51 +8,7 @@ import PasswordGate from "./PasswordGate";
 import { useToast } from "./ui/use-toast";
 import { toast } from "sonner";
 import { Database } from "@/types/database";
-
-// Custom WizardIcon SVG component that looks like the provided image
-const WizardIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    className="h-4 w-4"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    {/* Wizard hat */}
-    <path 
-      d="M12 2L8 10H16L12 2Z" 
-      fill="currentColor" 
-      stroke="currentColor"
-    />
-    
-    {/* Wizard face/beard */}
-    <path 
-      d="M8 10C8 10 7 12 7 14C7 17 9 19 12 19C15 19 17 17 17 14C17 12 16 10 16 10" 
-      fill="none"
-    />
-    
-    {/* Eyes */}
-    <circle cx="10" cy="12" r="0.5" fill="currentColor" />
-    <circle cx="14" cy="12" r="0.5" fill="currentColor" />
-    
-    {/* Robe bottom */}
-    <path 
-      d="M9 19L7 23M15 19L17 23" 
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
-    
-    {/* Magic sparkles */}
-    <path 
-      d="M20 4L21 5M4 4L3 5M5 9L3 8M19 9L21 8" 
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
-  </svg>
-);
+import { Wand } from "lucide-react";
 
 type EmergencyServiceImport = {
   id: string;
@@ -169,7 +125,7 @@ export function DevTools() {
         className="gap-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200/20 hover:from-purple-500/20 hover:to-blue-500/20"
         onClick={() => setOpen(true)}
       >
-        <WizardIcon />
+        <Wand className="h-4 w-4 text-purple-400" />
         <span>Dev Tools</span>
       </Button>
       
@@ -177,7 +133,7 @@ export function DevTools() {
         <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border-purple-500/20">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-              <WizardIcon />
+              <Wand className="h-5 w-5 text-purple-400" />
               Developer Tools
             </DialogTitle>
           </DialogHeader>
@@ -293,7 +249,7 @@ export function DevTools() {
                 
                 <div className="p-4 bg-slate-800/50 rounded-md text-sm text-slate-300 border border-slate-700/50">
                   <p className="flex items-center gap-2">
-                    <WizardIcon />
+                    <Wand className="h-4 w-4 text-purple-400" />
                     Import JSON files for emergency services. Files should contain arrays of objects with id, name, type, latitude, and longitude fields.
                   </p>
                   <p className="mt-2 text-slate-400 text-xs">
