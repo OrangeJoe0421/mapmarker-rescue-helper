@@ -92,11 +92,11 @@ export async function testTableAccess(tableName: ValidTableName, id: string) {
   try {
     // Handle each table specifically to satisfy TypeScript's type checking
     if (tableName === 'emergency_services') {
-      return await queryTable('emergency_services', id);
+      return await queryEmergencyServices(id);
     } else if (tableName === 'hospital_verifications') {
-      return await queryTable('hospital_verifications', id);
+      return await queryHospitalVerifications(id);
     } else if (tableName === 'latest_hospital_verifications') {
-      return await queryTable('latest_hospital_verifications', id);
+      return await queryLatestHospitalVerifications(id);
     } else {
       // This should never happen due to TypeScript, but we include it for safety
       return { 
@@ -114,12 +114,32 @@ export async function testTableAccess(tableName: ValidTableName, id: string) {
   }
 }
 
-// Helper function to query a specific table (type-safe)
-async function queryTable<T extends ValidTableName>(tableName: T, id: string) {
+// Type-safe table query functions
+async function queryEmergencyServices(id: string) {
   const { data, error } = await supabase
-    .from(tableName)
+    .from('emergency_services')
     .select('*')
     .eq('id', id)
+    .single();
+  
+  return { success: !error, data, error };
+}
+
+async function queryHospitalVerifications(id: string) {
+  const { data, error } = await supabase
+    .from('hospital_verifications')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  return { success: !error, data, error };
+}
+
+async function queryLatestHospitalVerifications(id: string) {
+  const { data, error } = await supabase
+    .from('latest_hospital_verifications')
+    .select('*')
+    .eq('service_id', id)  // Note: using service_id here as this is a view
     .single();
   
   return { success: !error, data, error };
