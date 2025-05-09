@@ -81,8 +81,8 @@ export function validateSupabaseCredentials(url: string, key: string): boolean {
   return true;
 }
 
-// Define the valid table names type based on the available tables in the database
-type ValidTableName = 'emergency_services' | 'hospital_verifications' | 'latest_hospital_verifications';
+// Define the valid table names type for TypeScript
+export type ValidTableName = 'emergency_services' | 'hospital_verifications' | 'latest_hospital_verifications';
 
 /**
  * Attempts to get a record by ID from the specified table
@@ -90,13 +90,21 @@ type ValidTableName = 'emergency_services' | 'hospital_verifications' | 'latest_
  */
 export async function testTableAccess(tableName: ValidTableName, id: string) {
   try {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    return { success: !error, data, error };
+    // Handle each table specifically to satisfy TypeScript's type checking
+    if (tableName === 'emergency_services') {
+      return await queryTable('emergency_services', id);
+    } else if (tableName === 'hospital_verifications') {
+      return await queryTable('hospital_verifications', id);
+    } else if (tableName === 'latest_hospital_verifications') {
+      return await queryTable('latest_hospital_verifications', id);
+    } else {
+      // This should never happen due to TypeScript, but we include it for safety
+      return { 
+        success: false, 
+        data: null, 
+        error: new Error(`Invalid table name: ${tableName}`) 
+      };
+    }
   } catch (err) {
     return { 
       success: false, 
@@ -104,6 +112,17 @@ export async function testTableAccess(tableName: ValidTableName, id: string) {
       error: err instanceof Error ? err : new Error('Unknown error')
     };
   }
+}
+
+// Helper function to query a specific table (type-safe)
+async function queryTable<T extends ValidTableName>(tableName: T, id: string) {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  return { success: !error, data, error };
 }
 
 /**
