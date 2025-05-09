@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -230,56 +229,21 @@ export function DevTools() {
         
         console.log(`Converted ${services.length} ${type} services`, services[0]);
         
-        // Process data in chunks to avoid timeout issues
-        const chunkSize = 100;
-        const chunks = [];
+        // Import services using the batch import function from our API hook
+        const { useEmergencyServicesApi } = await import('@/hooks/useEmergencyServicesApi');
+        const { batchImportServices } = useEmergencyServicesApi();
         
-        for (let i = 0; i < services.length; i += chunkSize) {
-          chunks.push(services.slice(i, i + chunkSize));
-        }
+        const result = await batchImportServices(services);
         
-        let importedCount = 0;
-        let errorCount = 0;
-        let lastError = null;
-        
-        for (let chunk of chunks) {
-          const { error, count } = await supabase
-            .from('emergency_services')
-            .upsert(
-              chunk.map(item => ({
-                id: item.id,
-                name: item.name,
-                type: type === 'hospitals' ? 'hospital' : 
-                      type === 'fire' ? 'fire_station' :
-                      type === 'police' ? 'police' : 
-                      type === 'ems' ? 'doctor' : type,
-                latitude: item.latitude,
-                longitude: item.longitude,
-                address: item.address || null,
-                phone: item.phone || null,
-                hours: item.hours || null,
-              })),
-              { onConflict: 'id' }
-            );
-            
-          if (error) {
-            console.error('Error importing data:', error);
-            lastError = error;
-            errorCount += chunk.length;
-          } else {
-            importedCount += chunk.length;
-          }
-        }
-        
-        if (importedCount > 0) {
-          toast.success(`Imported ${importedCount} ${type} services`, {
-            description: errorCount > 0 ? `${errorCount} records had errors` : undefined
+        if (result.success) {
+          toast.success(`Imported ${result.imported} ${type} services`, {
+            description: result.errors > 0 ? `${result.errors} records had errors` : undefined
           });
         } else {
-          const errorMessage = `Failed to import ${type} services: ${lastError?.message || 'Unknown error'}`;
+          const errorMessage = `Failed to import ${type} services`;
           setImportError(errorMessage);
           toast.error(errorMessage, {
-            description: 'No records were successfully imported'
+            description: `No records were successfully imported. ${result.errors} records failed.`
           });
         }
       } catch (err) {

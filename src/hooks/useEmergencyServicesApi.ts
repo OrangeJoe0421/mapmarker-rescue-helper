@@ -3,11 +3,16 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EmergencyService } from '@/types/mapTypes';
 import { Database } from '@/types/database';
+import { toast } from 'sonner';
 
 export function useEmergencyServicesApi() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
 
+  /**
+   * Fetches nearby emergency services within a specified radius
+   */
   const fetchNearbyEmergencyServices = async (
     lat: number, 
     lng: number, 
@@ -83,6 +88,85 @@ export function useEmergencyServicesApi() {
       setIsLoading(false);
     }
   };
+
+  /**
+   * Imports emergency services in batches to avoid payload size limits
+   */
+  const batchImportServices = async (services: EmergencyService[]): Promise<{success: boolean, imported: number, errors: number}> => {
+    setIsLoading(true);
+    setError(null);
+    setUploadProgress(0);
+    
+    try {
+      // Process in smaller batches to avoid payload limits
+      const batchSize = 25; // Smaller batch size to avoid payload limits
+      const totalBatches = Math.ceil(services.length / batchSize);
+      let importedCount = 0;
+      let errorCount = 0;
+      
+      console.log(`Starting batch import of ${services.length} services in ${totalBatches} batches`);
+      
+      for (let i = 0; i < services.length; i += batchSize) {
+        const batch = services.slice(i, i + batchSize);
+        const currentBatch = Math.floor(i / batchSize) + 1;
+        
+        console.log(`Processing batch ${currentBatch}/${totalBatches} (${batch.length} items)`);
+        
+        try {
+          const { data, error, count } = await supabase
+            .from('emergency_services')
+            .upsert(
+              batch.map(item => ({
+                id: item.id,
+                name: item.name,
+                type: item.type,
+                latitude: item.latitude,
+                longitude: item.longitude,
+                address: item.address || null,
+                phone: item.phone || null,
+                hours: item.hours || null,
+              })),
+              { onConflict: 'id', count: 'exact' }
+            );
+            
+          if (error) {
+            console.error('Error in batch:', error);
+            console.error('Problem batch:', JSON.stringify(batch.slice(0, 2)));
+            errorCount += batch.length;
+          } else {
+            importedCount += count || batch.length;
+          }
+          
+          // Update progress
+          const progress = Math.min(100, Math.round(((i + batch.length) / services.length) * 100));
+          setUploadProgress(progress);
+          
+          // Small delay to avoid overwhelming the database
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (batchError) {
+          console.error('Batch processing error:', batchError);
+          console.error('Problem batch index:', i);
+          errorCount += batch.length;
+        }
+      }
+      
+      return { 
+        success: importedCount > 0, 
+        imported: importedCount, 
+        errors: errorCount 
+      };
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
+      console.error('Error importing services:', err);
+      return { success: false, imported: 0, errors: services.length };
+    } finally {
+      setIsLoading(false);
+      setUploadProgress(0);
+    }
+  };
   
   // Haversine formula to calculate distance between two points in km
   const calculateDistance = (
@@ -108,7 +192,9 @@ export function useEmergencyServicesApi() {
   
   return {
     fetchNearbyEmergencyServices,
+    batchImportServices,
     isLoading,
+    uploadProgress,
     error
   };
 }
