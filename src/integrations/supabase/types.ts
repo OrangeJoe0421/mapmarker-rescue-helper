@@ -19,6 +19,7 @@ export type Database = {
           longitude: number
           name: string
           phone: string | null
+          state: string | null
           type: string
         }
         Insert: {
@@ -30,6 +31,7 @@ export type Database = {
           longitude: number
           name: string
           phone?: string | null
+          state?: string | null
           type: string
         }
         Update: {
@@ -41,6 +43,7 @@ export type Database = {
           longitude?: number
           name?: string
           phone?: string | null
+          state?: string | null
           type?: string
         }
         Relationships: []

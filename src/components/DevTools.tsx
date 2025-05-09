@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -8,8 +7,8 @@ import PasswordGate from "./PasswordGate";
 import { useToast } from "./ui/use-toast";
 import { toast } from "sonner";
 import { Database } from "@/types/database";
-import { Wand2, AlertCircle, Bug } from "lucide-react";
-import { EmergencyService, GeoJSONFeatureCollection, GeoJSONFeature } from "@/types/mapTypes";
+import { Wand2, AlertCircle, Bug, FileSpreadsheet } from "lucide-react";
+import { EmergencyService } from "@/types/mapTypes";
 import { useEmergencyServicesApi } from "@/hooks/useEmergencyServicesApi";
 
 // Component for displaying file upload form
@@ -38,7 +37,7 @@ const FileUploadForm = ({
       <div className="flex flex-col gap-2">
         <input
           type="file"
-          accept=".json,.geojson"
+          accept=".csv"
           onChange={onChange}
           className="text-sm text-slate-300 bg-slate-700/50 rounded p-1.5 border border-slate-600"
         />
@@ -55,54 +54,103 @@ const FileUploadForm = ({
   );
 };
 
-// Convert GeoJSON to emergency service
-function convertGeoJSONToService(feature: GeoJSONFeature, serviceType: string): EmergencyService | null {
+// Parse CSV data function
+function parseCSV(csvText: string): EmergencyService[] {
   try {
-    // Basic validation check
-    if (!feature.geometry || 
-        !feature.geometry.coordinates || 
-        feature.geometry.coordinates.length !== 2 ||
-        !feature.properties) {
-      console.error('Invalid feature structure:', feature);
-      return null;
+    // Split by lines and remove any empty lines
+    const lines = csvText.split('\n').filter(line => line.trim() !== '');
+    
+    // The first line should be the header
+    const header = lines[0].split(',').map(h => h.trim());
+    
+    // Expected headers (case insensitive)
+    const expectedHeaders = ['id', 'name', 'type', 'latitude', 'longitude', 'address', 'state', 'phone', 'hours'];
+    
+    // Map the actual header positions to our expected headers
+    const headerMap: Record<string, number> = {};
+    
+    // Check that all expected headers exist
+    for (const expected of expectedHeaders) {
+      const index = header.findIndex(h => h.toLowerCase() === expected.toLowerCase());
+      if (index !== -1) {
+        headerMap[expected] = index;
+      } else if (['id', 'name', 'type', 'latitude', 'longitude'].includes(expected)) {
+        // These fields are required
+        throw new Error(`Required column '${expected}' not found in the CSV header`);
+      }
+      // Other fields are optional
     }
-
-    // GeoJSON coordinates are [longitude, latitude]
-    const [longitude, latitude] = feature.geometry.coordinates;
     
-    if (typeof longitude !== 'number' || typeof latitude !== 'number') {
-      console.error('Invalid coordinates:', feature.geometry.coordinates);
-      return null;
+    // Parse each data line
+    const services: EmergencyService[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      // Skip empty lines
+      if (!lines[i].trim()) continue;
+      
+      // Split the line by comma but handle quoted values correctly
+      const values: string[] = [];
+      let currentValue = '';
+      let inQuotes = false;
+      
+      for (let j = 0; j < lines[i].length; j++) {
+        const char = lines[i][j];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(currentValue.trim());
+          currentValue = '';
+        } else {
+          currentValue += char;
+        }
+      }
+      values.push(currentValue.trim()); // Add the last value
+      
+      // Create the service object
+      const lat = parseFloat(values[headerMap['latitude']]);
+      const lng = parseFloat(values[headerMap['longitude']]);
+      
+      // Skip records with invalid coordinates
+      if (isNaN(lat) || isNaN(lng)) {
+        console.warn(`Skipping record ${i} due to invalid coordinates:`, values);
+        continue;
+      }
+      
+      const service: EmergencyService = {
+        id: values[headerMap['id']] || `${values[headerMap['type']]}-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        name: values[headerMap['name']],
+        type: values[headerMap['type']],
+        latitude: lat,
+        longitude: lng
+      };
+      
+      // Add optional fields if they exist in the CSV
+      if (headerMap['address'] !== undefined) {
+        const address = values[headerMap['address']];
+        if (address) service.address = address;
+      }
+      
+      if (headerMap['state'] !== undefined) {
+        const state = values[headerMap['state']];
+        if (state) service.address = (service.address || '') + ', ' + state;
+      }
+      
+      if (headerMap['phone'] !== undefined) {
+        const phone = values[headerMap['phone']];
+        if (phone) service.phone = phone;
+      }
+      
+      if (headerMap['hours'] !== undefined) {
+        const hours = values[headerMap['hours']];
+        if (hours) service.hours = hours;
+      }
+      
+      services.push(service);
     }
     
-    const props = feature.properties;
-    
-    // Check for required properties
-    if (!props.NAME && !props.name) {
-      console.warn('Feature missing NAME property:', feature);
-    }
-    
-    const address = [
-      props.ADDRESS || props.address,
-      props.CITY || props.city,
-      props.STATE || props.state,
-      props.ZIPCODE || props.zipcode
-    ].filter(Boolean).join(', ');
-    
-    return {
-      id: props.GLOBALID || props.globalid || `${serviceType}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      name: props.NAME || props.name || 'Unknown',
-      type: serviceType,
-      latitude,
-      longitude,
-      address: address || undefined,
-      phone: props.PHONE || props.phone,
-      hours: props.HOURS || props.hours
-    };
+    return services;
   } catch (err) {
-    console.error('Error converting GeoJSON feature to service:', err);
-    console.error('Feature data:', JSON.stringify(feature, null, 2));
-    return null;
+    console.error('Error parsing CSV:', err);
+    throw err;
   }
 }
 
@@ -135,55 +183,6 @@ export function DevTools() {
     }
   };
 
-  const processGeoJSON = (data: any): GeoJSONFeatureCollection => {
-    console.log("Input data type:", typeof data);
-    
-    // Clear any previous import errors
-    setImportError(null);
-    setImportDebug(null);
-    
-    // If data is a string (from incomplete JSON), try to parse it
-    if (typeof data === 'string') {
-      try {
-        data = JSON.parse(data);
-      } catch (err) {
-        console.error("Failed to parse JSON string:", err);
-        setImportError("Invalid JSON format: " + (err instanceof Error ? err.message : String(err)));
-        throw new Error("Invalid JSON format");
-      }
-    }
-    
-    // Check if data has the correct structure
-    if (!data || typeof data !== 'object') {
-      const errorMsg = "Invalid data format: Not an object";
-      setImportError(errorMsg);
-      setImportDebug(data);
-      throw new Error(errorMsg);
-    }
-    
-    // Save a snapshot of the data for debugging
-    setImportDebug({
-      dataType: typeof data,
-      hasType: Boolean(data.type),
-      type: data.type,
-      hasFeatures: Boolean(data.features),
-      featuresIsArray: Array.isArray(data.features),
-      featuresLength: Array.isArray(data.features) ? data.features.length : 'not an array',
-      sample: data.features && Array.isArray(data.features) && data.features.length > 0 
-        ? JSON.stringify(data.features[0]).substring(0, 200) + '...' 
-        : 'No sample available'
-    });
-    
-    // Handle GeoJSON FeatureCollection
-    if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
-      return data as GeoJSONFeatureCollection;
-    }
-    
-    const errorMsg = `Unsupported data format: Expected GeoJSON FeatureCollection, got ${data.type || 'unknown type'}`;
-    setImportError(errorMsg);
-    throw new Error(errorMsg);
-  };
-
   const handleImport = async (type: string, file: File) => {
     if (!file) return;
 
@@ -201,39 +200,25 @@ export function DevTools() {
           return;
         }
         
-        // Process the input data to get a standardized GeoJSON format
-        const geoJSON = processGeoJSON(e.target.result);
-        const features = geoJSON.features;
+        // Parse the CSV data
+        const csvText = e.target.result.toString();
+        const services = parseCSV(csvText);
         
-        console.log(`Parsed ${features.length} records from ${type} GeoJSON file`);
-        if (features.length === 0) {
-          setImportError(`No features found in the GeoJSON file`);
+        console.log(`Parsed ${services.length} records from ${type} CSV file`);
+        if (services.length === 0) {
+          setImportError(`No valid records found in the CSV file`);
           setImporting(false);
           return;
         }
         
-        if (features.length > 0) {
-          console.log("Sample feature:", features[0]);
+        if (services.length > 0) {
+          console.log("Sample service:", services[0]);
           setImportDebug({
-            ...importDebug,
-            sampleFeature: features[0]
+            sampleService: services[0]
           });
         }
         
-        // Convert GeoJSON features to emergency services
-        const services: EmergencyService[] = features
-          .map(feature => convertGeoJSONToService(feature, type))
-          .filter((service): service is EmergencyService => service !== null);
-        
-        if (services.length === 0) {
-          setImportError(`Failed to convert any features to ${type} services`);
-          setImporting(false);
-          return;
-        }
-        
-        console.log(`Converted ${services.length} ${type} services`, services[0]);
-        
-        // Use the batch import function that's now imported directly at the component level
+        // Use the batch import function imported at the component level
         const result = await batchImportServices(services);
         
         if (result.success) {
@@ -312,12 +297,12 @@ export function DevTools() {
               <TabsContent value="import" className="space-y-6">
                 <div className="p-4 bg-slate-800/50 rounded-md text-sm text-slate-300 border border-slate-700/50 border-l-4 border-l-amber-500">
                   <p className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-400" />
-                    <strong>GeoJSON Format Expected</strong>
+                    <FileSpreadsheet className="h-4 w-4 text-amber-400" />
+                    <strong>CSV Format Expected</strong>
                   </p>
                   <p className="mt-2 text-slate-400 text-xs">
-                    Import files should be in GeoJSON FeatureCollection format with features containing "geometry.coordinates" 
-                    for position and "properties" containing NAME, ADDRESS, etc.
+                    Import files should be in CSV format with headers: id, name, type, latitude, longitude, address, state, phone, hours. 
+                    Required fields are: id, name, type, latitude, longitude.
                   </p>
                 </div>
               
@@ -381,7 +366,7 @@ export function DevTools() {
                 <div className="p-4 bg-slate-800/50 rounded-md text-sm text-slate-300 border border-slate-700/50">
                   <p className="flex items-center gap-2">
                     <Wand2 className="h-4 w-4 text-purple-400" />
-                    Import GeoJSON files for emergency services. Files should contain a FeatureCollection of Points.
+                    Import CSV files for emergency services. Files must contain headers matching the expected format.
                   </p>
                   <p className="mt-2 text-slate-400 text-xs">
                     Data will be upserted into the database, updating existing records based on ID.
