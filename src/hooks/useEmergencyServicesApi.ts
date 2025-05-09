@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EmergencyService } from '@/types/mapTypes';
@@ -11,13 +10,14 @@ export function useEmergencyServicesApi() {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   /**
-   * Fetches nearby emergency services within a specified radius
+   * Fetches nearby emergency services within a specified radius and limits the number returned
    */
   const fetchNearbyEmergencyServices = async (
     lat: number, 
     lng: number, 
     radiusInKm: number = 30,
-    types?: string[]
+    types?: string[],
+    limit?: number
   ): Promise<EmergencyService[]> => {
     setIsLoading(true);
     setError(null);
@@ -76,6 +76,11 @@ export function useEmergencyServicesApi() {
       })
       .filter(service => service.distance <= radiusInKm)
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      
+      // Apply limit if specified
+      if (limit && limit > 0) {
+        return servicesWithDistance.slice(0, limit);
+      }
       
       return servicesWithDistance;
       

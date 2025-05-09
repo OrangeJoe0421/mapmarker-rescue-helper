@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,9 +104,9 @@ async function convertToEmergencyService(
   return service;
 }
 
-export async function fetchNearestEmergencyServices(latitude: number, longitude: number): Promise<EmergencyService[]> {
+export async function fetchNearestEmergencyServices(latitude: number, longitude: number, radius: number = 30, types?: string[], limit?: number): Promise<EmergencyService[]> {
   try {
-    console.log(`Fetching services near [${latitude}, ${longitude}]`);
+    console.log(`Fetching services near [${latitude}, ${longitude}] with limit ${limit || 'unlimited'}`);
     const allServices: EmergencyService[] = [];
 
     // Search for each type of emergency service - one at a time
@@ -150,7 +149,7 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
     );
 
     // Sort services by distance, prioritizing hospitals with emergency rooms
-    return servicesWithDistance.sort((a, b) => {
+    const sortedServices = servicesWithDistance.sort((a, b) => {
       // If both are hospitals and one has a verified emergency room
       if (a.type.toLowerCase().includes('hospital') && b.type.toLowerCase().includes('hospital')) {
         // If one has verified emergency room and the other doesn't
@@ -165,6 +164,13 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
       // Sort by road distance
       return (a.road_distance || Infinity) - (b.road_distance || Infinity);
     });
+    
+    // Apply limit if specified
+    if (limit && limit > 0) {
+      return sortedServices.slice(0, limit);
+    }
+    
+    return sortedServices;
   } catch (error) {
     console.error("Error fetching emergency services:", error);
     toast.error("Failed to fetch emergency services. Please try again.");

@@ -109,7 +109,8 @@ const EmergencySidebar = () => {
       setIsSearching(true);
       setUserLocation({ latitude: lat, longitude: lon });
       
-      const services = await fetchNearestEmergencyServices(lat, lon);
+      // Limit to the 10 closest emergency services
+      const services = await fetchNearestEmergencyServices(lat, lon, 30, undefined, 10);
       setEmergencyServices(services);
       setActiveTab("results");
     } catch (error) {
