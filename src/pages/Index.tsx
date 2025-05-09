@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import MapContainer from '@/components/MapContainer';
@@ -37,9 +38,10 @@ const Index = () => {
             variant: "destructive",
           });
         } else {
-          const count = data?.[0]?.count || 0;
-          setDbConnectionStatus(`Connected: ${count} records available`);
-          console.log("Database connection successful, found records:", count);
+          // Fix: Safely access count data, providing a fallback value
+          const countValue = data && data.length > 0 ? data[0].count || 0 : 0;
+          setDbConnectionStatus(`Connected: ${countValue} records available`);
+          console.log("Database connection successful, found records:", countValue);
         }
       } catch (err) {
         console.error("Database check failed:", err);
