@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import MapContainer from '@/components/MapContainer';

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EmergencyService } from '@/types/mapTypes';
@@ -52,6 +53,8 @@ export function useEmergencyServicesApi() {
       if (!data || data.length === 0) {
         return [];
       }
+      
+      console.log(`Found ${data.length} emergency services from database within coordinate bounds`);
       
       // Calculate actual distances and filter by radius
       const servicesWithDistance = data.map(service => {

@@ -109,8 +109,10 @@ const EmergencySidebar = () => {
       setIsSearching(true);
       setUserLocation({ latitude: lat, longitude: lon });
       
-      // Limit to the 10 closest emergency services
-      const services = await fetchNearestEmergencyServices(lat, lon, 30, undefined, 10);
+      // Use the hook's fetch function to get services from the database
+      // Limit to the closest emergency services (default 10)
+      const { fetchNearbyEmergencyServices } = useEmergencyServicesApi();
+      const services = await fetchNearbyEmergencyServices(lat, lon, 30, undefined, 10);
       setEmergencyServices(services);
       setActiveTab("results");
     } catch (error) {
