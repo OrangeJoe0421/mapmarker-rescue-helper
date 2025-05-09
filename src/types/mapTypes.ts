@@ -67,3 +67,10 @@ export interface MapState {
   routes: Record<string, RouteInfo>;
   selectedService: EmergencyService | null;
 }
+
+// Add UserLocation type to fix import errors
+export interface UserLocation {
+  latitude: number;
+  longitude: number;
+  address?: string;
+}

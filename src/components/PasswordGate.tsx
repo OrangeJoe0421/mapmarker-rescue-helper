@@ -3,7 +3,51 @@ import { useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useToast } from "./ui/use-toast";
-import { Wand } from "lucide-react";
+
+// Custom WizardIcon SVG component
+const WizardIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    className="h-5 w-5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {/* Wizard hat */}
+    <path 
+      d="M12 2L8 10H16L12 2Z" 
+      fill="currentColor" 
+      stroke="currentColor"
+    />
+    
+    {/* Wizard face/beard */}
+    <path 
+      d="M8 10C8 10 7 12 7 14C7 17 9 19 12 19C15 19 17 17 17 14C17 12 16 10 16 10" 
+      fill="none"
+    />
+    
+    {/* Eyes */}
+    <circle cx="10" cy="12" r="0.5" fill="currentColor" />
+    <circle cx="14" cy="12" r="0.5" fill="currentColor" />
+    
+    {/* Robe bottom */}
+    <path 
+      d="M9 19L7 23M15 19L17 23" 
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    
+    {/* Magic sparkles */}
+    <path 
+      d="M20 4L21 5M4 4L3 5M5 9L3 8M19 9L21 8" 
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+  </svg>
+);
 
 const CORRECT_PASSWORD = "Ragnar";
 
@@ -42,7 +86,7 @@ const PasswordGate = ({
         <div className="text-center">
           <div className="flex justify-center mb-2">
             <div className="h-10 w-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-              <Wand className="h-5 w-5 text-purple-400" />
+              <WizardIcon />
             </div>
           </div>
           <h2 className="text-xl font-bold text-purple-100">Developer Access Required</h2>
