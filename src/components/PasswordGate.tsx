@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { useToast } from "./ui/use-toast";
+import { Wand } from "lucide-react";
 
 const CORRECT_PASSWORD = "Ragnar";
 
@@ -37,10 +38,15 @@ const PasswordGate = ({
 
   if (!displayFullScreen) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
         <div className="text-center">
-          <h2 className="text-xl font-bold">Developer Access Required</h2>
-          <p className="mt-2 text-muted-foreground">Enter password to continue</p>
+          <div className="flex justify-center mb-2">
+            <div className="h-10 w-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+              <Wand className="h-5 w-5 text-purple-400" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-purple-100">Developer Access Required</h2>
+          <p className="mt-2 text-slate-400">Enter password to continue</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -48,10 +54,13 @@ const PasswordGate = ({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter password"
-            className="text-center"
+            className="text-center bg-slate-700/50 border-slate-600 text-slate-200"
             autoFocus
           />
-          <Button type="submit" className="w-full">
+          <Button 
+            type="submit" 
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+          >
             Continue
           </Button>
         </form>

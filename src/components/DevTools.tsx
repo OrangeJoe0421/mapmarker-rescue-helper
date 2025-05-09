@@ -8,6 +8,7 @@ import PasswordGate from "./PasswordGate";
 import { useToast } from "./ui/use-toast";
 import { toast } from "sonner";
 import { Database } from "@/types/database";
+import { Wand } from "lucide-react";
 
 type EmergencyServiceImport = {
   id: string;
@@ -121,110 +122,139 @@ export function DevTools() {
     <>
       <Button 
         variant="outline" 
-        className="gap-2" 
+        className="gap-2 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200/20 hover:from-purple-500/20 hover:to-blue-500/20"
         onClick={() => setOpen(true)}
       >
-        Dev Tools
+        <Wand className="h-4 w-4 text-purple-400" />
+        <span>Dev Tools</span>
       </Button>
       
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-slate-900 to-slate-800 border-purple-500/20">
           <DialogHeader>
-            <DialogTitle>Developer Tools</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Wand className="h-5 w-5 text-purple-400" />
+              Developer Tools
+            </DialogTitle>
           </DialogHeader>
           
           {!authenticated ? (
-            <PasswordGate onCorrectPassword={handlePasswordSuccess} />
+            <PasswordGate 
+              onCorrectPassword={handlePasswordSuccess} 
+              displayFullScreen={false}
+              title="Developer Access"
+            />
           ) : (
             <Tabs defaultValue="import" className="w-full">
-              <TabsList className="grid w-full grid-cols-1">
-                <TabsTrigger value="import">Data Import</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-1 bg-slate-800/50 mb-4">
+                <TabsTrigger value="import" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-200">
+                  Data Import
+                </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="import" className="space-y-4 mt-4">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Hospitals</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleFileChange('hospitals')}
-                          className="text-sm"
-                        />
-                        <Button 
-                          size="sm"
-                          disabled={!fileUploads.hospitals || importing}
-                          onClick={() => fileUploads.hospitals && handleImport('hospitals', fileUploads.hospitals)}
-                        >
-                          Import
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Fire Stations</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleFileChange('fire')}
-                          className="text-sm"
-                        />
-                        <Button 
-                          size="sm"
-                          disabled={!fileUploads.fire || importing}
-                          onClick={() => fileUploads.fire && handleImport('fire', fileUploads.fire)}
-                        >
-                          Import
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Police Stations</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleFileChange('police')}
-                          className="text-sm"
-                        />
-                        <Button 
-                          size="sm"
-                          disabled={!fileUploads.police || importing}
-                          onClick={() => fileUploads.police && handleImport('police', fileUploads.police)}
-                        >
-                          Import
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">EMS</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={handleFileChange('ems')}
-                          className="text-sm"
-                        />
-                        <Button 
-                          size="sm"
-                          disabled={!fileUploads.ems || importing}
-                          onClick={() => fileUploads.ems && handleImport('ems', fileUploads.ems)}
-                        >
-                          Import
-                        </Button>
-                      </div>
+              <TabsContent value="import" className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2 bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                    <label className="text-sm font-medium text-purple-200 flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                      Hospitals
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileChange('hospitals')}
+                        className="text-sm text-slate-300 bg-slate-700/50 rounded p-1.5 border border-slate-600"
+                      />
+                      <Button 
+                        size="sm"
+                        disabled={!fileUploads.hospitals || importing}
+                        onClick={() => fileUploads.hospitals && handleImport('hospitals', fileUploads.hospitals)}
+                        className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
+                      >
+                        Import
+                      </Button>
                     </div>
                   </div>
                   
-                  <div className="p-3 bg-muted/50 rounded-md text-sm text-muted-foreground">
-                    <p>Import JSON files for emergency services. Files should contain arrays of objects with id, name, type, latitude, and longitude fields.</p>
-                    <p className="mt-2">Data will be upserted into the database, updating existing records based on ID.</p>
+                  <div className="space-y-2 bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                    <label className="text-sm font-medium text-purple-200 flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+                      Fire Stations
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileChange('fire')}
+                        className="text-sm text-slate-300 bg-slate-700/50 rounded p-1.5 border border-slate-600"
+                      />
+                      <Button 
+                        size="sm"
+                        disabled={!fileUploads.fire || importing}
+                        onClick={() => fileUploads.fire && handleImport('fire', fileUploads.fire)}
+                        className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
+                      >
+                        Import
+                      </Button>
+                    </div>
                   </div>
+                  
+                  <div className="space-y-2 bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                    <label className="text-sm font-medium text-purple-200 flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                      Police Stations
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileChange('police')}
+                        className="text-sm text-slate-300 bg-slate-700/50 rounded p-1.5 border border-slate-600"
+                      />
+                      <Button 
+                        size="sm"
+                        disabled={!fileUploads.police || importing}
+                        onClick={() => fileUploads.police && handleImport('police', fileUploads.police)}
+                        className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
+                      >
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                    <label className="text-sm font-medium text-purple-200 flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                      EMS
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileChange('ems')}
+                        className="text-sm text-slate-300 bg-slate-700/50 rounded p-1.5 border border-slate-600"
+                      />
+                      <Button 
+                        size="sm"
+                        disabled={!fileUploads.ems || importing}
+                        onClick={() => fileUploads.ems && handleImport('ems', fileUploads.ems)}
+                        className="w-full bg-purple-500/20 hover:bg-purple-500/40 text-purple-200 border-purple-500/30"
+                      >
+                        Import
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-slate-800/50 rounded-md text-sm text-slate-300 border border-slate-700/50">
+                  <p className="flex items-center gap-2">
+                    <Wand className="h-4 w-4 text-purple-400" />
+                    Import JSON files for emergency services. Files should contain arrays of objects with id, name, type, latitude, and longitude fields.
+                  </p>
+                  <p className="mt-2 text-slate-400 text-xs">
+                    Data will be upserted into the database, updating existing records based on ID.
+                  </p>
                 </div>
               </TabsContent>
             </Tabs>
