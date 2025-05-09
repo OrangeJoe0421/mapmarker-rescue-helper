@@ -12,13 +12,15 @@ export function useEmergencyServicesApi() {
 
   /**
    * Fetches nearby emergency services within a specified radius and limits the number returned
+   * Can optionally return only the closest of each service type
    */
   const fetchNearbyEmergencyServices = async (
     lat: number, 
     lng: number, 
     radiusInKm: number = 30,
     types?: string[],
-    limit?: number
+    limit?: number,
+    closestByType: boolean = false
   ): Promise<EmergencyService[]> => {
     setIsLoading(true);
     setError(null);
@@ -80,7 +82,33 @@ export function useEmergencyServicesApi() {
       .filter(service => service.distance <= radiusInKm)
       .sort((a, b) => (a.distance || 0) - (b.distance || 0));
       
-      // Apply limit if specified
+      // Get the closest of each service type if requested
+      if (closestByType) {
+        const servicesByType: Record<string, EmergencyService> = {};
+        
+        // Extract main service categories
+        const serviceTypes = ["Hospital", "Fire", "EMS", "Law Enforcement", "Police"];
+        
+        // For each service, check if it belongs to one of our main categories
+        // and if it's closer than what we've found so far
+        servicesWithDistance.forEach(service => {
+          // Normalize the service type for comparison
+          const normalizedType = normalizeServiceType(service.type);
+          
+          // If we haven't found this type yet, or this is closer than what we have
+          if (!servicesByType[normalizedType] || 
+              (service.distance || Infinity) < (servicesByType[normalizedType].distance || Infinity)) {
+            servicesByType[normalizedType] = service;
+          }
+        });
+        
+        // Convert back to array
+        const closestServices = Object.values(servicesByType);
+        
+        return closestServices.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+      }
+      
+      // Apply limit if specified and not getting closest by type
       if (limit && limit > 0) {
         return servicesWithDistance.slice(0, limit);
       }
@@ -94,6 +122,26 @@ export function useEmergencyServicesApi() {
       return [];
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Normalizes service types to common categories
+   */
+  const normalizeServiceType = (type: string): string => {
+    const lowerType = type.toLowerCase();
+    
+    if (lowerType.includes('hospital') || lowerType.includes('medical center')) {
+      return 'Hospital';
+    } else if (lowerType.includes('fire')) {
+      return 'Fire';
+    } else if (lowerType.includes('ems') || lowerType.includes('ambulance') || lowerType.includes('emergency medical')) {
+      return 'EMS';
+    } else if (lowerType.includes('police') || lowerType.includes('sheriff') || lowerType.includes('law') || lowerType.includes('enforce')) {
+      return 'Law Enforcement';
+    } else {
+      // Return the original type if it doesn't match our categories
+      return type;
     }
   };
 

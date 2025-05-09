@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
@@ -114,8 +113,16 @@ const EmergencySidebar = () => {
       setIsSearching(true);
       setUserLocation({ latitude: lat, longitude: lon });
       
-      // Use the imported hook's fetch function to get services from the database
-      const services = await emergencyServicesApi.fetchNearbyEmergencyServices(lat, lon, 30, undefined, 10);
+      // Get the closest of each service type (Hospital, Fire, EMS, Law Enforcement)
+      const services = await emergencyServicesApi.fetchNearbyEmergencyServices(
+        lat, 
+        lon, 
+        30,  // radiusInKm
+        undefined, // types - not filtered so we get all types
+        undefined, // limit - not needed as we're using closestByType
+        true // closestByType - get the closest of each type
+      );
+      
       setEmergencyServices(services);
       setActiveTab("results");
     } catch (error) {
