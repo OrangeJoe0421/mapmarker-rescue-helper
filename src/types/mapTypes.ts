@@ -73,3 +73,36 @@ export interface MapState {
   routes: Record<string, RouteInfo>;
   selectedService: EmergencyService | null;
 }
+
+// GeoJSON interfaces
+export interface GeoJSONPoint {
+  type: "Point";
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
+export interface GeoJSONFeature {
+  type: "Feature";
+  id: number | string;
+  geometry: GeoJSONPoint;
+  properties: {
+    [key: string]: any;
+    NAME?: string;
+    ADDRESS?: string;
+    CITY?: string;
+    STATE?: string;
+    ZIPCODE?: string;
+    PHONE?: string;
+    HOURS?: string;
+  };
+}
+
+export interface GeoJSONFeatureCollection {
+  type: "FeatureCollection";
+  crs?: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
+  features: GeoJSONFeature[];
+}
