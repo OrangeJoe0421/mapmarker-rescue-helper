@@ -24,9 +24,9 @@ const Index = () => {
   useEffect(() => {
     async function checkDbConnection() {
       try {
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
           .from('emergency_services')
-          .select('count', { count: 'exact', head: true });
+          .select('*', { count: 'exact', head: true });
           
         if (error) {
           console.error("Supabase connection error:", error);
@@ -37,10 +37,10 @@ const Index = () => {
             variant: "destructive",
           });
         } else {
-          // The count is returned as the 'count' property directly on the response
-          const count = data?.count || 0;
-          setDbConnectionStatus(`Connected: ${count} records available`);
-          console.log("Database connection successful, found records:", count);
+          // The count is returned directly in the count property of the response
+          const recordCount = count || 0;
+          setDbConnectionStatus(`Connected: ${recordCount} records available`);
+          console.log("Database connection successful, found records:", recordCount);
         }
       } catch (err) {
         console.error("Database check failed:", err);
