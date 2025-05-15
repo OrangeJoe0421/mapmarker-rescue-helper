@@ -4,7 +4,7 @@ import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
 
 const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
-const EDGE_FUNCTION_URL = "https://zjtdwvhasntmhxsgbknf.supabase.co/functions/v1/emergency-handler";
+const EDGE_FUNCTION_URL = "https://ljsmrxbbkbleugkpehcl.supabase.co/functions/v1/get-emergency-services";
 
 // === Request Queue for OSRM Rate Limiting ===
 const requestQueue: (() => Promise<void>)[] = [];
@@ -40,13 +40,19 @@ function queueRequest(request: () => Promise<void>) {
 export async function fetchServicesFromEdge(): Promise<any[]> {
   try {
     const response = await fetch(EDGE_FUNCTION_URL);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch from Edge Function: ${errorText}`);
+    }
+    
     const json = await response.json();
 
-    if (!response.ok || json.error) {
+    if (json.error) {
       throw new Error(json.error?.message || 'Failed to fetch from Edge Function');
     }
 
-    return json.data;
+    return json.data || [];
   } catch (err: any) {
     console.error("Edge Function fetch error:", err.message);
     throw err;
