@@ -10,7 +10,10 @@ export async function checkDatabaseConnection(): Promise<{ success: boolean, mes
   try {
     console.log("Checking database connection via Edge Function...");
     
-    const data = await fetchServicesFromEdge();
+    // Use default coordinates for connection testing (San Francisco coordinates)
+    const defaultLat = 37.7749;
+    const defaultLon = -122.4194;
+    const data = await fetchServicesFromEdge(defaultLat, defaultLon);
     
     if (!data || !Array.isArray(data)) {
       throw new Error("Invalid response from service");
