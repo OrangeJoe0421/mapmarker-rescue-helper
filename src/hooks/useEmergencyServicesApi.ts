@@ -25,7 +25,7 @@ export function useEmergencyServicesApi() {
     
     try {
       // Use the fetchNearestEmergencyServices function from emergencyService.ts
-      // This now uses fetchServicesFromEdge() internally
+      // This now uses Google Maps API for routing
       const services = await fetchNearestEmergencyServices(
         lat,
         lng,

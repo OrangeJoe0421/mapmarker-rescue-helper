@@ -1,10 +1,11 @@
+
 import React, { useCallback, useEffect, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline, DirectionsRenderer } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
 import { Route, EmergencyService } from '@/types/mapTypes';
 
 // Google Maps API key
-const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4"; // Replace with your API key
+const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
 
 const containerStyle = {
   width: '100%',

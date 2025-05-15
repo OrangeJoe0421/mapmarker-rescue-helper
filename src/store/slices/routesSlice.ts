@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
@@ -71,7 +72,7 @@ export const createRoutesSlice: StateCreator<
     mapCaptureService.markCaptureStaleDueToRouteChange();
     console.info('Calculating new route, marking capture as stale');
 
-    toast.info('Calculating route...');
+    toast.info('Calculating route using Google Maps...');
 
     try {
       // Get start and end coordinates
@@ -87,7 +88,7 @@ export const createRoutesSlice: StateCreator<
       
       console.info(`Fetching route from [${startCoords.latitude}, ${startCoords.longitude}] to [${endCoords.latitude}, ${endCoords.longitude}]`);
       
-      // Call the enhanced routing service to get a real route
+      // Call the Google Maps routing service to get a real route
       const routeData = await fetchRoutePath(
         startCoords.latitude,
         startCoords.longitude,

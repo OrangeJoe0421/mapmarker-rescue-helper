@@ -1,13 +1,17 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
 
-const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
+// API Keys and URLs
+const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4"; // Using the same key from GoogleMap.tsx
 const EDGE_FUNCTION_URL = "https://ljsmrxbbkbleugkpehcl.supabase.co/functions/v1/get-emergency-services";
 
-// === Request Queue for OSRM Rate Limiting ===
+// === Request Queue for Google Directions API Rate Limiting ===
 const requestQueue: (() => Promise<void>)[] = [];
 let isProcessingQueue = false;
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 500; // 0.5 second between requests to avoid rate limiting
 
 async function processQueue() {
   if (isProcessingQueue || requestQueue.length === 0) return;
@@ -18,11 +22,19 @@ async function processQueue() {
     const request = requestQueue.shift();
     if (request) {
       try {
+        // Ensure we wait at least MIN_REQUEST_INTERVAL since the last request
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTime;
+        if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+          await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest));
+        }
+        
+        // Execute the request
+        lastRequestTime = Date.now();
         await request();
       } catch (error) {
         console.error("Error processing queued request:", error);
       }
-      await new Promise(resolve => setTimeout(resolve, 1200));
     }
   }
 
@@ -172,7 +184,7 @@ export async function fetchNearestEmergencyServices(
   }
 }
 
-// === Fetch Route Distance via OSRM API ===
+// === Fetch Route Distance via Google Maps Directions API ===
 export async function fetchRouteDistance(
   startLat: number,
   startLon: number,
@@ -180,23 +192,62 @@ export async function fetchRouteDistance(
   endLon: number
 ): Promise<number | null> {
   try {
-    const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
-    const url = `${OSRM_API_URL}${coordinates}?overview=full`;
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`OSRM API error: ${response.status}`);
-
-    const data = await response.json();
-    if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
-
-    return parseFloat((data.routes[0].distance / 1000).toFixed(2)); // meters → km
+    // Use Google Maps Distance Matrix API
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${startLat},${startLon}&destinations=${endLat},${endLon}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
+    
+    // We need to use a proxy or Edge Function as the client-side can't directly call this API
+    // For now, we'll simulate the response with the browser's native fetch
+    
+    // Note: In production, you should route this through a server-side proxy or Edge Function
+    // This direct fetch will likely fail due to CORS issues
+    const distance = await calculateGoogleRouteDistance(
+      { lat: startLat, lng: startLon },
+      { lat: endLat, lng: endLon }
+    );
+    
+    return distance / 1000; // Convert meters to kilometers
   } catch (error) {
     console.error("Error calculating route distance:", error);
     return calculateHaversineDistance(startLat, startLon, endLat, endLon) * 1.3;
   }
 }
 
-// === Fetch Route Path with Waypoints (Leaflet) ===
+// Use client-side Google Maps API to calculate distance
+// This works because you already loaded the Google Maps JavaScript API
+async function calculateGoogleRouteDistance(
+  origin: { lat: number, lng: number },
+  destination: { lat: number, lng: number }
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    // Ensure Google Maps API is loaded
+    if (!window.google || !window.google.maps) {
+      console.error("Google Maps API not loaded");
+      reject(new Error("Google Maps API not loaded"));
+      return;
+    }
+
+    const service = new google.maps.DistanceMatrixService();
+    service.getDistanceMatrix(
+      {
+        origins: [origin],
+        destinations: [destination],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC,
+      },
+      (response, status) => {
+        if (status === google.maps.DistanceMatrixStatus.OK && response) {
+          const distance = response.rows[0].elements[0].distance.value;
+          resolve(distance);
+        } else {
+          console.error("Distance Matrix failed:", status);
+          reject(new Error(`Distance Matrix failed: ${status}`));
+        }
+      }
+    );
+  });
+}
+
+// === Fetch Route Path with Waypoints (Google Maps) ===
 export async function fetchRoutePath(
   startLat: number,
   startLon: number,
@@ -206,26 +257,12 @@ export async function fetchRoutePath(
   return new Promise((resolve) => {
     queueRequest(async () => {
       try {
-        const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
-        const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
-
-        console.log("Fetching route path:", url);
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`OSRM API error: ${response.status}`);
-
-        const data = await response.json();
-        if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
-
-        const route = data.routes[0];
-        const points = route.geometry.coordinates.map(
-          ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+        const result = await getGoogleDirectionsRoute(
+          { lat: startLat, lng: startLon },
+          { lat: endLat, lng: endLon }
         );
-
-        resolve({
-          points,
-          distance: route.distance / 1000,
-          duration: route.duration / 60
-        });
+        
+        resolve(result);
       } catch (error) {
         console.error("Error fetching route path:", error);
         const fallbackPoints: [number, number][] = [
@@ -240,5 +277,52 @@ export async function fetchRoutePath(
         });
       }
     });
+  });
+}
+
+// Use Google Maps Directions API to get route
+async function getGoogleDirectionsRoute(
+  origin: { lat: number, lng: number },
+  destination: { lat: number, lng: number }
+): Promise<{ points: [number, number][]; distance: number; duration: number }> {
+  return new Promise((resolve, reject) => {
+    // Ensure Google Maps API is loaded
+    if (!window.google || !window.google.maps) {
+      console.error("Google Maps API not loaded");
+      reject(new Error("Google Maps API not loaded"));
+      return;
+    }
+
+    const directionsService = new google.maps.DirectionsService();
+    directionsService.route(
+      {
+        origin: origin,
+        destination: destination,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result) {
+          // Extract path points from the result
+          const route = result.routes[0];
+          const path = route.overview_path;
+          
+          const points: [number, number][] = path.map(point => 
+            [point.lat(), point.lng()] as [number, number]
+          );
+          
+          const distance = route.legs[0].distance?.value || 0;
+          const duration = route.legs[0].duration?.value || 0;
+          
+          resolve({
+            points,
+            distance: distance / 1000, // meters to km
+            duration: duration / 60 // seconds to minutes
+          });
+        } else {
+          console.error("Directions request failed:", status);
+          reject(new Error(`Directions request failed: ${status}`));
+        }
+      }
+    );
   });
 }
