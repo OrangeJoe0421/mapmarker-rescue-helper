@@ -1,22 +1,19 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
-import { supabase } from '@/integrations/supabase/client';
 import { calculateHaversineDistance } from '../utils/mapUtils';
 
-// OSRM API for routing (open source routing machine)
 const OSRM_API_URL = "https://router.project-osrm.org/route/v1/driving/";
+const EDGE_FUNCTION_URL = "https://zjtdwvhasntmhxsgbknf.supabase.co/functions/v1/emergency-handler";
 
-// Queue for managing API requests to prevent rate limiting
+// === Request Queue for OSRM Rate Limiting ===
 const requestQueue: (() => Promise<void>)[] = [];
 let isProcessingQueue = false;
 
-// Process the queue with rate limiting (one request per second)
 async function processQueue() {
   if (isProcessingQueue || requestQueue.length === 0) return;
-  
+
   isProcessingQueue = true;
-  
+
   while (requestQueue.length > 0) {
     const request = requestQueue.shift();
     if (request) {
@@ -25,43 +22,62 @@ async function processQueue() {
       } catch (error) {
         console.error("Error processing queued request:", error);
       }
-      // Wait 1.2 seconds between requests to stay under the rate limit
       await new Promise(resolve => setTimeout(resolve, 1200));
     }
   }
-  
+
   isProcessingQueue = false;
 }
 
-// Add a request to the queue and start processing if needed
 function queueRequest(request: () => Promise<void>) {
   requestQueue.push(request);
   processQueue();
 }
 
-export async function fetchNearestEmergencyServices(latitude: number, longitude: number, radius: number = 30, types?: string[], limit?: number): Promise<EmergencyService[]> {
+// === Fetch from Supabase Edge Function ===
+async function fetchServicesFromEdge(): Promise<any[]> {
   try {
-    console.log(`Fetching services from database near [${latitude}, ${longitude}] with limit ${limit || 'unlimited'}`);
-    
-    // Use the useEmergencyServicesApi hook's function directly via the supabase client
-    const { data, error } = await supabase
-      .from('emergency_services')
-      .select('*');
-    
-    if (error) {
-      console.error("Supabase query error:", error);
+    const response = await fetch(EDGE_FUNCTION_URL);
+    const json = await response.json();
+
+    if (!response.ok || json.error) {
+      throw new Error(json.error?.message || 'Failed to fetch from Edge Function');
+    }
+
+    return json.data;
+  } catch (err: any) {
+    console.error("Edge Function fetch error:", err.message);
+    throw err;
+  }
+}
+
+// === Main Function: Fetch Nearest Emergency Services ===
+export async function fetchNearestEmergencyServices(
+  latitude: number,
+  longitude: number,
+  radius: number = 30,
+  types?: string[],
+  limit?: number
+): Promise<EmergencyService[]> {
+  try {
+    console.log(`Fetching services from Edge Function near [${latitude}, ${longitude}]`);
+
+    let data: any[];
+    try {
+      data = await fetchServicesFromEdge();
+    } catch (error) {
+      console.error("Failed to fetch emergency services from edge:", error);
       toast.error("Failed to fetch emergency services from database");
       return [];
     }
-    
+
     if (!data || data.length === 0) {
       toast.info("No emergency services found in the database");
       return [];
     }
-    
-    console.log(`Found ${data.length} services in database, calculating distances...`);
-    
-    // Calculate distances for all services
+
+    console.log(`Found ${data.length} services, calculating distances...`);
+
     const servicesWithDistance = await Promise.all(
       data.map(async service => {
         try {
@@ -71,8 +87,7 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
             service.latitude,
             service.longitude
           );
-          
-          // Convert database model to EmergencyService type
+
           const emergencyService: EmergencyService = {
             id: service.id,
             name: service.name,
@@ -84,12 +99,11 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
             hours: service.hours || undefined,
             road_distance: roadDistance
           };
-          
+
           return emergencyService;
         } catch (error) {
           console.warn(`Could not calculate road distance for ${service.name}:`, error);
-          
-          // Return service with haversine distance as fallback
+
           return {
             id: service.id,
             name: service.name,
@@ -104,32 +118,24 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
         }
       })
     );
-    
-    // Filter by type if specified
+
     let filteredServices = servicesWithDistance;
+
     if (types && types.length > 0) {
-      filteredServices = filteredServices.filter(service => 
+      filteredServices = filteredServices.filter(service =>
         types.some(type => service.type.toLowerCase().includes(type.toLowerCase()))
       );
     }
-    
-    // Filter by radius
-    filteredServices = filteredServices.filter(service => 
+
+    filteredServices = filteredServices.filter(service =>
       (service.road_distance || Infinity) <= radius
     );
 
-    // Sort services by distance
-    const sortedServices = filteredServices.sort((a, b) => {
-      // Sort by road distance
-      return (a.road_distance || Infinity) - (b.road_distance || Infinity);
-    });
-    
-    // Apply limit if specified
-    if (limit && limit > 0) {
-      return sortedServices.slice(0, limit);
-    }
-    
-    return sortedServices;
+    const sortedServices = filteredServices.sort((a, b) =>
+      (a.road_distance || Infinity) - (b.road_distance || Infinity)
+    );
+
+    return limit && limit > 0 ? sortedServices.slice(0, limit) : sortedServices;
   } catch (error) {
     console.error("Error fetching emergency services:", error);
     toast.error("Failed to fetch emergency services. Please try again.");
@@ -137,7 +143,7 @@ export async function fetchNearestEmergencyServices(latitude: number, longitude:
   }
 }
 
-// Use OSRM API to get actual road distance
+// === Fetch Route Distance via OSRM API ===
 export async function fetchRouteDistance(
   startLat: number,
   startLon: number,
@@ -145,33 +151,23 @@ export async function fetchRouteDistance(
   endLon: number
 ): Promise<number | null> {
   try {
-    // Format coordinates for OSRM API
     const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
     const url = `${OSRM_API_URL}${coordinates}?overview=full`;
-    
+
     const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`OSRM API error: ${response.status}`);
-    }
-    
+    if (!response.ok) throw new Error(`OSRM API error: ${response.status}`);
+
     const data = await response.json();
-    
-    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-      throw new Error('No route found');
-    }
-    
-    // Get distance in kilometers (OSRM returns meters)
-    const distanceKm = data.routes[0].distance / 1000;
-    return parseFloat(distanceKm.toFixed(2));
+    if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
+
+    return parseFloat((data.routes[0].distance / 1000).toFixed(2)); // meters → km
   } catch (error) {
     console.error("Error calculating route distance:", error);
-    // Fall back to Haversine distance with a road factor
     return calculateHaversineDistance(startLat, startLon, endLat, endLon) * 1.3;
   }
 }
 
-// Function to fetch a route with all waypoints 
+// === Fetch Route Path with Waypoints (Leaflet) ===
 export async function fetchRoutePath(
   startLat: number,
   startLon: number,
@@ -181,53 +177,37 @@ export async function fetchRoutePath(
   return new Promise((resolve) => {
     queueRequest(async () => {
       try {
-        // Format coordinates for OSRM API
         const coordinates = `${startLon},${startLat};${endLon},${endLat}`;
         const url = `${OSRM_API_URL}${coordinates}?overview=full&geometries=geojson`;
-        
+
         console.log("Fetching route path:", url);
         const response = await fetch(url);
-        
-        if (!response.ok) {
-          console.error(`OSRM API error: ${response.status} ${response.statusText}`);
-          throw new Error(`OSRM API error: ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(`OSRM API error: ${response.status}`);
+
         const data = await response.json();
-        
-        if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-          throw new Error('No route found');
-        }
-        
+        if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
+
         const route = data.routes[0];
-        const geometry = route.geometry;
-        
-        // Extract coordinates from GeoJSON
-        const points = geometry.coordinates.map((coord: [number, number]) => {
-          // OSRM returns [lng, lat], but we need [lat, lng] for leaflet
-          return [coord[1], coord[0]] as [number, number];
-        });
-        
+        const points = route.geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng] as [number, number]
+        );
+
         resolve({
           points,
-          distance: route.distance / 1000, // convert meters to kilometers
-          duration: route.duration / 60, // convert seconds to minutes
+          distance: route.distance / 1000,
+          duration: route.duration / 60
         });
       } catch (error) {
         console.error("Error fetching route path:", error);
-        
-        // Create a fallback route with just start and end points
-        console.log("Using fallback route calculation");
         const fallbackPoints: [number, number][] = [
           [startLat, startLon],
           [endLat, endLon]
         ];
-        
         const distance = calculateHaversineDistance(startLat, startLon, endLat, endLon);
         resolve({
           points: fallbackPoints,
-          distance: distance,
-          duration: distance / 50 * 60 // Rough estimate: 50 km/h average speed
+          distance,
+          duration: distance / 50 * 60
         });
       }
     });
