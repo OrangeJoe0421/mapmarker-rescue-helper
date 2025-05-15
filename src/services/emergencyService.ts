@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -35,7 +36,8 @@ function queueRequest(request: () => Promise<void>) {
 }
 
 // === Fetch from Supabase Edge Function ===
-async function fetchServicesFromEdge(): Promise<any[]> {
+// Export this function so it can be imported by other modules
+export async function fetchServicesFromEdge(): Promise<any[]> {
   try {
     const response = await fetch(EDGE_FUNCTION_URL);
     const json = await response.json();
