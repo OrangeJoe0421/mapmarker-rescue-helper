@@ -203,10 +203,13 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
 
   if (!isLoaded) return <div className="h-full w-full flex items-center justify-center">Loading Maps...</div>;
 
+  // Add default center coordinates if mapCenter is undefined
+  const center = mapCenter ? { lat: mapCenter[0], lng: mapCenter[1] } : { lat: 37.7749, lng: -122.4194 };
+
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
-      center={{ lat: mapCenter[0], lng: mapCenter[1] }}
+      center={center}
       zoom={mapZoom}
       options={mapOptions}
       onLoad={onLoad}
