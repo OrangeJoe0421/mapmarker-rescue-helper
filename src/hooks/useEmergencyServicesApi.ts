@@ -34,7 +34,11 @@ export function useEmergencyServicesApi() {
         limit
       );
       
-      console.log(`Found ${services.length} emergency services`);
+      if (services.length === 0) {
+        toast.warning("No emergency services found within the specified radius");
+      } else {
+        console.log(`Found ${services.length} emergency services`);
+      }
       return services;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
