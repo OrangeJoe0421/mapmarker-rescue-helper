@@ -25,7 +25,7 @@ export function useEmergencyServicesApi() {
     
     try {
       // Use the fetchNearestEmergencyServices function from emergencyService.ts
-      // This now passes the location to the edge function and ensures we get one of each service type
+      // This now ensures we get one of each service type
       const services = await fetchNearestEmergencyServices(
         lat,
         lng,
@@ -38,8 +38,7 @@ export function useEmergencyServicesApi() {
         toast.warning("No emergency services found within the specified radius");
       } else {
         const serviceTypes = services.map(s => s.type);
-        const uniqueTypes = [...new Set(serviceTypes)]; // Get unique types
-        console.log(`Found ${services.length} emergency services of types: ${uniqueTypes.join(', ')}`);
+        console.log(`Found ${services.length} emergency services of types: ${serviceTypes.join(', ')}`);
       }
       return services;
     } catch (err) {

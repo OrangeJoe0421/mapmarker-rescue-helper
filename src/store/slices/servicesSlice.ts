@@ -32,12 +32,6 @@ export const createServicesSlice: StateCreator<
       const typesMessage = Array.from(types).join(", ");
       console.log(`Setting services: ${services.length} services of types: ${typesMessage}`);
       
-      // Include count of each type for better user feedback
-      const typeCounts = Array.from(types).map(type => {
-        const count = services.filter(s => s.type === type).length;
-        return `${type}: ${count}`;
-      }).join(", ");
-      
       toast.success(`Found ${services.length} emergency services (${typesMessage})`);
     }
   },
