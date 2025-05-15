@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
@@ -10,7 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
 import PasswordGate from '@/components/PasswordGate';
 import { DevTools } from '@/components/DevTools';
-import { supabase } from '@/integrations/supabase/client';
+import { checkDatabaseConnection } from '@/utils/supabaseHelpers';
 
 const Index = () => {
   const { toast: shadcnToast } = useToast();
@@ -31,26 +30,14 @@ const Index = () => {
         setDbConnectionStatus("Connecting...");
         console.log("Checking database connection...");
 
-        // Simple ping query to test connection
-        const { error: pingError } = await supabase
-          .from('emergency_services')
-          .select('id', { head: true, count: 'exact' })
-          .limit(1);
-
-        if (pingError) {
-          throw pingError;
+        // Instead of direct Supabase calls, use our helper which now uses the Edge Function
+        const result = await checkDatabaseConnection();
+        
+        if (!result.success) {
+          throw new Error(result.message);
         }
 
-        // If ping successful, get count in a separate query
-        const { count, error: countError } = await supabase
-          .from('emergency_services')
-          .select('*', { count: 'exact', head: true });
-
-        if (countError) {
-          throw countError;
-        }
-
-        const recordCount = count || 0;
+        const recordCount = result.count;
         setDbConnectionStatus(`Connected: ${recordCount} records available`);
         console.log("Database connection successful, found records:", recordCount);
         setRetryCount(0); // Reset retry counter on success

@@ -105,13 +105,11 @@ const EmergencySidebar = () => {
       toast.info("Searching for emergency services...");
       setUserLocation({ latitude: lat, longitude: lon });
       
-      // Fix the fetchNearbyEmergencyServices call to match expected parameters
+      // Use the hook function which now uses fetchNearestEmergencyServices via the edge function
       const services = await emergencyServicesApi.fetchNearbyEmergencyServices(
         lat, 
         lon, 
-        30,  // radiusInKm
-        undefined, // types - not filtered so we get all types
-        undefined  // limit - not needed as we're using closestByType
+        30  // radiusInKm
       );
       
       console.log("Search results:", services);

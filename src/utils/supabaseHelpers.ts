@@ -1,6 +1,5 @@
-
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchServicesFromEdge } from '@/services/emergencyService';
 
 /**
  * Checks if the Supabase connection is working
@@ -8,42 +7,22 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export async function checkDatabaseConnection() {
   try {
-    // First try a simple ping query
-    const { error: pingError } = await supabase
-      .from('emergency_services')
-      .select('id', { count: 'exact', head: true })
-      .limit(1);
-
-    if (pingError) {
-      console.error("Supabase ping error:", pingError);
-      return { 
-        success: false, 
-        message: `Connection error: ${pingError.message}`,
-        count: 0
-      };
+    // Try to fetch data from the Edge Function instead of direct Supabase call
+    console.log("Checking Edge Function connection...");
+    
+    const data = await fetchServicesFromEdge();
+    
+    if (!data) {
+      throw new Error("No data returned from Edge Function");
     }
-
-    // If ping works, get the count
-    const { count, error: countError } = await supabase
-      .from('emergency_services')
-      .select('*', { count: 'exact', head: true });
-
-    if (countError) {
-      console.error("Supabase count error:", countError);
-      return { 
-        success: false, 
-        message: `Data error: ${countError.message}`,
-        count: 0
-      };
-    }
-
+    
     return {
       success: true,
       message: `Connected successfully`,
-      count: count || 0
+      count: data.length || 0
     };
   } catch (err) {
-    console.error("Unexpected database error:", err);
+    console.error("Edge Function connection error:", err);
     return {
       success: false,
       message: err instanceof Error ? err.message : "Unknown connection error",
@@ -86,13 +65,17 @@ export function validateSupabaseCredentials(url: string, key: string): boolean {
  */
 export async function getEmergencyServiceById(id: string) {
   try {
-    const { data, error } = await supabase
-      .from('emergency_services')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Fetch all services from Edge Function
+    const services = await fetchServicesFromEdge();
     
-    return { success: !error, data, error };
+    // Find the specific service by ID
+    const service = services.find(s => s.id === id);
+    
+    return { 
+      success: !!service, 
+      data: service || null, 
+      error: service ? null : new Error('Service not found') 
+    };
   } catch (err) {
     return { 
       success: false, 

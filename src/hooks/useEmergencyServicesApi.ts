@@ -1,8 +1,8 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { EmergencyService } from '@/types/mapTypes';
 import { toast } from 'sonner';
+import { fetchNearestEmergencyServices } from '@/services/emergencyService';
 
 export function useEmergencyServicesApi() {
   const [isLoading, setIsLoading] = useState(false);
@@ -24,100 +24,18 @@ export function useEmergencyServicesApi() {
     console.log(`Searching for services near ${lat}, ${lng} with radius ${radiusInKm}km`);
     
     try {
-      // First, just get all services without filtering to see if we have data
-      const { data: allServices, error: initialError } = await supabase
-        .from('emergency_services')
-        .select('*');
+      // Use the fetchNearestEmergencyServices function from emergencyService.ts
+      // This now uses fetchServicesFromEdge() internally
+      const services = await fetchNearestEmergencyServices(
+        lat,
+        lng,
+        radiusInKm,
+        types,
+        limit
+      );
       
-      if (initialError) {
-        throw new Error(`Database query error: ${initialError.message}`);
-      }
-      
-      console.log(`Found ${allServices?.length || 0} total services in database`);
-      
-      if (!allServices || allServices.length === 0) {
-        toast.warning("No emergency services found in database");
-        return [];
-      }
-      
-      // Now filter and calculate distances
-      let query = supabase
-        .from('emergency_services')
-        .select('*');
-      
-      // Filter by type if provided
-      if (types && types.length > 0) {
-        query = query.in('type', types);
-      }
-      
-      // Get all within reasonable distance first - we'll sort by actual distance later
-      // This is a simple filter to reduce the data set
-      // Make the bounding box a bit larger to ensure we don't miss any services
-      const latDiff = radiusInKm / 110; // ~111km per degree of latitude, use slightly smaller value
-      const lngDiff = radiusInKm / (111 * Math.cos(lat * Math.PI / 180)); // Adjust for longitude differences
-      
-      query = query
-        .gte('latitude', lat - latDiff)
-        .lte('latitude', lat + latDiff)
-        .gte('longitude', lng - lngDiff)
-        .lte('longitude', lng + lngDiff);
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        throw new Error(`Failed to fetch emergency services: ${error.message}`);
-      }
-      
-      if (!data || data.length === 0) {
-        console.log("No services found within coordinate bounds");
-        // Try with much larger bounds to see if there's anything in the database nearby
-        const { data: widerData } = await supabase
-          .from('emergency_services')
-          .select('*')
-          .gte('latitude', lat - (latDiff * 2))
-          .lte('latitude', lat + (latDiff * 2))
-          .gte('longitude', lng - (lngDiff * 2))
-          .lte('longitude', lng + (lngDiff * 2));
-        
-        console.log(`Wider search found ${widerData?.length || 0} services`);
-        return [];
-      }
-      
-      console.log(`Found ${data.length} emergency services from database within coordinate bounds`);
-      
-      // Calculate actual distances and filter by radius
-      const servicesWithDistance = data.map(service => {
-        const distanceKm = calculateDistance(
-          lat, 
-          lng, 
-          service.latitude, 
-          service.longitude
-        );
-        
-        return {
-          id: service.id,
-          name: service.name,
-          type: service.type,
-          latitude: service.latitude,
-          longitude: service.longitude,
-          address: service.address || undefined,
-          phone: service.phone || undefined,
-          hours: service.hours || undefined,
-          distance: distanceKm
-        } as EmergencyService;
-      })
-      .filter(service => service.distance <= radiusInKm)
-      .sort((a, b) => (a.distance || 0) - (b.distance || 0));
-      
-      console.log(`After filtering by actual distance (${radiusInKm}km), found ${servicesWithDistance.length} services`);
-      
-      // Apply limit if specified
-      if (limit && limit > 0) {
-        return servicesWithDistance.slice(0, limit);
-      }
-      
-      return servicesWithDistance;
-      
+      console.log(`Found ${services.length} emergency services`);
+      return services;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -131,6 +49,8 @@ export function useEmergencyServicesApi() {
 
   /**
    * Imports emergency services in batches to avoid payload size limits
+   * This function is no longer using direct Supabase calls, but for backwards compatibility,
+   * we'll keep the function signature and update the implementation
    */
   const batchImportServices = async (services: EmergencyService[]): Promise<{success: boolean, imported: number, errors: number}> => {
     setIsLoading(true);
@@ -138,65 +58,16 @@ export function useEmergencyServicesApi() {
     setUploadProgress(0);
     
     try {
-      // Process in smaller batches to avoid payload limits
-      const batchSize = 25; // Smaller batch size to avoid payload limits
-      const totalBatches = Math.ceil(services.length / batchSize);
-      let importedCount = 0;
-      let errorCount = 0;
-      
-      console.log(`Starting batch import of ${services.length} services in ${totalBatches} batches`);
-      
-      for (let i = 0; i < services.length; i += batchSize) {
-        const batch = services.slice(i, i + batchSize);
-        const currentBatch = Math.floor(i / batchSize) + 1;
-        
-        console.log(`Processing batch ${currentBatch}/${totalBatches} (${batch.length} items)`);
-        
-        try {
-          const { data, error, count } = await supabase
-            .from('emergency_services')
-            .upsert(
-              batch.map(item => ({
-                id: item.id,
-                name: item.name,
-                type: item.type,
-                latitude: item.latitude,
-                longitude: item.longitude,
-                address: item.address || null,
-                phone: item.phone || null,
-                hours: item.hours || null,
-              })),
-              { onConflict: 'id', count: 'exact' }
-            );
-            
-          if (error) {
-            console.error('Error in batch:', error);
-            console.error('Problem batch:', JSON.stringify(batch.slice(0, 2)));
-            errorCount += batch.length;
-          } else {
-            importedCount += count || batch.length;
-          }
-          
-          // Update progress
-          const progress = Math.min(100, Math.round(((i + batch.length) / services.length) * 100));
-          setUploadProgress(progress);
-          
-          // Small delay to avoid overwhelming the database
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-        } catch (batchError) {
-          console.error('Batch processing error:', batchError);
-          console.error('Problem batch index:', i);
-          errorCount += batch.length;
-        }
-      }
+      // This functionality is now handled by the Edge Function
+      // Here we could make a call to an edge function that handles batch imports if needed
+      console.log('This functionality has been migrated to use Edge Functions');
+      toast.warning('Batch import is currently not supported through the Edge Function');
       
       return { 
-        success: importedCount > 0, 
-        imported: importedCount, 
-        errors: errorCount 
+        success: false, 
+        imported: 0, 
+        errors: 0
       };
-      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
@@ -206,28 +77,6 @@ export function useEmergencyServicesApi() {
       setIsLoading(false);
       setUploadProgress(0);
     }
-  };
-  
-  // Haversine formula to calculate distance between two points in km
-  const calculateDistance = (
-    lat1: number, 
-    lon1: number, 
-    lat2: number, 
-    lon2: number
-  ): number => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
-    
-    return parseFloat(distance.toFixed(2));
   };
   
   return {
