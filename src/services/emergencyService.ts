@@ -13,6 +13,9 @@ let isProcessingQueue = false;
 let lastRequestTime = 0;
 const MIN_REQUEST_INTERVAL = 500; // 0.5 second between requests to avoid rate limiting
 
+// Define standard service types to ensure consistent grouping
+const STANDARD_SERVICE_TYPES = ["Hospital", "EMS", "Fire", "Law Enforcement"];
+
 async function processQueue() {
   if (isProcessingQueue || requestQueue.length === 0) return;
 
@@ -154,19 +157,20 @@ export async function fetchNearestEmergencyServices(
     // Group services by type and get the closest for each type
     const servicesByType = new Map<string, EmergencyService>();
     
+    // First, try to match with standard service types
     filteredServices.forEach(service => {
-      // Create a standardized type key by converting to lowercase and trimming
-      const typeKey = service.type.toLowerCase().trim();
+      // Standardize the type for grouping
+      const type = standardizeServiceType(service.type);
       
       // If this type doesn't exist in the map yet, or if this service is closer than the existing one
       if (
-        !servicesByType.has(typeKey) || 
-        (service.road_distance || Infinity) < (servicesByType.get(typeKey)?.road_distance || Infinity)
+        !servicesByType.has(type) || 
+        (service.road_distance || Infinity) < (servicesByType.get(type)?.road_distance || Infinity)
       ) {
-        servicesByType.set(typeKey, service);
+        servicesByType.set(type, service);
       }
     });
-
+    
     // Convert the map values back to an array
     const closestByType = Array.from(servicesByType.values());
     
@@ -182,6 +186,19 @@ export async function fetchNearestEmergencyServices(
     toast.error("Failed to fetch emergency services. Please try again.");
     return [];
   }
+}
+
+// Helper function to map service types to standard categories
+function standardizeServiceType(type: string): string {
+  const lowerType = type.toLowerCase();
+  
+  if (lowerType.includes('hospital')) return 'Hospital';
+  if (lowerType.includes('ems') || lowerType.includes('ambulance')) return 'EMS';
+  if (lowerType.includes('fire')) return 'Fire';
+  if (lowerType.includes('law') || lowerType.includes('police')) return 'Law Enforcement';
+  
+  // If no match, return the original type
+  return type;
 }
 
 // === Fetch Route Distance via Google Maps Directions API ===

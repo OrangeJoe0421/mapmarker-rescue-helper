@@ -27,7 +27,10 @@ export const createServicesSlice: StateCreator<
     set({ emergencyServices: sortedServices });
     
     if (services.length > 0) {
-      toast.success(`Found ${services.length} emergency services`);
+      // Make a summarized message to show what types were found
+      const types = new Set(services.map(s => s.type));
+      const typesMessage = Array.from(types).join(", ");
+      toast.success(`Found ${services.length} emergency services (${typesMessage})`);
     }
   },
 
