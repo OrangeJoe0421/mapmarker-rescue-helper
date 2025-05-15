@@ -51,9 +51,11 @@ function queueRequest(request: () => Promise<void>) {
 
 // === Fetch from Supabase Edge Function ===
 // Export this function so it can be imported by other modules
-export async function fetchServicesFromEdge(): Promise<any[]> {
+export async function fetchServicesFromEdge(latitude: number, longitude: number): Promise<any[]> {
   try {
-    const response = await fetch(EDGE_FUNCTION_URL);
+    console.log(`Fetching services from edge function for coordinates: [${latitude}, ${longitude}]`);
+    const url = `${EDGE_FUNCTION_URL}?lat=${latitude}&lon=${longitude}`;
+    const response = await fetch(url);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -87,7 +89,7 @@ export async function fetchNearestEmergencyServices(
 
     let data: any[];
     try {
-      data = await fetchServicesFromEdge();
+      data = await fetchServicesFromEdge(latitude, longitude);
     } catch (error) {
       console.error("Failed to fetch emergency services from edge:", error);
       toast.error("Failed to fetch emergency services from database");
@@ -128,7 +130,7 @@ export async function fetchNearestEmergencyServices(
             address: service.address || undefined,
             phone: service.phone || undefined,
             hours: service.hours || undefined,
-            road_distance: roadDistance
+            road_distance: roadDistance || service.distance
           };
 
           return emergencyService;
@@ -144,7 +146,7 @@ export async function fetchNearestEmergencyServices(
             address: service.address || undefined,
             phone: service.phone || undefined,
             hours: service.hours || undefined,
-            road_distance: calculateHaversineDistance(latitude, longitude, service.latitude, service.longitude) * 1.3
+            road_distance: service.distance || calculateHaversineDistance(latitude, longitude, service.latitude, service.longitude) * 1.3
           };
         }
       })

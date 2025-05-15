@@ -25,7 +25,7 @@ export function useEmergencyServicesApi() {
     
     try {
       // Use the fetchNearestEmergencyServices function from emergencyService.ts
-      // This now ensures we get one of each service type
+      // Which now calls the edge function with lat/lon parameters
       const services = await fetchNearestEmergencyServices(
         lat,
         lng,

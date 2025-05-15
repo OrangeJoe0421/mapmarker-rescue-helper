@@ -19,6 +19,11 @@ export const createServicesSlice: StateCreator<
   selectedService: null,
 
   setEmergencyServices: (services) => {
+    if (!services || services.length === 0) {
+      set({ emergencyServices: [] });
+      return;
+    }
+    
     // Sort by distance
     const sortedServices = [...services].sort((a, b) => {
       return (a.road_distance || Infinity) - (b.road_distance || Infinity);
