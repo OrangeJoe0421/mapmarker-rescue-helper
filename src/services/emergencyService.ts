@@ -51,9 +51,19 @@ function queueRequest(request: () => Promise<void>) {
 
 // === Fetch from Supabase Edge Function ===
 // Export this function so it can be imported by other modules
-export async function fetchServicesFromEdge(): Promise<any[]> {
+export async function fetchServicesFromEdge(latitude?: number, longitude?: number): Promise<any[]> {
   try {
-    const response = await fetch(EDGE_FUNCTION_URL);
+    let url = EDGE_FUNCTION_URL;
+    
+    // Add query parameters if latitude and longitude are provided
+    if (latitude !== undefined && longitude !== undefined) {
+      url = `${EDGE_FUNCTION_URL}?lat=${latitude}&lon=${longitude}`;
+      console.log("Fetching services with location filter:", url);
+    } else {
+      console.log("Fetching all services (no location filter)");
+    }
+    
+    const response = await fetch(url);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -66,7 +76,7 @@ export async function fetchServicesFromEdge(): Promise<any[]> {
       throw new Error(json.error?.message || 'Failed to fetch from Edge Function');
     }
 
-    console.log("Raw services data from database:", json.data);
+    console.log("Raw services data from database:", json.data?.length || 0, "records");
     return json.data || [];
   } catch (err: any) {
     console.error("Edge Function fetch error:", err.message);
@@ -87,7 +97,8 @@ export async function fetchNearestEmergencyServices(
 
     let data: any[];
     try {
-      data = await fetchServicesFromEdge();
+      // Now passing the latitude and longitude to the edge function
+      data = await fetchServicesFromEdge(latitude, longitude);
     } catch (error) {
       console.error("Failed to fetch emergency services from edge:", error);
       toast.error("Failed to fetch emergency services from database");
