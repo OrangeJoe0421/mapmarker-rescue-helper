@@ -66,6 +66,7 @@ export async function fetchServicesFromEdge(): Promise<any[]> {
       throw new Error(json.error?.message || 'Failed to fetch from Edge Function');
     }
 
+    console.log("Raw services data from database:", json.data);
     return json.data || [];
   } catch (err: any) {
     console.error("Edge Function fetch error:", err.message);
@@ -99,10 +100,18 @@ export async function fetchNearestEmergencyServices(
     }
 
     console.log(`Found ${data.length} services, calculating distances...`);
+    
+    // Log the types of services found in the database for debugging
+    const typesInDatabase = new Set(data.map(service => service.type));
+    console.log("Service types found in database:", Array.from(typesInDatabase));
 
     const servicesWithDistance = await Promise.all(
       data.map(async service => {
         try {
+          // Standardize service type before processing
+          const standardType = standardizeServiceType(service.type);
+          console.log(`Processing service: ${service.name}, original type: ${service.type}, standard type: ${standardType}`);
+
           const roadDistance = await fetchRouteDistance(
             latitude,
             longitude,
@@ -113,7 +122,7 @@ export async function fetchNearestEmergencyServices(
           const emergencyService: EmergencyService = {
             id: service.id,
             name: service.name,
-            type: service.type,
+            type: standardType, // Use standardized type for consistency
             latitude: service.latitude,
             longitude: service.longitude,
             address: service.address || undefined,
@@ -129,7 +138,7 @@ export async function fetchNearestEmergencyServices(
           return {
             id: service.id,
             name: service.name,
-            type: service.type,
+            type: standardizeServiceType(service.type), // Use standardized type for consistency
             latitude: service.latitude,
             longitude: service.longitude,
             address: service.address || undefined,
@@ -141,7 +150,7 @@ export async function fetchNearestEmergencyServices(
       })
     );
 
-    // Filter services by type if specified
+    // Filter services by type if specified by the user
     let filteredServices = servicesWithDistance;
     if (types && types.length > 0) {
       filteredServices = filteredServices.filter(service =>
@@ -153,34 +162,44 @@ export async function fetchNearestEmergencyServices(
     filteredServices = filteredServices.filter(service =>
       (service.road_distance || Infinity) <= radius
     );
-
-    // Group services by type and get the closest for each type
+    
+    // Group services by standardized type
     const servicesByType = new Map<string, EmergencyService>();
     
-    // First, try to match with standard service types
-    filteredServices.forEach(service => {
-      // Standardize the type for grouping
-      const type = standardizeServiceType(service.type);
+    // First group by the standard service types we want to ensure are included
+    for (const serviceType of STANDARD_SERVICE_TYPES) {
+      const servicesOfType = filteredServices.filter(
+        service => service.type === serviceType
+      );
       
-      // If this type doesn't exist in the map yet, or if this service is closer than the existing one
-      if (
-        !servicesByType.has(type) || 
-        (service.road_distance || Infinity) < (servicesByType.get(type)?.road_distance || Infinity)
-      ) {
-        servicesByType.set(type, service);
+      if (servicesOfType.length > 0) {
+        // Find the closest service of this type
+        const closest = servicesOfType.reduce((prev, current) => {
+          return (prev.road_distance || Infinity) < (current.road_distance || Infinity) ? prev : current;
+        });
+        
+        servicesByType.set(serviceType, closest);
+        console.log(`Found closest ${serviceType}: ${closest.name} at ${closest.road_distance} km`);
+      } else {
+        console.log(`No services of type ${serviceType} found within radius`);
       }
-    });
+    }
     
     // Convert the map values back to an array
     const closestByType = Array.from(servicesByType.values());
     
-    // Sort the closest services by distance
+    // Log what we found for debugging
+    console.log(`Found ${closestByType.length} services (one of each available type):`);
+    closestByType.forEach(service => {
+      console.log(`- ${service.type}: ${service.name} (${service.road_distance} km)`);
+    });
+    
+    // Sort the services by distance
     const sortedServices = closestByType.sort((a, b) =>
       (a.road_distance || Infinity) - (b.road_distance || Infinity)
     );
-
-    console.log(`Returning ${sortedServices.length} services (closest of each type)`);
-    return limit && limit > 0 ? sortedServices.slice(0, limit) : sortedServices;
+    
+    return sortedServices;
   } catch (error) {
     console.error("Error fetching emergency services:", error);
     toast.error("Failed to fetch emergency services. Please try again.");
@@ -190,6 +209,8 @@ export async function fetchNearestEmergencyServices(
 
 // Helper function to map service types to standard categories
 function standardizeServiceType(type: string): string {
+  if (!type) return "Other";
+  
   const lowerType = type.toLowerCase();
   
   if (lowerType.includes('hospital')) return 'Hospital';

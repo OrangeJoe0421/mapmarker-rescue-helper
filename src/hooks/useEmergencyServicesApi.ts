@@ -25,7 +25,7 @@ export function useEmergencyServicesApi() {
     
     try {
       // Use the fetchNearestEmergencyServices function from emergencyService.ts
-      // This now uses Google Maps API for routing
+      // This now ensures we get one of each service type
       const services = await fetchNearestEmergencyServices(
         lat,
         lng,
@@ -37,7 +37,8 @@ export function useEmergencyServicesApi() {
       if (services.length === 0) {
         toast.warning("No emergency services found within the specified radius");
       } else {
-        console.log(`Found ${services.length} emergency services`);
+        const serviceTypes = services.map(s => s.type);
+        console.log(`Found ${services.length} emergency services of types: ${serviceTypes.join(', ')}`);
       }
       return services;
     } catch (err) {
