@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -127,22 +126,44 @@ export async function fetchNearestEmergencyServices(
       })
     );
 
+    // Filter services by type if specified
     let filteredServices = servicesWithDistance;
-
     if (types && types.length > 0) {
       filteredServices = filteredServices.filter(service =>
         types.some(type => service.type.toLowerCase().includes(type.toLowerCase()))
       );
     }
 
+    // Filter services by radius
     filteredServices = filteredServices.filter(service =>
       (service.road_distance || Infinity) <= radius
     );
 
-    const sortedServices = filteredServices.sort((a, b) =>
+    // Group services by type and get the closest for each type
+    const servicesByType = new Map<string, EmergencyService>();
+    
+    filteredServices.forEach(service => {
+      // Create a standardized type key by converting to lowercase and trimming
+      const typeKey = service.type.toLowerCase().trim();
+      
+      // If this type doesn't exist in the map yet, or if this service is closer than the existing one
+      if (
+        !servicesByType.has(typeKey) || 
+        (service.road_distance || Infinity) < (servicesByType.get(typeKey)?.road_distance || Infinity)
+      ) {
+        servicesByType.set(typeKey, service);
+      }
+    });
+
+    // Convert the map values back to an array
+    const closestByType = Array.from(servicesByType.values());
+    
+    // Sort the closest services by distance
+    const sortedServices = closestByType.sort((a, b) =>
       (a.road_distance || Infinity) - (b.road_distance || Infinity)
     );
 
+    console.log(`Returning ${sortedServices.length} services (closest of each type)`);
     return limit && limit > 0 ? sortedServices.slice(0, limit) : sortedServices;
   } catch (error) {
     console.error("Error fetching emergency services:", error);
