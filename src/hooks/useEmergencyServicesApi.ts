@@ -37,7 +37,7 @@ export function useEmergencyServicesApi() {
       if (services.length === 0) {
         toast.warning("No emergency services found within the specified radius");
       } else {
-        const serviceTypes = services.map(s => s.type);
+        const serviceTypes = [...new Set(services.map(s => s.type))];
         console.log(`Found ${services.length} emergency services of types: ${serviceTypes.join(', ')}`);
       }
       return services;

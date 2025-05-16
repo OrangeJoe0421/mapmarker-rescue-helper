@@ -36,6 +36,7 @@ export const createServicesSlice: StateCreator<
       const types = new Set(services.map(s => s.type));
       const typesMessage = Array.from(types).join(", ");
       console.log(`Setting services: ${services.length} services of types: ${typesMessage}`);
+      console.log("Search results:", services);
       
       toast.success(`Found ${services.length} emergency services (${typesMessage})`);
     }

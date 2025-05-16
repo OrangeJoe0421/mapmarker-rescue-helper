@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -165,33 +164,11 @@ export async function fetchNearestEmergencyServices(
       (service.road_distance || Infinity) <= radius
     );
     
-    // Group services by standardized type
-    const servicesByType = new Map<string, EmergencyService>();
-    
-    // First group by the standard service types we want to ensure are included
-    for (const serviceType of STANDARD_SERVICE_TYPES) {
-      const servicesOfType = filteredServices.filter(
-        service => service.type === serviceType
-      );
-      
-      if (servicesOfType.length > 0) {
-        // Find the closest service of this type
-        const closest = servicesOfType.reduce((prev, current) => {
-          return (prev.road_distance || Infinity) < (current.road_distance || Infinity) ? prev : current;
-        });
-        
-        servicesByType.set(serviceType, closest);
-        console.log(`Found closest ${serviceType}: ${closest.name} at ${closest.road_distance} km`);
-      } else {
-        console.log(`No services of type ${serviceType} found within radius`);
-      }
-    }
-    
-    // Convert the map values back to an array
-    const closestByType = Array.from(servicesByType.values());
+    // Get the closest service of each type
+    const closestByType = getClosestServiceByType(filteredServices);
     
     // Log what we found for debugging
-    console.log(`Found ${closestByType.length} services (one of each available type):`);
+    console.log(`Found ${closestByType.length} services (closest of each available type):`);
     closestByType.forEach(service => {
       console.log(`- ${service.type}: ${service.name} (${service.road_distance} km)`);
     });
@@ -207,6 +184,25 @@ export async function fetchNearestEmergencyServices(
     toast.error("Failed to fetch emergency services. Please try again.");
     return [];
   }
+}
+
+// Helper function to get the closest service of each type
+function getClosestServiceByType(services: EmergencyService[]): EmergencyService[] {
+  if (!services.length) return [];
+  
+  const servicesByType = new Map<string, EmergencyService>();
+  
+  // For each service type, find the closest service
+  for (const service of services) {
+    const existingService = servicesByType.get(service.type);
+    
+    if (!existingService || 
+        (service.road_distance || Infinity) < (existingService.road_distance || Infinity)) {
+      servicesByType.set(service.type, service);
+    }
+  }
+  
+  return Array.from(servicesByType.values());
 }
 
 // Helper function to map service types to standard categories
