@@ -205,15 +205,20 @@ export const addDetailedRouteInformation = (
       // First entry is always the starting point
       tableData.push(['1', 'Start at project location', '0.0 km']);
       
-      // Process each step from the Google Directions API
+      // Process each step from the Google Directions API - with improved text cleaning
       route.steps.forEach((step, idx) => {
         // Clean up HTML from Google's instructions
         const cleanInstructions = step.instructions
-          .replace(/<div.*?>/g, "") // Remove div tags
-          .replace(/<\/div>/g, "") // Remove closing div tags
-          .replace(/<\/?[^>]+(>|$)/g, "") // Remove other HTML tags
-          .replace(/&nbsp;/g, " ") // Replace &nbsp; with spaces
-          .replace(/\s+/g, " "); // Normalize whitespace
+          // Extract content from between <b> tags for preservation
+          .replace(/<b>(.*?)<\/b>/g, (_, streetName) => `"${streetName}"`)
+          // Remove remaining HTML tags
+          .replace(/<div.*?>/g, "")
+          .replace(/<\/div>/g, "")
+          .replace(/<\/?[^>]+(>|$)/g, "")
+          // Clean up spaces and entities
+          .replace(/&nbsp;/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
         
         tableData.push([
           (idx + 2).toString(), // Step number (starting from 2)
