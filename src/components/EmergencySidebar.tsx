@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,14 @@ const EmergencySidebar = () => {
 
       setIsSearching(true);
       toast.info("Searching for emergency services...");
+      
+      // Clear previous results first by setting empty array
+      setEmergencyServices([]);
+      
+      // Set the user location
       setUserLocation({ latitude: lat, longitude: lon });
+      
+      console.log(`Searching with coordinates: ${lat}, ${lon}`);
       
       // Use the hook function which now uses fetchNearestEmergencyServices via the edge function
       const services = await emergencyServicesApi.fetchNearbyEmergencyServices(
@@ -118,11 +126,16 @@ const EmergencySidebar = () => {
         toast.warning("No emergency services found within 30km");
       }
       
+      // Update the services in the store
       setEmergencyServices(services);
+      
+      // Switch to results tab
       setActiveTab("results");
     } catch (error) {
       console.error("Error during search:", error);
       toast.error("An error occurred during search");
+      // Clear any partial results on error
+      setEmergencyServices([]);
     } finally {
       setIsSearching(false);
     }

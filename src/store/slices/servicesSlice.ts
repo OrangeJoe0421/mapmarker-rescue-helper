@@ -20,7 +20,8 @@ export const createServicesSlice: StateCreator<
 
   setEmergencyServices: (services) => {
     if (!services || services.length === 0) {
-      set({ emergencyServices: [] });
+      console.log("No services provided, clearing the list");
+      set({ emergencyServices: [], selectedService: null });
       return;
     }
     
@@ -29,7 +30,14 @@ export const createServicesSlice: StateCreator<
       return (a.road_distance || Infinity) - (b.road_distance || Infinity);
     });
 
-    set({ emergencyServices: sortedServices });
+    console.log(`Setting ${sortedServices.length} emergency services`);
+    
+    // Reset the state with the new services
+    set({ 
+      emergencyServices: sortedServices,
+      // Clear selected service to avoid showing stale data
+      selectedService: null
+    });
     
     if (services.length > 0) {
       // Count service types found to display in the toast
