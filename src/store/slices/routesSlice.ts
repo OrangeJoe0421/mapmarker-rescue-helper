@@ -110,14 +110,15 @@ export const createRoutesSlice: StateCreator<
       const routeId = `route-${Date.now()}`;
       console.info(`Created new route with ID: ${routeId}, points: ${routePoints.length}`);
       
-      // Create the route object
+      // Create the route object with steps if available
       const newRoute: Route = {
         id: routeId,
         points: routePoints,
         fromId: sourceMarker.id,
         toId: toHospitalId || null,
         distance: routeData.distance,
-        duration: routeData.duration
+        duration: routeData.duration,
+        steps: routeData.steps // Include the step-by-step directions
       };
       
       // Add the route to state

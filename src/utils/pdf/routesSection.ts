@@ -1,7 +1,6 @@
-
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Route, CustomMarker, EmergencyService, UserLocation } from '@/types/mapTypes';
+import { Route, CustomMarker, EmergencyService, UserLocation, RouteStep } from '@/types/mapTypes';
 
 export const addServiceDetailsSection = (
   doc: jsPDF,
@@ -187,8 +186,8 @@ export const addDetailedRouteInformation = (
     yPosition += 5;
     
     if (route.duration) {
-      const minutes = Math.floor(route.duration / 60);
-      const seconds = Math.round(route.duration % 60);
+      const minutes = Math.floor(route.duration);
+      const seconds = Math.round((route.duration % 1) * 60);
       doc.text(`Estimated travel time: ${minutes} min ${seconds} sec`, 14, yPosition);
       yPosition += 10;
     }
@@ -196,83 +195,112 @@ export const addDetailedRouteInformation = (
     // Set up table headers for turn-by-turn directions
     const tableHeaders = [['Step', 'Direction', 'Distance (km)']];
     
-    // Analyze route points to create turn-by-turn directions
-    // This is a simplified version as we don't have actual direction data from Google Maps API
-    // It splits the route into segments based on direction changes
+    // Check if we have API-provided steps
     let tableData: string[][] = [];
     
-    // First entry is always the starting point
-    tableData.push(['1', 'Start at project location', '0.0']);
-    
-    // If we have a good number of points to work with
-    if (route.points && route.points.length > 2) {
-      // Calculate segments with significant direction changes
-      let segmentDistance = 0;
-      let lastDirection = '';
-      let segmentStartIndex = 0;
-      let currentStep = 2; // Start from step 2 as step 1 is the starting point
+    if (route.steps && route.steps.length > 0) {
+      console.log("Using actual Google Maps directions with", route.steps.length, "steps");
       
-      for (let i = 1; i < route.points.length; i++) {
-        const prevPoint = route.points[i-1];
-        const currPoint = route.points[i];
+      // First entry is always the starting point
+      tableData.push(['1', 'Start at project location', '0.0']);
+      
+      // Process each step from the Google Directions API
+      route.steps.forEach((step, idx) => {
+        // Clean up HTML from Google's instructions
+        const cleanInstructions = step.instructions
+          .replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
+          .replace(/&nbsp;/g, " "); // Replace &nbsp; with spaces
         
-        // Calculate bearing/direction
-        const dx = currPoint.longitude - prevPoint.longitude;
-        const dy = currPoint.latitude - prevPoint.latitude;
-        let bearing = Math.atan2(dx, dy) * 180 / Math.PI;
-        if (bearing < 0) bearing += 360;
-        
-        // Convert bearing to cardinal direction
-        let currentDirection = '';
-        if (bearing >= 337.5 || bearing < 22.5) currentDirection = 'North';
-        else if (bearing >= 22.5 && bearing < 67.5) currentDirection = 'Northeast';
-        else if (bearing >= 67.5 && bearing < 112.5) currentDirection = 'East';
-        else if (bearing >= 112.5 && bearing < 157.5) currentDirection = 'Southeast';
-        else if (bearing >= 157.5 && bearing < 202.5) currentDirection = 'South';
-        else if (bearing >= 202.5 && bearing < 247.5) currentDirection = 'Southwest';
-        else if (bearing >= 247.5 && bearing < 292.5) currentDirection = 'West';
-        else currentDirection = 'Northwest';
-        
-        // Calculate distance between points
-        const pointDistance = calculateDistance(
-          prevPoint.latitude, prevPoint.longitude,
-          currPoint.latitude, currPoint.longitude
-        );
-        
-        segmentDistance += pointDistance;
-        
-        // If this is the first segment, initialize lastDirection
-        if (i === 1) {
-          lastDirection = currentDirection;
-        }
-        
-        // If direction changed significantly or we're at the end of the route, 
-        // add a segment to the directions
-        if (currentDirection !== lastDirection || i === route.points.length - 1) {
-          // Create a descriptive direction based on the last direction
-          const directionText = `Continue ${lastDirection.toLowerCase()} toward ${service.name}`;
-          
-          tableData.push([
-            currentStep.toString(), 
-            directionText, 
-            segmentDistance.toFixed(2)
-          ]);
-          
-          currentStep++;
-          segmentStartIndex = i;
-          segmentDistance = 0;
-          lastDirection = currentDirection;
-        }
-      }
+        tableData.push([
+          (idx + 2).toString(), // Step number (starting from 2)
+          cleanInstructions,
+          (step.distance / 1000).toFixed(2) // Convert to km
+        ]);
+      });
       
       // Add arrival as the last step
-      tableData.push([currentStep.toString(), `Arrive at ${service.name}`, '0.0']);
+      tableData.push([
+        (route.steps.length + 2).toString(), 
+        `Arrive at ${service.name}`, 
+        '0.0'
+      ]);
     } else {
-      // If we have minimal points, create a simplified route
-      tableData.push(
-        ['2', `Head toward ${service.name}`, (route.distance * 0.8).toFixed(2)],
-        ['3', `Arrive at ${service.name}`, '0.0']
-      );
+      console.log("No Google Maps steps available, using calculated directions");
+      // If we don't have API steps, use the old calculation method
+      
+      // First entry is always the starting point
+      tableData.push(['1', 'Start at project location', '0.0']);
+      
+      // If we have a good number of points to work with
+      if (route.points && route.points.length > 2) {
+        // Calculate segments with significant direction changes
+        let segmentDistance = 0;
+        let lastDirection = '';
+        let segmentStartIndex = 0;
+        let currentStep = 2; // Start from step 2 as step 1 is the starting point
+        
+        for (let i = 1; i < route.points.length; i++) {
+          const prevPoint = route.points[i-1];
+          const currPoint = route.points[i];
+          
+          // Calculate bearing/direction
+          const dx = currPoint.longitude - prevPoint.longitude;
+          const dy = currPoint.latitude - prevPoint.latitude;
+          let bearing = Math.atan2(dx, dy) * 180 / Math.PI;
+          if (bearing < 0) bearing += 360;
+          
+          // Convert bearing to cardinal direction
+          let currentDirection = '';
+          if (bearing >= 337.5 || bearing < 22.5) currentDirection = 'North';
+          else if (bearing >= 22.5 && bearing < 67.5) currentDirection = 'Northeast';
+          else if (bearing >= 67.5 && bearing < 112.5) currentDirection = 'East';
+          else if (bearing >= 112.5 && bearing < 157.5) currentDirection = 'Southeast';
+          else if (bearing >= 157.5 && bearing < 202.5) currentDirection = 'South';
+          else if (bearing >= 202.5 && bearing < 247.5) currentDirection = 'Southwest';
+          else if (bearing >= 247.5 && bearing < 292.5) currentDirection = 'West';
+          else currentDirection = 'Northwest';
+          
+          // Calculate distance between points
+          const pointDistance = calculateDistance(
+            prevPoint.latitude, prevPoint.longitude,
+            currPoint.latitude, currPoint.longitude
+          );
+          
+          segmentDistance += pointDistance;
+          
+          // If this is the first segment, initialize lastDirection
+          if (i === 1) {
+            lastDirection = currentDirection;
+          }
+          
+          // If direction changed significantly or we're at the end of the route, 
+          // add a segment to the directions
+          if (currentDirection !== lastDirection || i === route.points.length - 1) {
+            // Create a descriptive direction based on the last direction
+            const directionText = `Continue ${lastDirection.toLowerCase()} toward ${service.name}`;
+            
+            tableData.push([
+              currentStep.toString(), 
+              directionText, 
+              segmentDistance.toFixed(2)
+            ]);
+            
+            currentStep++;
+            segmentStartIndex = i;
+            segmentDistance = 0;
+            lastDirection = currentDirection;
+          }
+        }
+        
+        // Add arrival as the last step
+        tableData.push([currentStep.toString(), `Arrive at ${service.name}`, '0.0']);
+      } else {
+        // If we have minimal points, create a simplified route
+        tableData.push(
+          ['2', `Head toward ${service.name}`, (route.distance * 0.8).toFixed(2)],
+          ['3', `Arrive at ${service.name}`, '0.0']
+        );
+      }
     }
     
     // Add the table
@@ -319,4 +347,3 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 function deg2rad(deg: number): number {
   return deg * (Math.PI/180);
 }
-

@@ -1,4 +1,3 @@
-
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -51,13 +50,29 @@ export interface RoutePoint {
   longitude: number;
 }
 
+export interface RouteStep {
+  instructions: string;
+  distance: number;
+  duration: number;
+  startLocation: {
+    lat: number;
+    lng: number;
+  };
+  endLocation: {
+    lat: number;
+    lng: number;
+  };
+  maneuver?: string;
+}
+
 export interface Route {
   id: string;
   points: RoutePoint[];
-  distance: number;
-  duration: number;
   fromId: string;
-  toId: string;
+  toId: string | null;
+  distance: number;
+  duration?: number;
+  steps?: RouteStep[];
 }
 
 export interface RouteInfo {

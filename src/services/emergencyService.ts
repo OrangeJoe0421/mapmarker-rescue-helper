@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -289,7 +290,7 @@ export async function fetchRoutePath(
   startLon: number,
   endLat: number,
   endLon: number
-): Promise<{ points: [number, number][]; distance: number; duration: number } | null> {
+): Promise<{ points: [number, number][]; distance: number; duration: number; steps?: any[] } | null> {
   return new Promise((resolve) => {
     queueRequest(async () => {
       try {
@@ -316,11 +317,11 @@ export async function fetchRoutePath(
   });
 }
 
-// Use Google Maps Directions API to get route
+// Use Google Maps Directions API to get route with detailed steps
 async function getGoogleDirectionsRoute(
   origin: { lat: number, lng: number },
   destination: { lat: number, lng: number }
-): Promise<{ points: [number, number][]; distance: number; duration: number }> {
+): Promise<{ points: [number, number][]; distance: number; duration: number; steps: any[] }> {
   return new Promise((resolve, reject) => {
     // Ensure Google Maps API is loaded
     if (!window.google || !window.google.maps) {
@@ -349,10 +350,29 @@ async function getGoogleDirectionsRoute(
           const distance = route.legs[0].distance?.value || 0;
           const duration = route.legs[0].duration?.value || 0;
           
+          // Extract detailed steps with instructions
+          const steps = route.legs[0].steps.map(step => ({
+            instructions: step.instructions,
+            distance: step.distance?.value || 0,
+            duration: step.duration?.value || 0,
+            startLocation: {
+              lat: step.start_location.lat(),
+              lng: step.start_location.lng()
+            },
+            endLocation: {
+              lat: step.end_location.lat(),
+              lng: step.end_location.lng()
+            },
+            maneuver: step.maneuver || ''
+          }));
+          
+          console.log("Google Maps returned route with", steps.length, "steps");
+          
           resolve({
             points,
             distance: distance / 1000, // meters to km
-            duration: duration / 60 // seconds to minutes
+            duration: duration / 60, // seconds to minutes
+            steps
           });
         } else {
           console.error("Directions request failed:", status);
