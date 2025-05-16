@@ -190,21 +190,90 @@ export const addDetailedRouteInformation = (
       const minutes = Math.floor(route.duration / 60);
       const seconds = Math.round(route.duration % 60);
       doc.text(`Estimated travel time: ${minutes} min ${seconds} sec`, 14, yPosition);
-      yPosition += 5;
+      yPosition += 10;
     }
     
     // Set up table headers for turn-by-turn directions
     const tableHeaders = [['Step', 'Direction', 'Distance (km)']];
     
-    // Create dummy turn-by-turn data since we don't have actual directions
-    // In a real app, this would come from the routing service
-    const tableData = [
-      ['1', 'Start at your location', '0.0'],
-      ['2', `Head toward ${service.name}`, (route.distance * 0.2).toFixed(2)],
-      ['3', 'Continue on main road', (route.distance * 0.4).toFixed(2)],
-      ['4', `Turn into ${service.name} parking lot`, (route.distance * 0.4).toFixed(2)],
-      ['5', 'Arrive at destination', '0.0']
-    ];
+    // Analyze route points to create turn-by-turn directions
+    // This is a simplified version as we don't have actual direction data from Google Maps API
+    // It splits the route into segments based on direction changes
+    let tableData: string[][] = [];
+    
+    // First entry is always the starting point
+    tableData.push(['1', 'Start at project location', '0.0']);
+    
+    // If we have a good number of points to work with
+    if (route.points && route.points.length > 2) {
+      // Calculate segments with significant direction changes
+      let segmentDistance = 0;
+      let lastDirection = '';
+      let segmentStartIndex = 0;
+      let currentStep = 2; // Start from step 2 as step 1 is the starting point
+      
+      for (let i = 1; i < route.points.length; i++) {
+        const prevPoint = route.points[i-1];
+        const currPoint = route.points[i];
+        
+        // Calculate bearing/direction
+        const dx = currPoint.longitude - prevPoint.longitude;
+        const dy = currPoint.latitude - prevPoint.latitude;
+        let bearing = Math.atan2(dx, dy) * 180 / Math.PI;
+        if (bearing < 0) bearing += 360;
+        
+        // Convert bearing to cardinal direction
+        let currentDirection = '';
+        if (bearing >= 337.5 || bearing < 22.5) currentDirection = 'North';
+        else if (bearing >= 22.5 && bearing < 67.5) currentDirection = 'Northeast';
+        else if (bearing >= 67.5 && bearing < 112.5) currentDirection = 'East';
+        else if (bearing >= 112.5 && bearing < 157.5) currentDirection = 'Southeast';
+        else if (bearing >= 157.5 && bearing < 202.5) currentDirection = 'South';
+        else if (bearing >= 202.5 && bearing < 247.5) currentDirection = 'Southwest';
+        else if (bearing >= 247.5 && bearing < 292.5) currentDirection = 'West';
+        else currentDirection = 'Northwest';
+        
+        // Calculate distance between points
+        const pointDistance = calculateDistance(
+          prevPoint.latitude, prevPoint.longitude,
+          currPoint.latitude, currPoint.longitude
+        );
+        
+        segmentDistance += pointDistance;
+        
+        // If this is the first segment, initialize lastDirection
+        if (i === 1) {
+          lastDirection = currentDirection;
+        }
+        
+        // If direction changed significantly or we're at the end of the route, 
+        // add a segment to the directions
+        if (currentDirection !== lastDirection || i === route.points.length - 1) {
+          // Create a descriptive direction based on the last direction
+          const directionText = `Continue ${lastDirection.toLowerCase()} toward ${service.name}`;
+          
+          tableData.push([
+            currentStep.toString(), 
+            directionText, 
+            segmentDistance.toFixed(2)
+          ]);
+          
+          currentStep++;
+          segmentStartIndex = i;
+          segmentDistance = 0;
+          lastDirection = currentDirection;
+        }
+      }
+      
+      // Add arrival as the last step
+      tableData.push([currentStep.toString(), `Arrive at ${service.name}`, '0.0']);
+    } else {
+      // If we have minimal points, create a simplified route
+      tableData.push(
+        ['2', `Head toward ${service.name}`, (route.distance * 0.8).toFixed(2)],
+        ['3', `Arrive at ${service.name}`, '0.0']
+      );
+    }
     
     // Add the table
     autoTable(doc, {
@@ -232,3 +301,22 @@ export const addDetailedRouteInformation = (
     yPosition = (doc as any).lastAutoTable.finalY + 20;
   });
 }
+
+// Helper function to calculate distance between two coordinates using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1); 
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const distance = R * c; // Distance in km
+  return distance;
+}
+
+function deg2rad(deg: number): number {
+  return deg * (Math.PI/180);
+}
+
