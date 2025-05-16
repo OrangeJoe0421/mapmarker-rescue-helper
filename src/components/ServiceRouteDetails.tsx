@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import ViewRouteDetailsButton from './ViewRouteDetailsButton';
 
@@ -16,11 +16,15 @@ const ServiceRouteDetails: React.FC<ServiceRouteDetailsProps> = ({ serviceId }) 
   // Find the route for this service
   const route = routes.find(r => r.fromId === serviceId);
   
-  // Only show if there's a route and the service is a hospital
-  const isHospital = service?.type?.toLowerCase().includes('hospital') || 
-                     service?.type?.toLowerCase().includes('medical');
+  useEffect(() => {
+    // Debug info to help troubleshoot component visibility
+    console.log(`ServiceRouteDetails - serviceId: ${serviceId}`);
+    console.log('Service found:', service?.name, 'type:', service?.type);
+    console.log('Route found:', route?.id);
+  }, [serviceId, service, route]);
   
-  if (!route || !service || !isHospital) {
+  // Show for all services with routes
+  if (!route || !service) {
     return null;
   }
 
