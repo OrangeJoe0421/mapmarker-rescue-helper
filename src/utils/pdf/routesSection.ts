@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Route, CustomMarker, EmergencyService, UserLocation, RouteStep } from '@/types/mapTypes';
@@ -193,7 +194,7 @@ export const addDetailedRouteInformation = (
     }
     
     // Set up table headers for turn-by-turn directions
-    const tableHeaders = [['Step', 'Direction', 'Distance (km)']];
+    const tableHeaders = [['Step', 'Direction', 'Distance']];
     
     // Check if we have API-provided steps
     let tableData: string[][] = [];
@@ -202,19 +203,22 @@ export const addDetailedRouteInformation = (
       console.log("Using actual Google Maps directions with", route.steps.length, "steps");
       
       // First entry is always the starting point
-      tableData.push(['1', 'Start at project location', '0.0']);
+      tableData.push(['1', 'Start at project location', '0.0 km']);
       
       // Process each step from the Google Directions API
       route.steps.forEach((step, idx) => {
         // Clean up HTML from Google's instructions
         const cleanInstructions = step.instructions
-          .replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
-          .replace(/&nbsp;/g, " "); // Replace &nbsp; with spaces
+          .replace(/<div.*?>/g, "") // Remove div tags
+          .replace(/<\/div>/g, "") // Remove closing div tags
+          .replace(/<\/?[^>]+(>|$)/g, "") // Remove other HTML tags
+          .replace(/&nbsp;/g, " ") // Replace &nbsp; with spaces
+          .replace(/\s+/g, " "); // Normalize whitespace
         
         tableData.push([
           (idx + 2).toString(), // Step number (starting from 2)
           cleanInstructions,
-          (step.distance / 1000).toFixed(2) // Convert to km
+          `${(step.distance / 1000).toFixed(2)} km` // Convert to km
         ]);
       });
       
@@ -222,7 +226,7 @@ export const addDetailedRouteInformation = (
       tableData.push([
         (route.steps.length + 2).toString(), 
         `Arrive at ${service.name}`, 
-        '0.0'
+        '0.0 km'
       ]);
     } else {
       console.log("No Google Maps steps available, using calculated directions");
@@ -322,6 +326,11 @@ export const addDetailedRouteInformation = (
       },
       alternateRowStyles: {
         fillColor: [245, 245, 245]
+      },
+      columnStyles: {
+        0: { cellWidth: 20 }, // Step number column
+        1: { cellWidth: 'auto' }, // Direction column
+        2: { cellWidth: 35 }  // Distance column
       }
     });
     

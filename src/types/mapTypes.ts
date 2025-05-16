@@ -51,9 +51,9 @@ export interface RoutePoint {
 }
 
 export interface RouteStep {
-  instructions: string;
-  distance: number;
-  duration: number;
+  instructions: string;     // HTML-formatted turn instructions (e.g., "Turn right onto <b>Main Street</b>")
+  distance: number;         // Distance in meters 
+  duration: number;         // Duration in seconds
   startLocation: {
     lat: number;
     lng: number;
@@ -62,7 +62,7 @@ export interface RouteStep {
     lat: number;
     lng: number;
   };
-  maneuver?: string;
+  maneuver?: string;        // e.g., "turn-right", "merge", etc.
 }
 
 export interface Route {
@@ -70,9 +70,9 @@ export interface Route {
   points: RoutePoint[];
   fromId: string;
   toId: string | null;
-  distance: number;
-  duration?: number;
-  steps?: RouteStep[];
+  distance: number;         // Total distance in kilometers
+  duration?: number;        // Total duration in minutes
+  steps?: RouteStep[];      // Step-by-step directions with street names from Google Maps
 }
 
 export interface RouteInfo {

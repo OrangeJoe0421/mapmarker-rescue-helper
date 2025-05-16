@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -294,6 +293,7 @@ export async function fetchRoutePath(
   return new Promise((resolve) => {
     queueRequest(async () => {
       try {
+        console.log("Fetching detailed route from Google Maps API...");
         const result = await getGoogleDirectionsRoute(
           { lat: startLat, lng: startLon },
           { lat: endLat, lng: endLon }
@@ -336,6 +336,7 @@ async function getGoogleDirectionsRoute(
         origin: origin,
         destination: destination,
         travelMode: google.maps.TravelMode.DRIVING,
+        provideRouteAlternatives: false,
       },
       (result, status) => {
         if (status === google.maps.DirectionsStatus.OK && result) {
@@ -367,6 +368,7 @@ async function getGoogleDirectionsRoute(
           }));
           
           console.log("Google Maps returned route with", steps.length, "steps");
+          console.log("Sample instruction:", steps.length > 0 ? steps[0].instructions : "No steps");
           
           resolve({
             points,
