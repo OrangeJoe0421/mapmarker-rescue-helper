@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
@@ -102,8 +103,9 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   
-  // Track when user location changes to clear routes
+  // Track when user location changes to evaluate if routes need clearing
   const userLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
+  const significantLocationChangeRef = useRef(false);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     console.info("Google Maps loaded successfully");
@@ -207,24 +209,25 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     };
   }, [map, useMapStore.getState().addingMarker]);
 
-  // Monitor userLocation changes to clear routes when location changes
+  // Monitor userLocation changes - don't clear routes automatically
   useEffect(() => {
-    // Only clear routes when userLocation changes to a different location (not just on mount)
+    // Only calculate if userLocation truly changed, not just on component mount
     if (userLocation) {
       const locationChanged = !userLocationRef.current || 
-        userLocationRef.current.latitude !== userLocation.latitude || 
-        userLocationRef.current.longitude !== userLocation.longitude;
+        Math.abs(userLocationRef.current.latitude - userLocation.latitude) > 0.0001 || 
+        Math.abs(userLocationRef.current.longitude - userLocation.longitude) > 0.0001;
       
       if (locationChanged) {
-        console.log("User location changed in map component - clearing routes");
-        clearRoutes();
+        console.log("User location changed significantly in map component");
+        // Set a flag indicating a significant location change occurred
+        significantLocationChangeRef.current = true;
         userLocationRef.current = {
           latitude: userLocation.latitude,
           longitude: userLocation.longitude
         };
       }
     }
-  }, [userLocation?.latitude, userLocation?.longitude, clearRoutes]);
+  }, [userLocation?.latitude, userLocation?.longitude]);
 
   // Debug log for userLocation
   useEffect(() => {
