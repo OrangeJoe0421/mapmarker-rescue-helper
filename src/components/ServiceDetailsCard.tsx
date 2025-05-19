@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Phone, Clock, MapPin, Navigation, X } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
+import EmergencyRoomVerification from './EmergencyRoomVerification';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -40,63 +40,76 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
   };
 
   return (
-    <Card className="absolute bottom-4 right-4 w-80 shadow-lg z-[1000] animate-in slide-in-from-bottom-5 duration-300">
-      <div className={`${getServiceColor()} h-2 rounded-t-lg w-full`} />
-      
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-2">
-            {getServiceIcon()}
-            <CardTitle className="text-lg">{service.name}</CardTitle>
+    <div className="space-y-3">
+      <Card className="absolute bottom-4 right-4 w-80 shadow-lg z-[1000] animate-in slide-in-from-bottom-5 duration-300">
+        <div className={`${getServiceColor()} h-2 rounded-t-lg w-full`} />
+        
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center gap-2">
+              {getServiceIcon()}
+              <CardTitle className="text-lg">{service.name}</CardTitle>
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="h-4 w-4" />
+          <CardDescription>{service.type}</CardDescription>
+        </CardHeader>
+        
+        {/* Add emergency room verification if it's a hospital */}
+        {service.type.toLowerCase() === 'hospital' && (
+          <EmergencyRoomVerification 
+            service={service} 
+            onVerificationChange={(hasER) => {
+              // Update local state if needed
+              console.log(`${service.name} emergency room status updated: ${hasER}`);
+            }}
+          />
+        )}
+        
+        <CardContent className="space-y-3 pt-0">
+          {service.address && (
+            <div className="flex items-start gap-2 text-sm">
+              <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+              <span>{service.address}</span>
+            </div>
+          )}
+          
+          {service.phone && (
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span>{service.phone}</span>
+            </div>
+          )}
+          
+          {service.hours && (
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span>{service.hours}</span>
+            </div>
+          )}
+          
+          {service.road_distance !== undefined && (
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Navigation className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span>{service.road_distance.toFixed(2)} km from project</span>
+            </div>
+          )}
+        </CardContent>
+        
+        <CardFooter className="pt-0">
+          <Button 
+            onClick={handleRouteClick} 
+            className="w-full gap-2"
+            size="sm"
+          >
+            <Navigation className="h-4 w-4" />
+            Route to Project
           </Button>
-        </div>
-        <CardDescription>{service.type}</CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-3 pt-0">
-        {service.address && (
-          <div className="flex items-start gap-2 text-sm">
-            <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-            <span>{service.address}</span>
-          </div>
-        )}
-        
-        {service.phone && (
-          <div className="flex items-center gap-2 text-sm">
-            <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span>{service.phone}</span>
-          </div>
-        )}
-        
-        {service.hours && (
-          <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span>{service.hours}</span>
-          </div>
-        )}
-        
-        {service.road_distance !== undefined && (
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Navigation className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <span>{service.road_distance.toFixed(2)} km from project</span>
-          </div>
-        )}
-      </CardContent>
-      
-      <CardFooter className="pt-0">
-        <Button 
-          onClick={handleRouteClick} 
-          className="w-full gap-2"
-          size="sm"
-        >
-          <Navigation className="h-4 w-4" />
-          Route to Project
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 
