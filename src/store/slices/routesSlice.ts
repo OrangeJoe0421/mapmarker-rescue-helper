@@ -280,6 +280,7 @@ export const createRoutesSlice: StateCreator<
   },
   
   clearRoutes: () => {
+    console.log("clearRoutes called");
     set({ routes: [] });
     toast.info('All routes cleared');
     // Also clear any capture when routes are cleared

@@ -31,13 +31,19 @@ export const useMapStore = create<MapState>()(
       ...createRoutesSlice(...args),
 
       clearAll: () => {
+        // Make sure to explicitly clear routes first before clearing everything else
+        const state = args[0].getState();
+        if (state.clearRoutes) {
+          state.clearRoutes();
+        }
+        
         args[0]({
           userLocation: null,
           emergencyServices: [],
           customMarkers: [],
           selectedService: null,
           selectedMarker: null,
-          routes: [],
+          routes: [], // Explicitly clear routes here too for redundancy
           mapCenter: DEFAULT_CENTER,
           mapZoom: DEFAULT_ZOOM,
         });

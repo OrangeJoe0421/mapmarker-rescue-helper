@@ -15,6 +15,8 @@ export function ClearButton({ onClear, ...props }: ClearButtonProps) {
     if (window.confirm("Are you sure you want to clear all data and reset the application?")) {
       // First clear routes explicitly to ensure they're removed
       clearRoutes();
+      console.log("Routes cleared from clear button");
+      
       // Then clear everything else
       clearAll();
       
