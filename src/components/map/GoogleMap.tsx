@@ -39,11 +39,11 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     content: string;
   } | null>(null);
 
-  // Load Google Maps API with centralized config
+  // Load Google Maps API with centralized config and explicit typing
   const { isLoaded } = useJsApiLoader({
     id: GOOGLE_MAPS_LOADER_ID,
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES
+    libraries: GOOGLE_MAPS_LIBRARIES as ['places', 'geometry']
   });
 
   const [map, setMap] = useState<google.maps.Map | null>(null);

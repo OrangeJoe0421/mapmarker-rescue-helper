@@ -1,23 +1,16 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { AlertCircle, ArrowLeft, Check, Clock, MapPin, X } from 'lucide-react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { AlertCircle, ArrowLeft, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
 import EmergencyRoomVerification from '@/components/EmergencyRoomVerification';
 import { EmergencyService } from '@/types/mapTypes';
 import { cn } from '@/lib/utils';
-import { 
-  GOOGLE_MAPS_API_KEY, 
-  GOOGLE_MAPS_LIBRARIES, 
-  GOOGLE_MAPS_LOADER_ID,
-  MAP_OPTIONS 
-} from '@/config/mapsConfig';
 
 const containerStyle = {
   width: '100%',
@@ -33,25 +26,15 @@ interface HospitalWithStatus extends EmergencyService {
 const HospitalVerification = () => {
   const [hospitals, setHospitals] = useState<HospitalWithStatus[]>([]);
   const [selectedHospital, setSelectedHospital] = useState<HospitalWithStatus | null>(null);
-  const [selectedInfoWindow, setSelectedInfoWindow] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<boolean | null>(null);
   const [comments, setComments] = useState('');
-  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
 
   const navigate = useNavigate();
   const { toast: shadcnToast } = useToast();
   const { 
     emergencyServices, 
-    userLocation, 
-    setMapCenter: setMapCenterStore,
+    userLocation
   } = useMapStore();
-
-  // Load Google Maps API with centralized config
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: GOOGLE_MAPS_LOADER_ID,
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES
-  });
 
   useEffect(() => {
     if (emergencyServices) {
@@ -62,13 +45,6 @@ const HospitalVerification = () => {
       setHospitals(hospitalsOnly);
     }
   }, [emergencyServices]);
-
-  useEffect(() => {
-    if (userLocation) {
-      setMapCenter([userLocation.latitude, userLocation.longitude]);
-      setMapCenterStore([userLocation.latitude, userLocation.longitude]);
-    }
-  }, [userLocation, setMapCenterStore]);
 
   // Calculate the distances if userLocation is present
   useEffect(() => {
@@ -94,69 +70,37 @@ const HospitalVerification = () => {
 
   const handleSelectHospital = (hospital: HospitalWithStatus) => {
     setSelectedHospital(hospital);
-    setSelectedInfoWindow(true);
-    setVerificationStatus(hospital.hasEmergencyRoom ?? null);
-    setComments(hospital.comments ?? '');
-    setMapCenter([hospital.latitude, hospital.longitude]);
+    setVerificationStatus(hospital.verification?.hasEmergencyRoom ?? null);
+    setComments(hospital.verification?.comments ?? '');
   };
 
-  const handleVerificationToggle = (value: boolean) => {
-    setVerificationStatus(value);
-  };
-
-  const handleSubmitVerification = async () => {
-    if (!selectedHospital) {
-      toast.error('No hospital selected');
-      return;
+  const handleVerificationUpdate = (updated: boolean) => {
+    // Refresh the hospitals list
+    if (emergencyServices) {
+      const updatedHospitals = emergencyServices
+        .filter(service => service.type.toLowerCase().includes('hospital'))
+        .map(hospital => {
+          if (hospital.id === selectedHospital?.id) {
+            return {
+              ...hospital,
+              verification: {
+                ...hospital.verification,
+                hasEmergencyRoom: verificationStatus || false,
+                comments
+              }
+            };
+          }
+          return hospital;
+        });
+      
+      setHospitals(updatedHospitals);
+      toast.success('Hospital verification updated successfully');
     }
-
-    if (verificationStatus === null) {
-      toast.error('Please select a verification status');
-      return;
-    }
-
-    // Optimistically update the UI
-    setHospitals(hospitals.map(hospital => {
-      if (hospital.id === selectedHospital.id) {
-        return {
-          ...hospital,
-          hasEmergencyRoom: verificationStatus,
-          verifiedAt: new Date(),
-          comments: comments,
-        };
-      }
-      return hospital;
-    }));
-
-    setSelectedHospital({
-      ...selectedHospital,
-      hasEmergencyRoom: verificationStatus,
-      verifiedAt: new Date(),
-      comments: comments,
-    });
-
-    shadcnToast({
-      title: "Verification Submitted",
-      description: `You have verified that ${selectedHospital.name} ${verificationStatus ? 'has' : 'does not have'} an emergency room.`,
-    });
-  };
-
-  const handleCommentsChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setComments(event.target.value);
-  };
-
-  const getMarkerIcon = (service: EmergencyService) => {
-    const type = service.type.toLowerCase();
-    if (type.includes('hospital')) return '/hospital-marker.svg';
-    if (type.includes('ems') || type.includes('ambulance')) return '/ems-marker.svg';
-    if (type.includes('fire')) return '/fire-marker.svg';
-    if (type.includes('law') || type.includes('police')) return '/law-marker.svg';
-    return '/hospital-marker.svg';
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
-      <div className="container mx-auto max-w-7xl">
+      <div className="container mx-auto max-w-4xl">
         <header className="mb-6">
           <div className="flex items-center gap-2 mb-2">
             <Button 
@@ -173,9 +117,9 @@ const HospitalVerification = () => {
           </p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column: Hospital list */}
-          <div className="lg:col-span-1">
+          <div>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -205,9 +149,6 @@ const HospitalVerification = () => {
                           index === 0 && userLocation && "font-medium"
                         )}>
                           <div className="font-medium">{hospital.name}</div>
-                          {index === 0 && userLocation && (
-                            <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
-                          )}
                         </div>
                         <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
                         {hospital.verification && (
@@ -231,125 +172,29 @@ const HospitalVerification = () => {
             </Card>
           </div>
 
-          {/* Right column: Map and verification form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Map card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Location Map</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 rounded-b-lg overflow-hidden">
-                {isLoaded ? (
-                  <GoogleMap
-                    mapContainerStyle={containerStyle}
-                    center={mapCenter ? 
-                      { lat: mapCenter[0], lng: mapCenter[1] } : 
-                      { lat: 37.7749, lng: -122.4194 }
-                    }
-                    zoom={11}
-                    options={MAP_OPTIONS}
-                  >
-                    {/* Add user location marker (project location) */}
-                    {userLocation && (
-                      <Marker 
-                        position={{ lat: userLocation.latitude, lng: userLocation.longitude }}
-                        icon={{
-                          url: 'data:image/svg+xml;base64,' + btoa(`
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                              <circle cx="12" cy="12" r="8" fill="#38a169" stroke="#ffffff" stroke-width="2" />
-                            </svg>
-                          `),
-                          scaledSize: new window.google.maps.Size(24, 24),
-                          anchor: new window.google.maps.Point(12, 12)
-                        }}
-                      />
-                    )}
-                    
-                    {/* Hospital markers */}
-                    {hospitals.map(hospital => (
-                      <Marker
-                        key={hospital.id}
-                        position={{ lat: hospital.latitude, lng: hospital.longitude }}
-                        icon={{
-                          url: getMarkerIcon(hospital),
-                          scaledSize: new window.google.maps.Size(30, 30),
-                          anchor: new window.google.maps.Point(15, 15)
-                        }}
-                        onClick={() => handleSelectHospital(hospital)}
-                      />
-                    ))}
-
-                    {/* InfoWindow for selected hospital */}
-                    {selectedHospital && selectedInfoWindow && (
-                      <InfoWindow
-                        position={{ lat: selectedHospital.latitude, lng: selectedHospital.longitude }}
-                        onCloseClick={() => setSelectedInfoWindow(false)}
-                      >
-                        <div className="p-2 max-w-xs">
-                          <h3 className="font-bold text-black">{selectedHospital.name}</h3>
-                          <div className="text-gray-700 text-xs mt-1">{selectedHospital.address}</div>
-                          {selectedHospital.verification && (
-                            <div className="flex items-center gap-1 text-xs mt-1">
-                              {selectedHospital.verification.hasEmergencyRoom ? 
-                                <Check className="h-3 w-3 text-green-500" /> : 
-                                <X className="h-3 w-3 text-red-500" />}
-                              <span>{selectedHospital.verification.hasEmergencyRoom ? "Has Emergency Room" : "No Emergency Room"}</span>
-                            </div>
-                          )}
-                        </div>
-                      </InfoWindow>
-                    )}
-                  </GoogleMap>
-                ) : (
-                  <div className="h-[400px] flex items-center justify-center bg-muted/50">
-                    Loading Map...
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Verification form */}
+          {/* Right column: Verification form */}
+          <div>
             {selectedHospital ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Verify Emergency Room Status</CardTitle>
-                  <CardContent>
-                    <p>Selected Hospital: {selectedHospital.name}</p>
-                  </CardContent>
+                  <CardTitle>Emergency Room Verification</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant={verificationStatus === true ? "secondary" : "outline"}
-                      onClick={() => handleVerificationToggle(true)}
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Has Emergency Room
-                    </Button>
-                    <Button
-                      variant={verificationStatus === false ? "secondary" : "outline"}
-                      onClick={() => handleVerificationToggle(false)}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      No Emergency Room
-                    </Button>
+                <CardContent>
+                  <div className="mb-4">
+                    <h3 className="font-medium">{selectedHospital.name}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedHospital.address}</p>
+                    {selectedHospital.distance !== undefined && (
+                      <p className="text-xs font-medium mt-1 text-[#F97316]">
+                        {selectedHospital.distance.toFixed(1)} km from project
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed" htmlFor="comments">
-                      Comments
-                    </label>
-                    <textarea
-                      id="comments"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      placeholder="Add any relevant comments"
-                      value={comments}
-                      onChange={handleCommentsChange}
-                    />
-                  </div>
+
+                  <EmergencyRoomVerification 
+                    service={selectedHospital}
+                    onVerificationUpdate={handleVerificationUpdate}
+                  />
                 </CardContent>
-                <CardFooter>
-                  <Button onClick={handleSubmitVerification}>Submit Verification</Button>
-                </CardFooter>
               </Card>
             ) : (
               <Card>
