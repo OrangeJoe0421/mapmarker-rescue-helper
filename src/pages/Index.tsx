@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
@@ -16,13 +17,7 @@ import { checkDatabaseConnection } from '@/utils/supabaseHelpers';
 
 const Index = () => {
   const { toast: shadcnToast } = useToast();
-  const { 
-    userLocation, 
-    emergencyServices, 
-    calculateRouteToNearestHospital, 
-    setMapCenter,
-    routes,
-  } = useMapStore();
+  const { userLocation, emergencyServices, calculateRoutesForAllEMS, setMapCenter } = useMapStore();
   const routesCalculatedRef = useRef(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("auth") === "true";
@@ -92,25 +87,21 @@ const Index = () => {
   }, [isAuthenticated, retryCount, shadcnToast]);
 
   // Effect to automatically calculate routes when emergency services are loaded
-  // but without clearing existing routes automatically
   useEffect(() => {
     if (userLocation && emergencyServices.length > 0 && !routesCalculatedRef.current) {
       // Slight delay to ensure the UI has updated
       const timer = setTimeout(() => {
-        // Don't clear routes automatically here anymore
-        calculateRouteToNearestHospital();
+        calculateRoutesForAllEMS();
         routesCalculatedRef.current = true;
       }, 1500);
       
       return () => clearTimeout(timer);
     }
-  }, [userLocation, emergencyServices.length, calculateRouteToNearestHospital]);
+  }, [userLocation, emergencyServices.length, calculateRoutesForAllEMS]);
 
-  // Reset the calculation flag when routes are cleared
+  // Reset the calculation flag when the user location changes
   useEffect(() => {
-    if (routes.length === 0) {
-      routesCalculatedRef.current = false;
-    }
+    routesCalculatedRef.current = false;
 
     // Ensure the map is centered on user location when it changes
     if (userLocation && !userLocationInitializedRef.current) {
@@ -118,7 +109,7 @@ const Index = () => {
       setMapCenter([userLocation.latitude, userLocation.longitude]);
       userLocationInitializedRef.current = true;
     }
-  }, [userLocation, setMapCenter, routes.length]);
+  }, [userLocation?.latitude, userLocation?.longitude, setMapCenter]);
 
   // Debug log for userLocation
   useEffect(() => {

@@ -4,7 +4,7 @@ import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
 import { fetchRoutePath } from '@/services/emergencyService';
-import { mapCaptureService } from '@/services/mapCaptureService';
+import { mapCaptureService } from '@/components/MapCapture';
 
 export interface RoutesState {
   routes: Route[];
@@ -12,7 +12,6 @@ export interface RoutesState {
   // Actions
   calculateRoute: (fromId: string, toUserLocation: boolean, toHospitalId?: string) => Promise<void>;
   calculateRoutesForAllEMS: () => Promise<void>;
-  calculateRouteToNearestHospital: () => Promise<void>;
   clearRoutes: () => void;
 }
 
@@ -64,7 +63,7 @@ export const createRoutesSlice: StateCreator<
       return;
     }
     
-    // Only clear existing routes with this source to avoid clearing all routes unnecessarily
+    // Clear any existing routes with this source to avoid clutter
     set(state => ({
       routes: state.routes.filter(route => route.fromId !== fromId)
     }));
@@ -196,8 +195,8 @@ export const createRoutesSlice: StateCreator<
       return;
     }
     
-    // Note: We don't automatically clear routes here anymore
-    // Only done explicitly via clearRoutes()
+    // Clear all existing routes first
+    set({ routes: [] });
     
     // Mark any existing captures as stale
     mapCaptureService.markCaptureStaleDueToRouteChange();
@@ -279,69 +278,11 @@ export const createRoutesSlice: StateCreator<
       toast.error('Failed to calculate any routes');
     }
   },
-
-  calculateRouteToNearestHospital: async () => {
-    const state = get();
-    
-    // Validate necessary data
-    if (!state.userLocation) {
-      toast.error('Please set a user location first');
-      return;
-    }
-    
-    if (!state.emergencyServices || state.emergencyServices.length === 0) {
-      toast.error('No emergency services loaded');
-      return;
-    }
-    
-    // Filter to only include hospital services
-    const hospitals = state.emergencyServices.filter(service => 
-      service.type.toLowerCase().includes('hospital')
-    );
-    
-    if (hospitals.length === 0) {
-      toast.warning('No hospitals found to route to');
-      return;
-    }
-    
-    // Sort hospitals by distance (if available) or calculate straight-line distance
-    const sortedHospitals = [...hospitals].sort((a, b) => {
-      // Use road_distance if available
-      if (a.road_distance !== undefined && b.road_distance !== undefined) {
-        return a.road_distance - b.road_distance;
-      }
-      
-      // Fallback to straight-line distance
-      return (a.distance || Infinity) - (b.distance || Infinity);
-    });
-    
-    // Get the nearest hospital
-    const nearestHospital = sortedHospitals[0];
-    
-    if (nearestHospital) {
-      toast.info(`Routing to nearest hospital: ${nearestHospital.name}`);
-      
-      // Calculate route from nearest hospital to user location
-      // Don't clear existing routes here
-      await get().calculateRoute(nearestHospital.id, true);
-    } else {
-      toast.error('Could not determine nearest hospital');
-    }
-  },
   
   clearRoutes: () => {
-    console.log("Clearing all routes from state");
-    
-    // Explicitly empty the routes array with a new empty array
-    // This should ONLY be called when explicitly clearing routes via a button
     set({ routes: [] });
-    
     toast.info('All routes cleared');
-    
     // Also clear any capture when routes are cleared
     mapCaptureService.clearCapture();
-    
-    // Make sure to mark capture as stale
-    mapCaptureService.markCaptureStaleDueToRouteChange();
   },
 });

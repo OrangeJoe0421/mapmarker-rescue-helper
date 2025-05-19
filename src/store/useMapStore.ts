@@ -8,7 +8,6 @@ import { LocationState, createLocationSlice, DEFAULT_CENTER, DEFAULT_ZOOM } from
 import { ServicesState, createServicesSlice } from './slices/servicesSlice';
 import { MarkersState, createMarkersSlice } from './slices/markersSlice';
 import { RoutesState, createRoutesSlice } from './slices/routesSlice';
-import { mapCaptureService } from '@/services/mapCaptureService';
 
 // Re-export types from the types file
 export * from '@/types/mapTypes';
@@ -25,46 +24,26 @@ interface MapState extends
 
 export const useMapStore = create<MapState>()(
   persist(
-    (...args) => {
-      // Extract the set function for type safety
-      const set = args[0];
-      
-      // Create an object with all slice implementations
-      const slices = {
-        ...createLocationSlice(...args),
-        ...createServicesSlice(...args),
-        ...createMarkersSlice(...args),
-        ...createRoutesSlice(...args),
-      };
-      
-      // Add the clearAll function
-      return {
-        ...slices,
-        clearAll: () => {
-          // First clear routes specifically to trigger all necessary side effects
-          if (slices.clearRoutes) {
-            slices.clearRoutes();
-          }
-          
-          // Then reset everything else
-          set({
-            userLocation: null,
-            emergencyServices: [],
-            customMarkers: [],
-            selectedService: null,
-            selectedMarker: null,
-            // Don't set routes to empty here again - it was already cleared by clearRoutes above
-            mapCenter: DEFAULT_CENTER,
-            mapZoom: DEFAULT_ZOOM,
-          });
-          
-          // Ensure map capture is cleared
-          mapCaptureService.clearCapture();
-          
-          toast.info('All data cleared');
-        },
-      };
-    },
+    (...args) => ({
+      ...createLocationSlice(...args),
+      ...createServicesSlice(...args),
+      ...createMarkersSlice(...args),
+      ...createRoutesSlice(...args),
+
+      clearAll: () => {
+        args[0]({
+          userLocation: null,
+          emergencyServices: [],
+          customMarkers: [],
+          selectedService: null,
+          selectedMarker: null,
+          routes: [],
+          mapCenter: DEFAULT_CENTER,
+          mapZoom: DEFAULT_ZOOM,
+        });
+        toast.info('All data cleared');
+      },
+    }),
     {
       name: 'emergency-map-storage',
       partialize: (state) => ({

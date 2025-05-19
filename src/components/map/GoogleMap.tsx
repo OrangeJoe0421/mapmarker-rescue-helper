@@ -1,14 +1,11 @@
 
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
 import { Route, EmergencyService } from '@/types/mapTypes';
 
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
-
-// Google Maps libraries - defined as a constant to prevent reloading issues
-const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry")[] = ['places', 'geometry'];
 
 const containerStyle = {
   width: '100%',
@@ -93,17 +90,14 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     content: string;
   } | null>(null);
 
-  // Load Google Maps API with Places library - using constant array to prevent reloading
+  // Load Google Maps API with Places library
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: GOOGLE_MAPS_LIBRARIES
+    libraries: ['places', 'geometry']
   });
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  
-  // We're no longer tracking location changes for route clearing
-  const userLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     console.info("Google Maps loaded successfully");
@@ -207,17 +201,6 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     };
   }, [map, useMapStore.getState().addingMarker]);
 
-  // Store current user location, but don't clear routes based on location changes
-  useEffect(() => {
-    if (userLocation) {
-      userLocationRef.current = {
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude
-      };
-      // Explicitly removed any code that would clear routes here
-    }
-  }, [userLocation?.latitude, userLocation?.longitude]);
-
   // Debug log for userLocation
   useEffect(() => {
     if (userLocation) {
@@ -300,8 +283,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
         />
       ))}
 
-      {/* Route Polylines - only render if routes exist */}
-      {routes && routes.length > 0 && routes.map((route: Route) => (
+      {/* Route Polylines */}
+      {routes.map((route: Route) => (
         <Polyline
           key={route.id}
           path={route.points.map(point => ({ lat: point.latitude, lng: point.longitude }))}
