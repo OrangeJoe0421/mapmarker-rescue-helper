@@ -1,407 +1,413 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { AlertCircle, ArrowLeft, Check, Clock, MapPin, X } from 'lucide-react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle } from 'lucide-react';
-import { EmergencyService } from '@/types/mapTypes';
+import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
-import { calculateHaversineDistance } from '@/utils/mapUtils';
+import { EmergencyRoomVerification } from '@/components/EmergencyRoomVerification';
+import { EmergencyService } from '@/types/mapTypes';
+import { cn } from '@/lib/utils';
 
-// Define an interface for the database response
-interface HospitalData {
-  id: string;
-  name: string;
-  type: string;
-  latitude: number;
-  longitude: number;
-  address: string;
-  phone: string;
-  hours: string;
-  state: string;
-  has_emergency_room: boolean | null;
-  verified_at: string | null;
-  created_at: string;
-  comments?: string | null; // Make comments optional with nullable type
+// Google Maps API key
+const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
+
+const containerStyle = {
+  width: '100%',
+  height: '400px'
+};
+
+const mapOptions = {
+  styles: [
+    {
+      "elementType": "geometry",
+      "stylers": [{ "color": "#242f3e" }]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#746855" }]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [{ "color": "#242f3e" }]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "all",
+      "stylers": [{ "visibility": "off" }]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "all",
+      "stylers": [{ "visibility": "off" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#38414e" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry.stroke",
+      "stylers": [{ "color": "#212a37" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "labels.text.fill",
+      "stylers": [{ "color": "#9ca5b3" }]
+    },
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [{ "color": "#17263c" }]
+    }
+  ],
+  disableDefaultUI: false,
+  zoomControl: true,
+  mapTypeControl: false,
+  streetViewControl: false,
+  fullscreenControl: true
+};
+
+interface HospitalWithStatus extends EmergencyService {
+  hasEmergencyRoom?: boolean;
+  verifiedAt?: Date | null;
+  comments?: string;
 }
 
 const HospitalVerification = () => {
+  const [hospitals, setHospitals] = useState<HospitalWithStatus[]>([]);
+  const [selectedHospital, setSelectedHospital] = useState<HospitalWithStatus | null>(null);
+  const [selectedInfoWindow, setSelectedInfoWindow] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<boolean | null>(null);
+  const [comments, setComments] = useState('');
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [hospitals, setHospitals] = useState<EmergencyService[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedHospital, setSelectedHospital] = useState<EmergencyService | null>(null);
-  const userLocation = useMapStore(state => state.userLocation);
-  
-  // Verification form state
-  const [hasER, setHasER] = useState<boolean | undefined>(undefined);
-  const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(new Date());
-  const [comments, setComments] = useState<string>('');
+  const { toast: shadcnToast } = useToast();
+  const { 
+    emergencyServices, 
+    userLocation, 
+    setMapCenter: setMapCenterStore,
+  } = useMapStore();
+
+  // Load Google Maps API with Places library
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: ['places']
+  });
 
   useEffect(() => {
-    // Load all hospitals on component mount
-    loadHospitals();
-  }, []);
+    if (emergencyServices) {
+      // Filter to only include hospital services
+      const hospitalsOnly = emergencyServices.filter(service => 
+        service.type.toLowerCase().includes('hospital')
+      );
+      setHospitals(hospitalsOnly);
+    }
+  }, [emergencyServices]);
 
-  const loadHospitals = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('emergency_services')
-        .select('*')
-        .ilike('type', '%hospital%')
-        .order('name');
+  useEffect(() => {
+    if (userLocation) {
+      setMapCenter([userLocation.latitude, userLocation.longitude]);
+      setMapCenterStore([userLocation.latitude, userLocation.longitude]);
+    }
+  }, [userLocation, setMapCenterStore]);
 
-      if (error) {
-        throw error;
-      }
-
-      // Map the data to match the EmergencyService type
-      let hospitalServices = (data as HospitalData[]).map((item): EmergencyService => ({
-        id: item.id,
-        name: item.name || '',
-        type: item.type || '',
-        latitude: item.latitude || 0,
-        longitude: item.longitude || 0,
-        address: item.address,
-        phone: item.phone,
-        hours: item.hours,
-        state: item.state,
-        verification: {
-          hasEmergencyRoom: item.has_emergency_room,
-          verifiedAt: item.verified_at ? new Date(item.verified_at) : undefined,
-          comments: item.comments || undefined
-        }
-      }));
-
-      // Calculate distance from project location if available
-      if (userLocation) {
-        hospitalServices = hospitalServices.map(hospital => {
-          const distance = calculateHaversineDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            hospital.latitude,
-            hospital.longitude
-          );
-          return {
-            ...hospital,
-            distance
-          };
-        });
+  // Calculate the distances if userLocation is present
+  useEffect(() => {
+    if (userLocation && hospitals.length > 0) {
+      // Calculate distance from user location
+      const hospitalsWithDistance = hospitals.map((hospital) => {
+        const distance = userLocation ? Math.sqrt(
+          Math.pow(hospital.latitude - userLocation.latitude, 2) +
+          Math.pow(hospital.longitude - userLocation.longitude, 2)
+        ) * 111 : undefined;
         
-        // Sort by distance
-        hospitalServices.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-      }
+        return {
+          ...hospital,
+          distance: distance,
+        };
+      }).sort((a, b) => 
+        (a.distance || Infinity) - (b.distance || Infinity)
+      );
 
-      setHospitals(hospitalServices);
-    } catch (error) {
-      console.error('Error loading hospitals:', error);
-      toast.error('Failed to load hospitals');
-    } finally {
-      setLoading(false);
+      setHospitals(hospitalsWithDistance);
     }
-  };
+  }, [userLocation, hospitals.length]);
 
-  const handleSearch = () => {
-    if (!searchTerm.trim()) {
-      loadHospitals();
-      return;
-    }
-
-    const filtered = hospitals.filter(
-      hospital => hospital.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 (hospital.address && hospital.address.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-    
-    setHospitals(filtered);
-  };
-
-  const handleSelectHospital = (hospital: EmergencyService) => {
+  const handleSelectHospital = (hospital: HospitalWithStatus) => {
     setSelectedHospital(hospital);
-    setHasER(hospital.verification?.hasEmergencyRoom);
-    setVerifiedDate(hospital.verification?.verifiedAt ? new Date(hospital.verification.verifiedAt) : new Date());
-    setComments(hospital.verification?.comments || '');
+    setSelectedInfoWindow(true);
+    setVerificationStatus(hospital.hasEmergencyRoom ?? null);
+    setComments(hospital.comments ?? '');
+    setMapCenter([hospital.latitude, hospital.longitude]);
   };
 
-  const handleVerify = async () => {
-    if (!selectedHospital) return;
-    if (hasER === undefined) {
-      toast.error("Please select whether this hospital has an emergency room");
+  const handleVerificationToggle = (value: boolean) => {
+    setVerificationStatus(value);
+  };
+
+  const handleSubmitVerification = async () => {
+    if (!selectedHospital) {
+      toast.error('No hospital selected');
       return;
     }
 
-    if (!verifiedDate) {
-      toast.error("Please select a verification date");
+    if (verificationStatus === null) {
+      toast.error('Please select a verification status');
       return;
     }
-    
-    setLoading(true);
-    try {
-      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}`);
-      
-      // Update the database with verification status
-      const { error } = await supabase
-        .from('emergency_services')
-        .update({
-          has_emergency_room: hasER,
-          verified_at: verifiedDate.toISOString(),
-          comments: comments || null
-        })
-        .eq('id', selectedHospital.id);
-      
-      if (error) {
-        throw error;
+
+    // Optimistically update the UI
+    setHospitals(hospitals.map(hospital => {
+      if (hospital.id === selectedHospital.id) {
+        return {
+          ...hospital,
+          hasEmergencyRoom: verificationStatus,
+          verifiedAt: new Date(),
+          comments: comments,
+        };
       }
-      
-      // Update local data
-      const updatedHospitals = hospitals.map(hospital => {
-        if (hospital.id === selectedHospital.id) {
-          return {
-            ...hospital,
-            verification: {
-              hasEmergencyRoom: hasER,
-              verifiedAt: verifiedDate,
-              comments: comments
-            }
-          };
-        }
-        return hospital;
-      });
-      
-      setHospitals(updatedHospitals);
-      toast.success(`Successfully verified ${selectedHospital.name}`);
-      
-      // Reset selection
-      setSelectedHospital(null);
-    } catch (error) {
-      console.error('Error verifying hospital:', error);
-      toast.error("Failed to update verification status");
-    } finally {
-      setLoading(false);
-    }
+      return hospital;
+    }));
+
+    setSelectedHospital({
+      ...selectedHospital,
+      hasEmergencyRoom: verificationStatus,
+      verifiedAt: new Date(),
+      comments: comments,
+    });
+
+    shadcnToast({
+      title: "Verification Submitted",
+      description: `You have verified that ${selectedHospital.name} ${verificationStatus ? 'has' : 'does not have'} an emergency room.`,
+    });
   };
 
-  const cancelVerification = () => {
-    setSelectedHospital(null);
-    setHasER(undefined);
-    setVerifiedDate(new Date());
-    setComments('');
+  const handleCommentsChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setComments(event.target.value);
   };
 
-  const getERStatusDisplay = (hospital: EmergencyService) => {
-    if (hospital.verification?.hasEmergencyRoom === true) {
-      return (
-        <div className="flex items-center gap-1 text-green-600">
-          <CheckCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">ER Available</span>
-        </div>
-      );
-    } else if (hospital.verification?.hasEmergencyRoom === false) {
-      return (
-        <div className="flex items-center gap-1 text-red-600">
-          <XCircle className="h-4 w-4" />
-          <span className="text-sm font-medium">No ER</span>
-        </div>
-      );
-    } else {
-      return <div className="text-sm text-muted-foreground">ER Status: Unknown</div>;
-    }
+  const getMarkerIcon = (service: EmergencyService) => {
+    const type = service.type.toLowerCase();
+    if (type.includes('hospital')) return '/hospital-marker.svg';
+    if (type.includes('ems') || type.includes('ambulance')) return '/ems-marker.svg';
+    if (type.includes('fire')) return '/fire-marker.svg';
+    if (type.includes('law') || type.includes('police')) return '/law-marker.svg';
+    return '/hospital-marker.svg';
   };
-
-  const filteredHospitals = searchTerm.trim() 
-    ? hospitals.filter(h => 
-        h.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (h.address && h.address.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : hospitals;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
       <div className="container mx-auto max-w-7xl">
-        <header className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Hospital ER Verification
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Verify and update emergency room status for hospitals
-            </p>
+        <header className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Hospital Verification</h1>
           </div>
-          <Button variant="outline" onClick={() => navigate('/')}>
-            <Home className="h-4 w-4 mr-2" />
-            Back to Map
-          </Button>
+          <p className="text-muted-foreground">
+            Verify if hospitals have emergency rooms to improve response planning
+          </p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column: Hospital list */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>Hospitals</CardTitle>
-                <CardDescription>
-                  {hospitals.length} hospitals in database
-                  {userLocation && <span> • Sorted by distance to project</span>}
-                </CardDescription>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Hospitals</span>
+                  <Badge variant="outline" className="ml-2">{hospitals.length}</Badge>
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex gap-2 mb-4">
-                  <Input
-                    placeholder="Search hospitals..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleSearch} variant="secondary">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="h-[600px] overflow-y-auto border rounded-md">
-                  {loading && <div className="p-4 text-center">Loading hospitals...</div>}
-                  
-                  {!loading && filteredHospitals.length === 0 && (
+              <CardContent className="p-0">
+                <div className="max-h-[500px] overflow-y-auto">
+                  {hospitals.length === 0 ? (
                     <div className="p-4 text-center text-muted-foreground">
-                      No hospitals found.
+                      No hospitals found. Return to the main page and search for a location.
                     </div>
-                  )}
-
-                  {!loading && filteredHospitals.map((hospital, index) => (
-                    <div
-                      key={hospital.id}
-                      className={cn(
-                        "p-3 border-b cursor-pointer hover:bg-muted transition-colors",
-                        selectedHospital?.id === hospital.id && "bg-muted",
-                        index === 0 && userLocation && "border-l-4 border-l-primary"
-                      )}
-                      onClick={() => handleSelectHospital(hospital)}
-                    >
-                      <div className={cn(
-                        "flex justify-between items-start",
-                        index === 0 && userLocation && "font-medium"
-                      )}>
-                        <div className="font-medium">{hospital.name}</div>
-                        {index === 0 && userLocation && (
-                          <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
+                  ) : (
+                    hospitals.map((hospital, index) => (
+                      <div 
+                        key={hospital.id} 
+                        className={cn(
+                          "p-3 border-b cursor-pointer hover:bg-muted transition-colors",
+                          selectedHospital?.id === hospital.id && "bg-muted",
+                          index === 0 && userLocation && "border-l-4 border-l-primary"
+                        )}
+                        onClick={() => handleSelectHospital(hospital)}
+                      >
+                        <div className={cn(
+                          "flex justify-between items-start",
+                          index === 0 && userLocation && "font-medium"
+                        )}>
+                          <div className="font-medium">{hospital.name}</div>
+                          {index === 0 && userLocation && (
+                            <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
+                        {hospital.verification && (
+                          <div className="flex items-center gap-1 text-xs mt-1">
+                            {hospital.verification.hasEmergencyRoom ? 
+                              <Check className="h-3 w-3 text-green-500" /> : 
+                              <X className="h-3 w-3 text-red-500" />}
+                            <span>{hospital.verification.hasEmergencyRoom ? "Has ER" : "No ER"}</span>
+                          </div>
+                        )}
+                        {hospital.distance !== undefined && (
+                          <div className="text-xs font-medium mt-1 text-[#F97316]">
+                            {hospital.distance.toFixed(1)} km from project
+                          </div>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
-                      {getERStatusDisplay(hospital)}
-                      {hospital.verification?.verifiedAt && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Verified: {format(new Date(hospital.verification.verifiedAt), 'MMM d, yyyy')}
-                        </div>
-                      )}
-                      {hospital.distance !== undefined && (
-                        <div className="text-xs font-medium mt-1 text-[#F97316]">
-                          {hospital.distance.toFixed(1)} km from project
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="lg:col-span-2">
+          {/* Right column: Map and verification form */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Map card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Location Map</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 rounded-b-lg overflow-hidden">
+                {isLoaded ? (
+                  <GoogleMap
+                    mapContainerStyle={containerStyle}
+                    center={mapCenter ? 
+                      { lat: mapCenter[0], lng: mapCenter[1] } : 
+                      { lat: 37.7749, lng: -122.4194 }
+                    }
+                    zoom={11}
+                    options={mapOptions}
+                  >
+                    {/* Add user location marker (project location) */}
+                    {userLocation && (
+                      <Marker 
+                        position={{ lat: userLocation.latitude, lng: userLocation.longitude }}
+                        icon={{
+                          url: 'data:image/svg+xml;base64,' + btoa(`
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                              <circle cx="12" cy="12" r="8" fill="#38a169" stroke="#ffffff" stroke-width="2" />
+                            </svg>
+                          `),
+                          scaledSize: new window.google.maps.Size(24, 24),
+                          anchor: new window.google.maps.Point(12, 12)
+                        }}
+                      />
+                    )}
+                    
+                    {/* Hospital markers */}
+                    {hospitals.map(hospital => (
+                      <Marker
+                        key={hospital.id}
+                        position={{ lat: hospital.latitude, lng: hospital.longitude }}
+                        icon={{
+                          url: getMarkerIcon(hospital),
+                          scaledSize: new window.google.maps.Size(30, 30),
+                          anchor: new window.google.maps.Point(15, 15)
+                        }}
+                        onClick={() => handleSelectHospital(hospital)}
+                      />
+                    ))}
+
+                    {/* InfoWindow for selected hospital */}
+                    {selectedHospital && selectedInfoWindow && (
+                      <InfoWindow
+                        position={{ lat: selectedHospital.latitude, lng: selectedHospital.longitude }}
+                        onCloseClick={() => setSelectedInfoWindow(false)}
+                      >
+                        <div className="p-2 max-w-xs">
+                          <h3 className="font-bold text-black">{selectedHospital.name}</h3>
+                          <div className="text-gray-700 text-xs mt-1">{selectedHospital.address}</div>
+                          {selectedHospital.verification && (
+                            <div className="flex items-center gap-1 text-xs mt-1">
+                              {selectedHospital.verification.hasEmergencyRoom ? 
+                                <Check className="h-3 w-3 text-green-500" /> : 
+                                <X className="h-3 w-3 text-red-500" />}
+                              <span>{selectedHospital.verification.hasEmergencyRoom ? "Has Emergency Room" : "No Emergency Room"}</span>
+                            </div>
+                          )}
+                        </div>
+                      </InfoWindow>
+                    )}
+                  </GoogleMap>
+                ) : (
+                  <div className="h-[400px] flex items-center justify-center bg-muted/50">
+                    Loading Map...
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Verification form */}
             {selectedHospital ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>{selectedHospital.name}</CardTitle>
-                  <CardDescription>
-                    {selectedHospital.address || 'No address available'}
-                  </CardDescription>
+                  <CardTitle>Verify Emergency Room Status</CardTitle>
+                  <CardContent>
+                    <p>Selected Hospital: {selectedHospital.name}</p>
+                  </CardContent>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Emergency Room Status</h4>
-                    <RadioGroup 
-                      value={hasER === true ? "yes" : hasER === false ? "no" : undefined}
-                      onValueChange={(value) => setHasER(value === "yes")}
-                      className="flex gap-4"
+                <CardContent className="grid gap-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant={verificationStatus === true ? "secondary" : "outline"}
+                      onClick={() => handleVerificationToggle(true)}
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="yes" id={`er-yes-${selectedHospital.id}`} />
-                        <label htmlFor={`er-yes-${selectedHospital.id}`} className="text-sm">
-                          Has ER
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="no" id={`er-no-${selectedHospital.id}`} />
-                        <label htmlFor={`er-no-${selectedHospital.id}`} className="text-sm">
-                          No ER
-                        </label>
-                      </div>
-                    </RadioGroup>
+                      <Check className="h-4 w-4 mr-2" />
+                      Has Emergency Room
+                    </Button>
+                    <Button
+                      variant={verificationStatus === false ? "secondary" : "outline"}
+                      onClick={() => handleVerificationToggle(false)}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      No Emergency Room
+                    </Button>
                   </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Date Verified</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !verifiedDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {verifiedDate ? format(verifiedDate, "PPP") : <span>Select date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={verifiedDate}
-                          onSelect={setVerifiedDate}
-                          initialFocus
-                          disabled={(date) => date > new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Comments</label>
-                    <Textarea 
-                      placeholder="Add any additional information about this hospital"
+                  <div>
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed" htmlFor="comments">
+                      Comments
+                    </label>
+                    <textarea
+                      id="comments"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="Add any relevant comments"
                       value={comments}
-                      onChange={(e) => setComments(e.target.value)}
-                      className="resize-none"
-                      rows={3}
+                      onChange={handleCommentsChange}
                     />
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={cancelVerification}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleVerify}
-                    disabled={loading || hasER === undefined || !verifiedDate}
-                  >
-                    {loading ? "Saving..." : "Save Verification"}
-                  </Button>
+                <CardFooter>
+                  <Button onClick={handleSubmitVerification}>Submit Verification</Button>
                 </CardFooter>
               </Card>
             ) : (
               <Card>
-                <CardContent className="flex items-center justify-center h-72">
-                  <div className="text-center text-muted-foreground">
-                    <h3 className="text-lg font-medium">No Hospital Selected</h3>
-                    <p>Select a hospital from the list to verify its emergency room status</p>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-center h-40 text-center text-muted-foreground">
+                    <div>
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground/70" />
+                      <p>Select a hospital to verify its emergency room status</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

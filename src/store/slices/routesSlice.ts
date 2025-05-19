@@ -4,7 +4,7 @@ import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
 import { fetchRoutePath } from '@/services/emergencyService';
-import { mapCaptureService } from '@/components/MapCapture';
+import { mapCaptureService } from '@/services/mapCaptureService';
 
 export interface RoutesState {
   routes: Route[];
