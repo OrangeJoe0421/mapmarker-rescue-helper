@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -154,7 +155,7 @@ const HospitalVerification = () => {
       console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('emergency_services')
         .update({
           has_emergency_room: hasER,
@@ -166,8 +167,11 @@ const HospitalVerification = () => {
         .eq('id', selectedHospital.id);
       
       if (error) {
+        console.error('Supabase update error:', error);
         throw error;
       }
+      
+      console.log('Supabase update response:', data);
       
       // Update local data
       const updatedHospitals = hospitals.map(hospital => {
@@ -305,6 +309,21 @@ const HospitalVerification = () => {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
+                      
+                      {hospital.googleMapsLink && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <a 
+                            href={hospital.googleMapsLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline truncate"
+                          >
+                            Google Link
+                          </a>
+                        </div>
+                      )}
+                      
                       {hospital.phone && (
                         <div className="text-sm flex items-center gap-1 text-muted-foreground">
                           <Phone className="h-3 w-3" /> {hospital.phone}
@@ -336,6 +355,19 @@ const HospitalVerification = () => {
                   <CardDescription>
                     {selectedHospital.address || 'No address available'}
                   </CardDescription>
+                  {selectedHospital.googleMapsLink && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <a 
+                        href={selectedHospital.googleMapsLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline truncate"
+                      >
+                        Google Link
+                      </a>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -398,27 +430,6 @@ const HospitalVerification = () => {
                         className="flex-1"
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Google Maps Link</label>
-                    {googleMapsLink ? (
-                      <div className="flex gap-2 items-center">
-                        <div className="text-sm border rounded-md p-2 bg-muted/30 flex-1 break-all">
-                          {googleMapsLink}
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => window.open(googleMapsLink, '_blank')}
-                          title="Open in Google Maps"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground">No Google Maps link available</div>
-                    )}
                   </div>
                   
                   <div className="space-y-1">

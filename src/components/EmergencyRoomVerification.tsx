@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EmergencyService } from '@/types/mapTypes';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, ExternalLink, Phone, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, ExternalLink, MapPin, Phone, XCircle } from 'lucide-react';
 
 interface EmergencyRoomVerificationProps {
   service: EmergencyService;
@@ -32,6 +32,15 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Update local state when service changes
+  useEffect(() => {
+    setHasER(service.verification?.hasEmergencyRoom);
+    setVerifiedDate(service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : new Date());
+    setComments(service.verification?.comments || '');
+    setGoogleMapsLink(service.googleMapsLink || '');
+    setPhone(service.phone || '');
+  }, [service]);
+
   const handleVerify = async () => {
     if (hasER === undefined) {
       toast.error("Please select whether this hospital has an emergency room");
@@ -48,7 +57,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
       console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('emergency_services')
         .update({
           has_emergency_room: hasER,
@@ -60,8 +69,11 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
         .eq('id', service.id);
       
       if (error) {
+        console.error('Supabase update error:', error);
         throw error;
       }
+      
+      console.log('Supabase update response:', data);
       
       // Update local service data
       service.verification = {
@@ -171,6 +183,27 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
       </div>
       
       <div className="space-y-1">
+        <label className="text-sm font-medium">Address</label>
+        <div className="text-sm border rounded-md p-2 bg-muted/30">
+          {service.address || 'No address available'}
+        </div>
+
+        {googleMapsLink && (
+          <div className="flex gap-2 items-center">
+            <MapPin className="h-3 w-3 text-muted-foreground" />
+            <a 
+              href={googleMapsLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline truncate"
+            >
+              Google Link
+            </a>
+          </div>
+        )}
+      </div>
+      
+      <div className="space-y-1">
         <label className="text-sm font-medium">Date Verified</label>
         <Popover>
           <PopoverTrigger asChild>
@@ -209,28 +242,6 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
             className="text-sm"
           />
         </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Google Maps Link</label>
-        {googleMapsLink ? (
-          <div className="flex gap-2 items-center">
-            <div className="text-xs border rounded-md p-1.5 bg-muted/30 flex-1 truncate">
-              {googleMapsLink}
-            </div>
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="h-8 w-8 flex-shrink-0"
-              onClick={() => window.open(googleMapsLink, '_blank')}
-              title="Open in Google Maps"
-            >
-              <ExternalLink className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">No Google Maps link available</div>
-        )}
       </div>
       
       <div className="space-y-1">
