@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -280,14 +279,17 @@ const HospitalVerification = () => {
                       className={cn(
                         "p-3 border-b cursor-pointer hover:bg-muted transition-colors",
                         selectedHospital?.id === hospital.id && "bg-muted",
-                        index === 0 && userLocation && "bg-blue-50 dark:bg-blue-950/30 border-l-4 border-l-blue-500"
+                        index === 0 && userLocation && "border-l-4 border-l-primary"
                       )}
                       onClick={() => handleSelectHospital(hospital)}
                     >
-                      <div className="flex justify-between items-start">
+                      <div className={cn(
+                        "flex justify-between items-start",
+                        index === 0 && userLocation && "font-medium"
+                      )}>
                         <div className="font-medium">{hospital.name}</div>
                         {index === 0 && userLocation && (
-                          <MapPin className="h-4 w-4 text-blue-500 flex-shrink-0 mt-1" />
+                          <MapPin className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
@@ -298,7 +300,7 @@ const HospitalVerification = () => {
                         </div>
                       )}
                       {hospital.distance !== undefined && (
-                        <div className="text-xs font-medium mt-1 text-blue-600 dark:text-blue-400">
+                        <div className="text-xs font-medium mt-1 text-[#F97316]">
                           {hospital.distance.toFixed(1)} km from project
                         </div>
                       )}
