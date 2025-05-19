@@ -9,15 +9,11 @@ interface ClearButtonProps extends ButtonProps {
 }
 
 export function ClearButton({ onClear, ...props }: ClearButtonProps) {
-  const { clearAll, clearRoutes } = useMapStore();
+  const clearAll = useMapStore((state) => state.clearAll);
 
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear all data and reset the application?")) {
-      // First clear routes explicitly to ensure they're removed
-      clearRoutes();
-      console.log("Routes cleared from clear button");
-      
-      // Then clear everything else
+      // Call the clearAll function which now internally handles clearing routes first
       clearAll();
       
       if (onClear) onClear();

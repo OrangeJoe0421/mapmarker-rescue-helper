@@ -24,32 +24,40 @@ interface MapState extends
 
 export const useMapStore = create<MapState>()(
   persist(
-    (...args) => ({
-      ...createLocationSlice(...args),
-      ...createServicesSlice(...args),
-      ...createMarkersSlice(...args),
-      ...createRoutesSlice(...args),
+    (...args) => {
+      // Extract the set function from args for clarity
+      const set = args[0];
+      // Get the slices with their state and actions
+      const locationSlice = createLocationSlice(...args);
+      const servicesSlice = createServicesSlice(...args);
+      const markersSlice = createMarkersSlice(...args);
+      const routesSlice = createRoutesSlice(...args);
+      
+      return {
+        ...locationSlice,
+        ...servicesSlice,
+        ...markersSlice,
+        ...routesSlice,
 
-      clearAll: () => {
-        // Make sure to explicitly clear routes first before clearing everything else
-        const state = args[0].getState();
-        if (state.clearRoutes) {
-          state.clearRoutes();
-        }
-        
-        args[0]({
-          userLocation: null,
-          emergencyServices: [],
-          customMarkers: [],
-          selectedService: null,
-          selectedMarker: null,
-          routes: [], // Explicitly clear routes here too for redundancy
-          mapCenter: DEFAULT_CENTER,
-          mapZoom: DEFAULT_ZOOM,
-        });
-        toast.info('All data cleared');
-      },
-    }),
+        clearAll: () => {
+          // First directly use the clearRoutes action from the routesSlice
+          routesSlice.clearRoutes();
+          
+          // Then reset all other state values
+          set({
+            userLocation: null,
+            emergencyServices: [],
+            customMarkers: [],
+            selectedService: null,
+            selectedMarker: null,
+            routes: [], // Explicitly clear routes here too for redundancy
+            mapCenter: DEFAULT_CENTER,
+            mapZoom: DEFAULT_ZOOM,
+          });
+          toast.info('All data cleared');
+        },
+      };
+    },
     {
       name: 'emergency-map-storage',
       partialize: (state) => ({
