@@ -5,11 +5,8 @@
 // Google Maps API key
 export const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
 
-// Libraries to load
-export const GOOGLE_MAPS_LIBRARIES: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = [
-  'places',
-  'geometry'
-];
+// Libraries to load - typed correctly for Google Maps API
+export const GOOGLE_MAPS_LIBRARIES = ['places', 'geometry'] as const;
 
 // Map loader ID - must be consistent across the application
 export const GOOGLE_MAPS_LOADER_ID = 'google-map-script';

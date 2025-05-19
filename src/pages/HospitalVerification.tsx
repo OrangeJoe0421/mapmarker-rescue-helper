@@ -19,64 +19,9 @@ import {
   MAP_OPTIONS 
 } from '@/config/mapsConfig';
 
-// Google Maps API key
-const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
-
 const containerStyle = {
   width: '100%',
   height: '400px'
-};
-
-const mapOptions = {
-  styles: [
-    {
-      "elementType": "geometry",
-      "stylers": [{ "color": "#242f3e" }]
-    },
-    {
-      "elementType": "labels.text.fill",
-      "stylers": [{ "color": "#746855" }]
-    },
-    {
-      "elementType": "labels.text.stroke",
-      "stylers": [{ "color": "#242f3e" }]
-    },
-    {
-      "featureType": "poi",
-      "elementType": "all",
-      "stylers": [{ "visibility": "off" }]
-    },
-    {
-      "featureType": "transit",
-      "elementType": "all",
-      "stylers": [{ "visibility": "off" }]
-    },
-    {
-      "featureType": "road",
-      "elementType": "geometry",
-      "stylers": [{ "color": "#38414e" }]
-    },
-    {
-      "featureType": "road",
-      "elementType": "geometry.stroke",
-      "stylers": [{ "color": "#212a37" }]
-    },
-    {
-      "featureType": "road",
-      "elementType": "labels.text.fill",
-      "stylers": [{ "color": "#9ca5b3" }]
-    },
-    {
-      "featureType": "water",
-      "elementType": "geometry",
-      "stylers": [{ "color": "#17263c" }]
-    }
-  ],
-  disableDefaultUI: false,
-  zoomControl: true,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: true
 };
 
 interface HospitalWithStatus extends EmergencyService {
