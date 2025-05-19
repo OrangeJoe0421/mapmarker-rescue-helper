@@ -34,7 +34,6 @@ const Index = () => {
   const [isInitialRender, setIsInitialRender] = useState(true);
   const initialCheckCompleteRef = useRef(false);
   const userLocationInitializedRef = useRef(false);
-  const previousUserLocation = useRef<{latitude: number, longitude: number} | null>(null);
 
   // Prevent animation flickering on re-renders by tracking initial render
   useEffect(() => {
@@ -95,31 +94,19 @@ const Index = () => {
   }, [isAuthenticated, retryCount, shadcnToast]);
 
   // Effect to automatically calculate routes when emergency services are loaded
+  // but without clearing existing routes automatically
   useEffect(() => {
     if (userLocation && emergencyServices.length > 0 && !routesCalculatedRef.current) {
       // Slight delay to ensure the UI has updated
       const timer = setTimeout(() => {
-        // Clear routes only if user location has changed significantly
-        const locationChanged = !previousUserLocation.current || 
-          previousUserLocation.current.latitude !== userLocation.latitude || 
-          previousUserLocation.current.longitude !== userLocation.longitude;
-        
-        if (locationChanged) {
-          console.log("User location changed, clearing existing routes before calculating new ones");
-          clearRoutes();
-          previousUserLocation.current = {
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude
-          };
-        }
-        
+        // Don't clear routes automatically here anymore
         calculateRouteToNearestHospital();
         routesCalculatedRef.current = true;
       }, 1500);
       
       return () => clearTimeout(timer);
     }
-  }, [userLocation, emergencyServices.length, calculateRouteToNearestHospital, clearRoutes]);
+  }, [userLocation, emergencyServices.length, calculateRouteToNearestHospital]);
 
   // Reset the calculation flag when routes are cleared
   useEffect(() => {

@@ -12,13 +12,13 @@ export function ClearButton({ onClear, ...props }: ClearButtonProps) {
   const { clearAll, clearRoutes } = useMapStore();
 
   const handleClear = () => {
-    if (window.confirm("Are you sure you want to clear all data and reset the application?")) {
+    if (window.confirm("Are you sure you want to clear all data, reset the map, and clear all routes?")) {
       // Ensure routes are cleared first
       clearRoutes();
       // Then clear everything else
       clearAll();
       if (onClear) onClear();
-      toast.success("Application has been reset");
+      toast.success("Map has been reset and all routes have been cleared");
     }
   };
 
@@ -30,7 +30,7 @@ export function ClearButton({ onClear, ...props }: ClearButtonProps) {
       {...props}
     >
       <RotateCcw className="h-4 w-4" />
-      <span>Reset App</span>
+      <span>Reset Map</span>
     </Button>
   );
 }

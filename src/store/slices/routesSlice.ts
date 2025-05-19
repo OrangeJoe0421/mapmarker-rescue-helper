@@ -64,7 +64,7 @@ export const createRoutesSlice: StateCreator<
       return;
     }
     
-    // Clear any existing routes with this source to avoid clutter
+    // Only clear existing routes with this source to avoid clearing all routes unnecessarily
     set(state => ({
       routes: state.routes.filter(route => route.fromId !== fromId)
     }));
@@ -196,7 +196,8 @@ export const createRoutesSlice: StateCreator<
       return;
     }
     
-    // Clear all existing routes first
+    // Clear all existing routes before calculating new ones
+    // This is intentional as this is a "calculate ALL routes" action
     set({ routes: [] });
     
     // Mark any existing captures as stale
@@ -321,7 +322,8 @@ export const createRoutesSlice: StateCreator<
     if (nearestHospital) {
       toast.info(`Routing to nearest hospital: ${nearestHospital.name}`);
       
-      // Calculate route from user location to nearest hospital
+      // Calculate route from nearest hospital to user location
+      // Don't clear existing routes here
       await get().calculateRoute(nearestHospital.id, true);
     } else {
       toast.error('Could not determine nearest hospital');
@@ -332,6 +334,7 @@ export const createRoutesSlice: StateCreator<
     console.log("Clearing all routes from state");
     
     // Explicitly empty the routes array with a new empty array
+    // This should ONLY be called when explicitly clearing routes via a button
     set(state => ({ 
       routes: [] 
     }));

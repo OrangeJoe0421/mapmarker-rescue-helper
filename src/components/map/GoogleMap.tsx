@@ -83,8 +83,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     calculateRoute,
     selectService,
     addCustomMarker,
-    toggleAddingMarker,
-    clearRoutes
+    toggleAddingMarker
   } = useMapStore();
 
   const [selectedMarker, setSelectedMarker] = useState<{
@@ -103,9 +102,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   
-  // Track when user location changes to evaluate if routes need clearing
+  // We're no longer tracking location changes for route clearing
   const userLocationRef = useRef<{latitude: number, longitude: number} | null>(null);
-  const significantLocationChangeRef = useRef(false);
 
   const onLoad = useCallback((map: google.maps.Map) => {
     console.info("Google Maps loaded successfully");
@@ -209,23 +207,13 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     };
   }, [map, useMapStore.getState().addingMarker]);
 
-  // Monitor userLocation changes - don't clear routes automatically
+  // Store current user location, but don't clear routes based on location changes
   useEffect(() => {
-    // Only calculate if userLocation truly changed, not just on component mount
     if (userLocation) {
-      const locationChanged = !userLocationRef.current || 
-        Math.abs(userLocationRef.current.latitude - userLocation.latitude) > 0.0001 || 
-        Math.abs(userLocationRef.current.longitude - userLocation.longitude) > 0.0001;
-      
-      if (locationChanged) {
-        console.log("User location changed significantly in map component");
-        // Set a flag indicating a significant location change occurred
-        significantLocationChangeRef.current = true;
-        userLocationRef.current = {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude
-        };
-      }
+      userLocationRef.current = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude
+      };
     }
   }, [userLocation?.latitude, userLocation?.longitude]);
 
