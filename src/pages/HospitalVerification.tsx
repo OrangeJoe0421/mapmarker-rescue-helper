@@ -11,21 +11,11 @@ import { useMapStore } from '@/store/useMapStore';
 import EmergencyRoomVerification from '@/components/EmergencyRoomVerification';
 import { EmergencyService } from '@/types/mapTypes';
 import { cn } from '@/lib/utils';
-
-const containerStyle = {
-  width: '100%',
-  height: '400px'
-};
-
-interface HospitalWithStatus extends EmergencyService {
-  hasEmergencyRoom?: boolean;
-  verifiedAt?: Date | null;
-  comments?: string;
-}
+import { calculateHaversineDistance } from '@/utils/mapUtils';
 
 const HospitalVerification = () => {
-  const [hospitals, setHospitals] = useState<HospitalWithStatus[]>([]);
-  const [selectedHospital, setSelectedHospital] = useState<HospitalWithStatus | null>(null);
+  const [hospitals, setHospitals] = useState<EmergencyService[]>([]);
+  const [selectedHospital, setSelectedHospital] = useState<EmergencyService | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<boolean | null>(null);
   const [comments, setComments] = useState('');
 
@@ -33,45 +23,55 @@ const HospitalVerification = () => {
   const { toast: shadcnToast } = useToast();
   const { 
     emergencyServices, 
-    userLocation
+    userLocation,
+    selectService
   } = useMapStore();
 
+  // Populate hospitals from all emergency services
   useEffect(() => {
-    if (emergencyServices) {
+    if (emergencyServices && emergencyServices.length > 0) {
       // Filter to only include hospital services
       const hospitalsOnly = emergencyServices.filter(service => 
         service.type.toLowerCase().includes('hospital')
       );
-      setHospitals(hospitalsOnly);
-    }
-  }, [emergencyServices]);
-
-  // Calculate the distances if userLocation is present
-  useEffect(() => {
-    if (userLocation && hospitals.length > 0) {
-      // Calculate distance from user location
-      const hospitalsWithDistance = hospitals.map((hospital) => {
-        const distance = userLocation ? Math.sqrt(
-          Math.pow(hospital.latitude - userLocation.latitude, 2) +
-          Math.pow(hospital.longitude - userLocation.longitude, 2)
-        ) * 111 : undefined;
+      
+      // Calculate distances for all hospitals if userLocation is available
+      if (userLocation) {
+        const hospitalsWithDistance = hospitalsOnly.map(hospital => {
+          // Calculate direct distance
+          const distance = calculateHaversineDistance(
+            userLocation.latitude, 
+            userLocation.longitude, 
+            hospital.latitude, 
+            hospital.longitude
+          );
+          
+          return {
+            ...hospital,
+            distance: hospital.road_distance || distance // Use road_distance if available, otherwise use haversine
+          };
+        });
         
-        return {
-          ...hospital,
-          distance: distance,
-        };
-      }).sort((a, b) => 
-        (a.distance || Infinity) - (b.distance || Infinity)
-      );
-
-      setHospitals(hospitalsWithDistance);
+        // Sort hospitals by distance
+        const sortedHospitals = hospitalsWithDistance.sort((a, b) => 
+          (a.distance || Infinity) - (b.distance || Infinity)
+        );
+        
+        setHospitals(sortedHospitals);
+      } else {
+        // No user location, just set the hospitals without distance sorting
+        setHospitals(hospitalsOnly);
+      }
+    } else {
+      setHospitals([]);
     }
-  }, [userLocation, hospitals.length]);
+  }, [emergencyServices, userLocation]);
 
-  const handleSelectHospital = (hospital: HospitalWithStatus) => {
+  const handleSelectHospital = (hospital: EmergencyService) => {
     setSelectedHospital(hospital);
     setVerificationStatus(hospital.verification?.hasEmergencyRoom ?? null);
     setComments(hospital.verification?.comments ?? '');
+    selectService(hospital);
   };
 
   const handleVerificationUpdate = (updated: boolean) => {
@@ -93,7 +93,12 @@ const HospitalVerification = () => {
           return hospital;
         });
       
-      setHospitals(updatedHospitals);
+      // Sort by distance
+      const sortedHospitals = userLocation ? updatedHospitals.sort((a, b) => 
+        ((a.road_distance || a.distance || Infinity) - (b.road_distance || b.distance || Infinity))
+      ) : updatedHospitals;
+      
+      setHospitals(sortedHospitals);
       toast.success('Hospital verification updated successfully');
     }
   };
@@ -159,9 +164,9 @@ const HospitalVerification = () => {
                             <span>{hospital.verification.hasEmergencyRoom ? "Has ER" : "No ER"}</span>
                           </div>
                         )}
-                        {hospital.distance !== undefined && (
+                        {(hospital.distance !== undefined || hospital.road_distance !== undefined) && (
                           <div className="text-xs font-medium mt-1 text-[#F97316]">
-                            {hospital.distance.toFixed(1)} km from project
+                            {(hospital.road_distance || hospital.distance)?.toFixed(1)} km from project
                           </div>
                         )}
                       </div>
@@ -183,9 +188,9 @@ const HospitalVerification = () => {
                   <div className="mb-4">
                     <h3 className="font-medium">{selectedHospital.name}</h3>
                     <p className="text-sm text-muted-foreground">{selectedHospital.address}</p>
-                    {selectedHospital.distance !== undefined && (
+                    {(selectedHospital.distance !== undefined || selectedHospital.road_distance !== undefined) && (
                       <p className="text-xs font-medium mt-1 text-[#F97316]">
-                        {selectedHospital.distance.toFixed(1)} km from project
+                        {(selectedHospital.road_distance || selectedHospital.distance)?.toFixed(1)} km from project
                       </p>
                     )}
                   </div>
