@@ -25,37 +25,46 @@ interface MapState extends
 
 export const useMapStore = create<MapState>()(
   persist(
-    (...args) => ({
-      ...createLocationSlice(...args),
-      ...createServicesSlice(...args),
-      ...createMarkersSlice(...args),
-      ...createRoutesSlice(...args),
-
-      clearAll: () => {
-        // First clear routes specifically to trigger all necessary side effects
-        const currentState = args[0].getState();
-        if (currentState.clearRoutes) {
-          currentState.clearRoutes();
-        }
-        
-        // Then reset everything else
-        args[0]({
-          userLocation: null,
-          emergencyServices: [],
-          customMarkers: [],
-          selectedService: null,
-          selectedMarker: null,
-          routes: [], // Explicitly set routes to empty array again
-          mapCenter: DEFAULT_CENTER,
-          mapZoom: DEFAULT_ZOOM,
-        });
-        
-        // Ensure map capture is cleared
-        mapCaptureService.clearCapture();
-        
-        toast.info('All data cleared');
-      },
-    }),
+    (...args) => {
+      // Extract the set function for type safety
+      const set = args[0];
+      
+      // Create an object with all slice implementations
+      const slices = {
+        ...createLocationSlice(...args),
+        ...createServicesSlice(...args),
+        ...createMarkersSlice(...args),
+        ...createRoutesSlice(...args),
+      };
+      
+      // Add the clearAll function
+      return {
+        ...slices,
+        clearAll: () => {
+          // First clear routes specifically to trigger all necessary side effects
+          if (slices.clearRoutes) {
+            slices.clearRoutes();
+          }
+          
+          // Then reset everything else
+          set({
+            userLocation: null,
+            emergencyServices: [],
+            customMarkers: [],
+            selectedService: null,
+            selectedMarker: null,
+            routes: [], // Explicitly set routes to empty array again
+            mapCenter: DEFAULT_CENTER,
+            mapZoom: DEFAULT_ZOOM,
+          });
+          
+          // Ensure map capture is cleared
+          mapCaptureService.clearCapture();
+          
+          toast.info('All data cleared');
+        },
+      };
+    },
     {
       name: 'emergency-map-storage',
       partialize: (state) => ({
