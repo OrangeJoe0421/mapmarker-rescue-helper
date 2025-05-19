@@ -63,6 +63,9 @@ export async function fetchServicesFromEdge(latitude: number, longitude: number)
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add these options to help with potential CORS or connection issues
+      mode: 'cors',
+      credentials: 'omit',
     });
     
     if (!response.ok) {
@@ -71,15 +74,15 @@ export async function fetchServicesFromEdge(latitude: number, longitude: number)
       throw new Error(`Failed to fetch from Edge Function: ${response.status} ${response.statusText}`);
     }
     
-    const json = await response.json();
-    console.log("Response from edge function:", json);
+    const data = await response.json();
+    console.log("Response from edge function:", data);
 
-    if (json.error) {
-      throw new Error(json.error?.message || 'Failed to fetch from Edge Function');
+    if (!data || data.error) {
+      throw new Error(data.error?.message || 'Failed to fetch from Edge Function');
     }
 
-    console.log("Raw services data from database:", json.data);
-    return json.data || [];
+    console.log("Raw services data from database:", data);
+    return data || [];
   } catch (err: any) {
     console.error("Edge Function fetch error:", err.message);
     throw err;

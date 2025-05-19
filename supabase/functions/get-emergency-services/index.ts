@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     console.log(`Found ${data?.length || 0} emergency services`)
     
     // Return the data
-    return new Response(JSON.stringify({ data }), {
+    return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
