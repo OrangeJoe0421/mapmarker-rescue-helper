@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
@@ -30,7 +31,7 @@ const Index = () => {
         setDbConnectionStatus("Connecting...");
         console.log("Checking database connection...");
 
-        // Instead of direct Supabase calls, use our helper which now uses the Edge Function
+        // Now using direct Supabase client connection
         const result = await checkDatabaseConnection();
         
         if (!result.success) {
