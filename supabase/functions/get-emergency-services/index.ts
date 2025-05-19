@@ -1,4 +1,5 @@
 
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -26,8 +27,10 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const lat = url.searchParams.get('lat')
     const lon = url.searchParams.get('lon')
+    const radiusKm = url.searchParams.get('radius') || '30'
+    const types = url.searchParams.get('types')
 
-    console.log(`Received parameters: lat=${lat}, lon=${lon}`)
+    console.log(`Received parameters: lat=${lat}, lon=${lon}, radius=${radiusKm}km, types=${types || 'all'}`)
 
     if (!lat || !lon) {
       console.log('Missing lat or lon parameters')
@@ -46,14 +49,35 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
     
-    console.log("Querying emergency_services table...")
+    console.log("Querying emergency_services table with spatial filtering...")
     
-    // Query emergency services data
-    const { data, error } = await supabase
-      .from('emergency_services')
-      .select('*')
+    // Build the query with spatial filtering using raw SQL
+    let query = supabase.from('emergency_services').select('*')
       .not('latitude', 'is', null)
-      .not('longitude', 'is', null)
+      .not('longitude', 'is', null);
+      
+    // Apply type filtering if specified
+    if (types) {
+      const typeList = types.split(',');
+      query = query.in('type', typeList);
+    }
+    
+    // Create a SQL statement for the spatial filtering
+    // This computes the distance between each service and the user's location
+    const { data, error } = await supabase.rpc(
+      'find_services_within_distance',
+      {
+        user_lat: parseFloat(lat),
+        user_lng: parseFloat(lon),
+        radius_km: parseFloat(radiusKm)
+      }
+    ).catch(async (err) => {
+      // If the RPC function doesn't exist, fall back to a basic query
+      console.log("RPC function not found, using fallback query:", err);
+      
+      // Basic query without PostGIS
+      return await query;
+    });
 
     if (error) {
       console.error('Database query error:', error)

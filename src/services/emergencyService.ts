@@ -3,9 +3,7 @@ import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Fetches emergency services within a specified geographic radius using PostGIS functions.
- * This function calculates the distance between the user's location and each emergency service
- * directly within the database, and only returns services within the specified radius.
+ * Fetches emergency services within a specified geographic radius.
  *
  * @param latitude User's latitude
  * @param longitude User's longitude
@@ -22,25 +20,24 @@ export async function fetchNearestEmergencyServices(
   limit?: number
 ): Promise<EmergencyService[]> {
   try {
-    // Construct the SQL query to fetch emergency services within the radius
+    // Construct the SQL query to fetch emergency services
     let query = supabase
       .from('emergency_services')
       .select('*')
-      .order('distance') // Order by distance for consistent results
-      .limit(limit || 100); // Apply the limit here
+      .limit(limit || 100);
 
     // Apply type filter if provided
     if (types && types.length > 0) {
       query = query.in('type', types);
     }
 
-    // Use stored procedure for accurate distance calculation
-    // Using filter with appropriate PostGIS functions
-    const { data, error } = await query.filter(
-      'ST_DWithin(ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography, ST_SetSRID(ST_Point(${longitude}, ${latitude}), 4326)::geography, ${radiusInKm * 1000})',
-      longitude,
-      latitude
-    );
+    // Simple filtering for non-null lat/lng values
+    query = query
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
+
+    // Execute the query
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching services from database:", error);
@@ -48,22 +45,63 @@ export async function fetchNearestEmergencyServices(
     }
 
     if (!data || data.length === 0) {
-      console.log("No emergency services found within the specified radius.");
+      console.log("No emergency services found.");
       return [];
     }
 
+    // Filter by distance in memory (since we can't use PostGIS functions directly)
+    const filteredServices = data.filter(service => {
+      const distance = calculateDistance(
+        latitude,
+        longitude,
+        service.latitude,
+        service.longitude
+      );
+      
+      // Add the calculated distance to the service object
+      service.distance = distance;
+      
+      // Only include services within the radius
+      return distance <= radiusInKm;
+    });
+
+    // Sort by distance
+    filteredServices.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+
     // Convert database records to EmergencyService objects
     const services: EmergencyService[] = await Promise.all(
-      data.map(async (record: any) => await convertDatabaseRecordToService(record))
+      filteredServices.map(async (record: any) => await convertDatabaseRecordToService(record))
     );
 
-    console.log(`Found ${services.length} emergency services within the specified radius`);
+    console.log(`Found ${services.length} emergency services within ${radiusInKm}km radius`);
     return services;
 
   } catch (error) {
     console.error("Failed to fetch emergency services:", error);
     throw error;
   }
+}
+
+/**
+ * Calculate the distance between two points using the Haversine formula
+ * @param lat1 First latitude
+ * @param lon1 First longitude
+ * @param lat2 Second latitude
+ * @param lon2 Second longitude
+ * @returns Distance in kilometers
+ */
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c; // Distance in km
+  
+  return distance;
 }
 
 /**
