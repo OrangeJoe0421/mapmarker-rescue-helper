@@ -1,3 +1,4 @@
+
 import jsPDF from 'jspdf';
 import { ExportData } from './types';
 import { addProjectLocationSection } from './projectLocationSection';
@@ -8,22 +9,18 @@ import { mapCaptureService } from '../../components/MapCapture';
 
 export * from './types';
 
-// Add Stantec logo to PDF
-const addStantecLogo = (doc: jsPDF, pageWidth: number) => {
-  try {
-    // Try to add the Stantec logo with the correct path
-    doc.addImage('/lovable-uploads/e7fb8cc8-9b48-457c-a65f-7ed272d81060.png', 'PNG', 10, 10, 30, 30);
-  } catch (error) {
-    console.error('Error adding Stantec logo to PDF:', error);
-    // If logo not found, continue without it
-    try {
-      // Attempt to use the SVG fallback
-      doc.addImage('https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg', 'SVG', 10, 10, 30, 30);
-    } catch (svgError) {
-      console.error('Failed to add SVG fallback logo:', svgError);
-      // Continue without logo if both attempts fail
-    }
-  }
+// PDF header setup (without logo)
+const addPdfHeader = (doc: jsPDF, pageWidth: number) => {
+  // Dark header gradient for white text
+  doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
+  doc.rect(0, 0, pageWidth, 40, 'F');
+  
+  // Add title with white text
+  doc.setTextColor(255, 255, 255); // White text
+  doc.setFontSize(22);
+  doc.text('Emergency Response Plan', pageWidth / 2, 22, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 32, { align: 'center' });
 };
 
 export const exportToPdf = async (data: ExportData) => {
@@ -33,19 +30,8 @@ export const exportToPdf = async (data: ExportData) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Dark header gradient for white text
-  doc.setFillColor(51, 51, 51, 0.8); // Dark gray with opacity
-  doc.rect(0, 0, pageWidth, 40, 'F');
-
-  // Add Stantec logo
-  addStantecLogo(doc, pageWidth);
-  
-  // Add title with white text
-  doc.setTextColor(255, 255, 255); // White text
-  doc.setFontSize(22);
-  doc.text('Emergency Response Plan', pageWidth / 2, 22, { align: 'center' });
-  doc.setFontSize(12);
-  doc.text(`Generated on ${new Date().toLocaleString()}`, pageWidth / 2, 32, { align: 'center' });
+  // Add header (without logo)
+  addPdfHeader(doc, pageWidth);
   
   let yPosition = 60; // Start content further down after the header
   

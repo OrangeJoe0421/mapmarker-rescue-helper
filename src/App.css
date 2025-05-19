@@ -7,7 +7,7 @@
   text-align: left;
 }
 
-/* Add Stantec theme colors */
+/* Stantec theme colors kept for reference but can be renamed later if needed */
 :root {
   --stantec-black: #222222;
   --stantec-dark-gray: #333333;
@@ -15,11 +15,6 @@
   --stantec-light-gray: #cccccc;
   --stantec-orange: #F97316;
   --stantec-white: #ffffff;
-}
-
-.stantec-logo {
-  height: 40px;
-  margin-right: 16px;
 }
 
 /* Custom button styles */
@@ -34,7 +29,5 @@
 }
 
 @media (max-width: 768px) {
-  .stantec-logo {
-    height: 30px;
-  }
+  /* Empty media query kept for structure */
 }

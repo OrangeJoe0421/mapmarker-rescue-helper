@@ -114,29 +114,18 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
       <div className="container mx-auto max-w-7xl">
         <header className="mb-6 flex justify-between items-center">
-          <div className="flex items-center">
-            <img 
-              src="/lovable-uploads/e7fb8cc8-9b48-457c-a65f-7ed272d81060.png" 
-              alt="Stantec Logo" 
-              className="mr-3 h-10 md:h-12"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = 'https://www.stantec.com/content/dam/stantec/images/logos/stantec-logo.svg';
-              }}
-            />
-            <div>
-              <h1 className={`text-3xl font-bold tracking-tight text-foreground ${headerAnimationClass}`}>
-                Emergency Response Planner
-              </h1>
-              <p className={`text-muted-foreground mt-1 ${subtitleAnimationClass}`} style={isInitialRender ? { animationDelay: '100ms' } : {}}>
-                Find and map emergency services near any location
+          <div>
+            <h1 className={`text-3xl font-bold tracking-tight text-foreground ${headerAnimationClass}`}>
+              Emergency Response Planner
+            </h1>
+            <p className={`text-muted-foreground mt-1 ${subtitleAnimationClass}`} style={isInitialRender ? { animationDelay: '100ms' } : {}}>
+              Find and map emergency services near any location
+            </p>
+            {dbConnectionStatus && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Database: {dbConnectionStatus}
               </p>
-              {dbConnectionStatus && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Database: {dbConnectionStatus}
-                </p>
-              )}
-            </div>
+            )}
           </div>
           <div className="flex gap-2">
             <DevTools />
