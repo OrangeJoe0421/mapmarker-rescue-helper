@@ -25,6 +25,14 @@ const MapContainer = () => {
   const [isInitialRender, setIsInitialRender] = useState(true);
   const renderCountRef = useRef(0);
   
+  // Force re-render when routes change to ensure the map updates
+  const [, forceUpdate] = useState({});
+  
+  useEffect(() => {
+    // Force component update when routes change
+    forceUpdate({});
+  }, [routes.length]);
+  
   // Stop animations after initial mount with RAF to ensure we're past the first render cycle
   useEffect(() => {
     if (isInitialRender) {
@@ -108,8 +116,9 @@ const MapContainer = () => {
         data-map-type="google"
         data-has-routes={routes.length > 0 ? "true" : "false"}
         data-routes-count={routes.length.toString()}
+        key={`map-container-${routes.length}`} // Add key to force re-render when routes change
       >
-        <GoogleMap />
+        <GoogleMap key={`google-map-${routes.length}`} /> {/* Force re-render of GoogleMap when routes change */}
         
         <div className="absolute bottom-3 left-3 z-[1000] bg-white/80 px-2 py-1 rounded text-xs">
           Google Maps: Click markers to see details

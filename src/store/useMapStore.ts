@@ -8,6 +8,7 @@ import { LocationState, createLocationSlice, DEFAULT_CENTER, DEFAULT_ZOOM } from
 import { ServicesState, createServicesSlice } from './slices/servicesSlice';
 import { MarkersState, createMarkersSlice } from './slices/markersSlice';
 import { RoutesState, createRoutesSlice } from './slices/routesSlice';
+import { mapCaptureService } from '@/services/mapCaptureService';
 
 // Re-export types from the types file
 export * from '@/types/mapTypes';
@@ -31,16 +32,27 @@ export const useMapStore = create<MapState>()(
       ...createRoutesSlice(...args),
 
       clearAll: () => {
+        // First clear routes specifically to trigger all necessary side effects
+        const currentState = args[0].getState();
+        if (currentState.clearRoutes) {
+          currentState.clearRoutes();
+        }
+        
+        // Then reset everything else
         args[0]({
           userLocation: null,
           emergencyServices: [],
           customMarkers: [],
           selectedService: null,
           selectedMarker: null,
-          routes: [],
+          routes: [], // Explicitly set routes to empty array again
           mapCenter: DEFAULT_CENTER,
           mapZoom: DEFAULT_ZOOM,
         });
+        
+        // Ensure map capture is cleared
+        mapCaptureService.clearCapture();
+        
         toast.info('All data cleared');
       },
     }),

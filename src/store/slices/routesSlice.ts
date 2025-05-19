@@ -281,8 +281,14 @@ export const createRoutesSlice: StateCreator<
   
   clearRoutes: () => {
     console.log("Clearing all routes from state");
-    set({ routes: [] });
+    
+    // Explicitly empty the routes array with a new empty array
+    set(state => ({ 
+      routes: [] 
+    }));
+    
     toast.info('All routes cleared');
+    
     // Also clear any capture when routes are cleared
     mapCaptureService.clearCapture();
     
