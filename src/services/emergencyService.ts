@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -125,6 +126,12 @@ export async function fetchNearestEmergencyServices(
             }
           }
 
+          // Create verification object if verification data exists
+          const verification = service.has_emergency_room !== null || service.verified_at ? {
+            hasEmergencyRoom: service.has_emergency_room || false,
+            verifiedAt: service.verified_at || null
+          } : undefined;
+
           const emergencyService: EmergencyService = {
             id: service.id,
             name: service.name,
@@ -134,12 +141,19 @@ export async function fetchNearestEmergencyServices(
             address: service.address || undefined,
             phone: service.phone || undefined,
             hours: service.hours || undefined,
-            road_distance: roadDistance
+            road_distance: roadDistance,
+            verification: verification
           };
 
           return emergencyService;
         } catch (error) {
           console.warn(`Could not process service ${service.name}:`, error);
+
+          // Create verification object if verification data exists
+          const verification = service.has_emergency_room !== null || service.verified_at ? {
+            hasEmergencyRoom: service.has_emergency_room || false,
+            verifiedAt: service.verified_at || null
+          } : undefined;
 
           return {
             id: service.id,
@@ -150,7 +164,8 @@ export async function fetchNearestEmergencyServices(
             address: service.address || undefined,
             phone: service.phone || undefined,
             hours: service.hours || undefined,
-            road_distance: calculateHaversineDistance(latitude, longitude, service.latitude, service.longitude) * 1.3
+            road_distance: calculateHaversineDistance(latitude, longitude, service.latitude, service.longitude) * 1.3,
+            verification: verification
           };
         }
       })

@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string
+          has_emergency_room: boolean | null
           hours: string | null
           id: string
           latitude: number | null
@@ -21,10 +22,12 @@ export type Database = {
           phone: string | null
           state: string | null
           type: string | null
+          verified_at: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string
+          has_emergency_room?: boolean | null
           hours?: string | null
           id: string
           latitude?: number | null
@@ -33,10 +36,12 @@ export type Database = {
           phone?: string | null
           state?: string | null
           type?: string | null
+          verified_at?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string
+          has_emergency_room?: boolean | null
           hours?: string | null
           id?: string
           latitude?: number | null
@@ -45,6 +50,7 @@ export type Database = {
           phone?: string | null
           state?: string | null
           type?: string | null
+          verified_at?: string | null
         }
         Relationships: []
       }

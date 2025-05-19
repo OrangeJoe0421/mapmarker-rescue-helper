@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Phone, Clock, MapPin, Navigation, X } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
+import EmergencyRoomVerification from './EmergencyRoomVerification';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -84,6 +85,9 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
             <span>{service.road_distance.toFixed(2)} km from project</span>
           </div>
         )}
+        
+        {/* Add EmergencyRoomVerification component for hospitals */}
+        <EmergencyRoomVerification service={service} />
       </CardContent>
       
       <CardFooter className="pt-0">
