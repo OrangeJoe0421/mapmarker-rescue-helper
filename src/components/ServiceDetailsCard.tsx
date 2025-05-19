@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,6 @@ import { Phone, Clock, MapPin, Navigation, X } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import EmergencyRoomVerification from './EmergencyRoomVerification';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -85,23 +85,7 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           </div>
         )}
 
-        {/* Only show for Hospital types */}
-        {service.type.toLowerCase().includes("hospital") && (
-          <div className="mt-2 border-t pt-2 bg-gray-50 p-2 rounded">
-            <div className="text-sm font-medium mb-2 text-red-500">Select Hospital Option</div>
-            <RadioGroup defaultValue="option1">
-              <div className="flex items-center space-x-2 mb-1">
-                <RadioGroupItem value="option1" id={`option1-${service.id}`} />
-                <label htmlFor={`option1-${service.id}`} className="text-sm">Option 1</label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="option2" id={`option2-${service.id}`} />
-                <label htmlFor={`option2-${service.id}`} className="text-sm">Option 2</label>
-              </div>
-            </RadioGroup>
-          </div>
-        )}
-
+        {/* Include the EmergencyRoomVerification component - will only show for Hospital type */}
         <EmergencyRoomVerification service={service} />
       </CardContent>
       

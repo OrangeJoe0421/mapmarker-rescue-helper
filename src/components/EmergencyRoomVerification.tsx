@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { EmergencyService } from '@/types/mapTypes';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Shield, ShieldCheck, ShieldX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -17,7 +16,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Only show for Hospital type services with exact match
+  // Only show for Hospital type services 
   if (service.type !== 'Hospital') {
     return null;
   }
@@ -30,6 +29,8 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
     
     setIsLoading(true);
     try {
+      console.log(`Verifying ${service.name}, hasER: ${hasER}`);
+      
       // Update the database with verification status
       const { data, error } = await supabase
         .from('emergency_services')
@@ -94,6 +95,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
             variant="outline" 
             size="sm" 
             onClick={() => setIsVerifying(true)}
+            className="whitespace-nowrap"
           >
             Verify
           </Button>
@@ -104,16 +106,17 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
           <RadioGroup 
             value={hasER === true ? "yes" : hasER === false ? "no" : undefined}
             onValueChange={(value) => setHasER(value === "yes")}
+            className="space-y-1"
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yes" id="has-er" />
-              <label htmlFor="has-er" className="text-sm">
+              <RadioGroupItem value="yes" id={`has-er-${service.id}`} />
+              <label htmlFor={`has-er-${service.id}`} className="text-sm">
                 Yes, emergency room available
               </label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="no-er" />
-              <label htmlFor="no-er" className="text-sm">
+              <RadioGroupItem value="no" id={`no-er-${service.id}`} />
+              <label htmlFor={`no-er-${service.id}`} className="text-sm">
                 No emergency room
               </label>
             </div>
@@ -124,6 +127,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
               size="sm" 
               onClick={handleVerify}
               disabled={isLoading || hasER === undefined}
+              className="bg-blue-600 hover:bg-blue-700"
             >
               {isLoading ? "Saving..." : "Save"}
             </Button>
