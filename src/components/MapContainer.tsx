@@ -22,7 +22,20 @@ const MapContainer = () => {
     class: "text-gray-500"
   });
   const [showPreview, setShowPreview] = useState(false);
+  const [isInitialRender, setIsInitialRender] = useState(true);
   
+  // Stop animations after initial mount
+  useEffect(() => {
+    if (isInitialRender) {
+      // Use requestAnimationFrame to ensure we're past the first render cycle
+      const animationId = requestAnimationFrame(() => {
+        setIsInitialRender(false);
+      });
+      
+      return () => cancelAnimationFrame(animationId);
+    }
+  }, [isInitialRender]);
+
   // Update capture status whenever relevant state changes
   useEffect(() => {
     const capturedImage = mapCaptureService.getCapturedImage();

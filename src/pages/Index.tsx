@@ -21,6 +21,13 @@ const Index = () => {
   });
   const [dbConnectionStatus, setDbConnectionStatus] = useState<string>("Checking...");
   const [retryCount, setRetryCount] = useState(0);
+  const [isInitialRender, setIsInitialRender] = useState(true);
+
+  // Prevent animation flickering on re-renders by tracking initial render
+  useEffect(() => {
+    // Set isInitialRender to false after component mounts
+    setIsInitialRender(false);
+  }, []);
 
   // Check database connection on startup with retry mechanism
   useEffect(() => {
@@ -91,6 +98,12 @@ const Index = () => {
     return <PasswordGate onCorrectPassword={() => setIsAuthenticated(true)} />;
   }
 
+  // Only apply animation classes on initial render, not on re-renders
+  const headerAnimationClass = isInitialRender ? "animate-fade-in" : "";
+  const subtitleAnimationClass = isInitialRender ? "animate-fade-in" : "";
+  const sidebarAnimationClass = isInitialRender ? "animate-fade-in" : "";
+  const mapAnimationClass = isInitialRender ? "animate-fade-in" : "";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
       <div className="container mx-auto max-w-7xl">
@@ -106,10 +119,10 @@ const Index = () => {
               }}
             />
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground animate-fade-in">
+              <h1 className={`text-3xl font-bold tracking-tight text-foreground ${headerAnimationClass}`}>
                 Emergency Response Planner
               </h1>
-              <p className="text-muted-foreground mt-1 animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <p className={`text-muted-foreground mt-1 ${subtitleAnimationClass}`} style={isInitialRender ? { animationDelay: '100ms' } : {}}>
                 Find and map emergency services near any location
               </p>
               {dbConnectionStatus && (
@@ -127,10 +140,10 @@ const Index = () => {
         </header>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <div className={`md:col-span-1 ${sidebarAnimationClass}`} style={isInitialRender ? { animationDelay: '200ms' } : {}}>
             <EmergencySidebar />
           </div>
-          <div className="md:col-span-2 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <div className={`md:col-span-2 ${mapAnimationClass}`} style={isInitialRender ? { animationDelay: '300ms' } : {}}>
             <MapContainer />
           </div>
         </div>
