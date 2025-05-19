@@ -19,8 +19,6 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
 
   if (!service) return null;
 
-  console.log('ServiceDetailsCard rendering for:', service.name, 'type:', service.type);
-
   const handleRouteClick = () => {
     calculateRoute(service.id, true);
   };
@@ -43,7 +41,8 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
     return <span className="text-xl">📍</span>;
   };
 
-  const isHospital = service.type === 'Hospital' || service.type.toLowerCase().includes('hospital');
+  // Single consistent check for hospitals
+  const isHospital = service.type.toLowerCase().includes('hospital');
 
   return (
     <Card className="absolute bottom-4 right-4 w-80 shadow-lg z-[1000] animate-in slide-in-from-bottom-5 duration-300">
@@ -104,7 +103,6 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           Route to Project
         </Button>
         
-        {/* Only show details button for hospitals with improved condition check */}
         {isHospital && (
           <Dialog>
             <DialogTrigger asChild>
