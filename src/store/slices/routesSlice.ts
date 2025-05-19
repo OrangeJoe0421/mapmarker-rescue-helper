@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
@@ -333,9 +334,7 @@ export const createRoutesSlice: StateCreator<
     
     // Explicitly empty the routes array with a new empty array
     // This should ONLY be called when explicitly clearing routes via a button
-    set(state => ({ 
-      routes: [] 
-    }));
+    set({ routes: [] });
     
     toast.info('All routes cleared');
     

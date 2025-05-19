@@ -53,7 +53,7 @@ export const useMapStore = create<MapState>()(
             customMarkers: [],
             selectedService: null,
             selectedMarker: null,
-            routes: [], // Explicitly set routes to empty array again
+            // Don't set routes to empty here again - it was already cleared by clearRoutes above
             mapCenter: DEFAULT_CENTER,
             mapZoom: DEFAULT_ZOOM,
           });

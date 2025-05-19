@@ -214,6 +214,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
         latitude: userLocation.latitude,
         longitude: userLocation.longitude
       };
+      // Explicitly removed any code that would clear routes here
     }
   }, [userLocation?.latitude, userLocation?.longitude]);
 
