@@ -17,7 +17,13 @@ import { checkDatabaseConnection } from '@/utils/supabaseHelpers';
 
 const Index = () => {
   const { toast: shadcnToast } = useToast();
-  const { userLocation, emergencyServices, calculateRoutesForAllEMS, setMapCenter } = useMapStore();
+  const { 
+    userLocation, 
+    emergencyServices, 
+    calculateRouteToNearestHospital, 
+    setMapCenter,
+    routes
+  } = useMapStore();
   const routesCalculatedRef = useRef(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("auth") === "true";
@@ -91,17 +97,19 @@ const Index = () => {
     if (userLocation && emergencyServices.length > 0 && !routesCalculatedRef.current) {
       // Slight delay to ensure the UI has updated
       const timer = setTimeout(() => {
-        calculateRoutesForAllEMS();
+        calculateRouteToNearestHospital();
         routesCalculatedRef.current = true;
       }, 1500);
       
       return () => clearTimeout(timer);
     }
-  }, [userLocation, emergencyServices.length, calculateRoutesForAllEMS]);
+  }, [userLocation, emergencyServices.length, calculateRouteToNearestHospital]);
 
-  // Reset the calculation flag when the user location changes
+  // Reset the calculation flag when the user location changes or routes are cleared
   useEffect(() => {
-    routesCalculatedRef.current = false;
+    if (routes.length === 0) {
+      routesCalculatedRef.current = false;
+    }
 
     // Ensure the map is centered on user location when it changes
     if (userLocation && !userLocationInitializedRef.current) {
@@ -109,7 +117,7 @@ const Index = () => {
       setMapCenter([userLocation.latitude, userLocation.longitude]);
       userLocationInitializedRef.current = true;
     }
-  }, [userLocation?.latitude, userLocation?.longitude, setMapCenter]);
+  }, [userLocation?.latitude, userLocation?.longitude, setMapCenter, routes.length]);
 
   // Debug log for userLocation
   useEffect(() => {

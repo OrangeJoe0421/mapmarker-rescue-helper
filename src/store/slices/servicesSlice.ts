@@ -10,11 +10,12 @@ export interface ServicesState {
   // Actions
   setEmergencyServices: (services: EmergencyService[]) => void;
   selectService: (service: EmergencyService | null) => void;
+  findNearestHospital: () => EmergencyService | null;
 }
 
 export const createServicesSlice: StateCreator<
   ServicesState & { mapCenter?: [number, number] }
-> = (set) => ({
+> = (set, get) => ({
   emergencyServices: [],
   selectedService: null,
 
@@ -56,4 +57,31 @@ export const createServicesSlice: StateCreator<
       mapCenter: service ? [service.latitude, service.longitude] : undefined,
     });
   },
+  
+  findNearestHospital: () => {
+    const { emergencyServices } = get();
+    
+    if (!emergencyServices || emergencyServices.length === 0) {
+      return null;
+    }
+    
+    // Filter to only include hospitals
+    const hospitals = emergencyServices.filter(service => 
+      service.type.toLowerCase().includes('hospital')
+    );
+    
+    if (hospitals.length === 0) {
+      return null;
+    }
+    
+    // Sort by road_distance if available, otherwise by direct distance
+    const sortedHospitals = [...hospitals].sort((a, b) => {
+      if (a.road_distance !== undefined && b.road_distance !== undefined) {
+        return a.road_distance - b.road_distance;
+      }
+      return (a.distance || Infinity) - (b.distance || Infinity);
+    });
+    
+    return sortedHospitals[0];
+  }
 });

@@ -4,7 +4,7 @@ import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
 import { fetchRoutePath } from '@/services/emergencyService';
-import { mapCaptureService } from '@/components/MapCapture';
+import { mapCaptureService } from '@/services/mapCaptureService';
 
 export interface RoutesState {
   routes: Route[];
@@ -12,6 +12,7 @@ export interface RoutesState {
   // Actions
   calculateRoute: (fromId: string, toUserLocation: boolean, toHospitalId?: string) => Promise<void>;
   calculateRoutesForAllEMS: () => Promise<void>;
+  calculateRouteToNearestHospital: () => Promise<void>;
   clearRoutes: () => void;
 }
 
@@ -276,6 +277,54 @@ export const createRoutesSlice: StateCreator<
       toast.success(`Successfully calculated routes for ${successCount} hospitals`);
     } else {
       toast.error('Failed to calculate any routes');
+    }
+  },
+
+  calculateRouteToNearestHospital: async () => {
+    const state = get();
+    
+    // Validate necessary data
+    if (!state.userLocation) {
+      toast.error('Please set a user location first');
+      return;
+    }
+    
+    if (!state.emergencyServices || state.emergencyServices.length === 0) {
+      toast.error('No emergency services loaded');
+      return;
+    }
+    
+    // Filter to only include hospital services
+    const hospitals = state.emergencyServices.filter(service => 
+      service.type.toLowerCase().includes('hospital')
+    );
+    
+    if (hospitals.length === 0) {
+      toast.warning('No hospitals found to route to');
+      return;
+    }
+    
+    // Sort hospitals by distance (if available) or calculate straight-line distance
+    const sortedHospitals = [...hospitals].sort((a, b) => {
+      // Use road_distance if available
+      if (a.road_distance !== undefined && b.road_distance !== undefined) {
+        return a.road_distance - b.road_distance;
+      }
+      
+      // Fallback to straight-line distance
+      return (a.distance || Infinity) - (b.distance || Infinity);
+    });
+    
+    // Get the nearest hospital
+    const nearestHospital = sortedHospitals[0];
+    
+    if (nearestHospital) {
+      toast.info(`Routing to nearest hospital: ${nearestHospital.name}`);
+      
+      // Calculate route from user location to nearest hospital
+      await get().calculateRoute(nearestHospital.id, true);
+    } else {
+      toast.error('Could not determine nearest hospital');
     }
   },
   
