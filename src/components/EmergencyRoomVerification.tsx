@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, ExternalLink, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, ExternalLink, Phone, XCircle } from 'lucide-react';
 
 interface EmergencyRoomVerificationProps {
   service: EmergencyService;
@@ -28,6 +28,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
   );
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
+  const [phone, setPhone] = useState<string>(service.phone || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -44,7 +45,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
       const { error } = await supabase
@@ -53,7 +54,8 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
           has_emergency_room: hasER,
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
-          google_maps_link: googleMapsLink || null
+          google_maps_link: googleMapsLink || null,
+          phone: phone || null
         })
         .eq('id', service.id);
       
@@ -68,6 +70,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
         comments: comments
       };
       service.googleMapsLink = googleMapsLink;
+      service.phone = phone;
       
       toast.success(`Successfully verified ${service.name}`);
       
@@ -196,25 +199,38 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
       </div>
 
       <div className="space-y-1">
-        <label className="text-sm font-medium">Google Maps Link</label>
-        <div className="flex gap-2">
+        <label className="text-sm font-medium">Phone Number</label>
+        <div className="flex gap-2 items-center">
+          <Phone className="h-3 w-3 text-muted-foreground" />
           <Input
-            placeholder="https://maps.google.com/..."
-            value={googleMapsLink}
-            onChange={(e) => setGoogleMapsLink(e.target.value)}
+            placeholder="(123) 456-7890"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             className="text-sm"
           />
-          {googleMapsLink && (
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Google Maps Link</label>
+        {googleMapsLink ? (
+          <div className="flex gap-2 items-center">
+            <div className="text-xs border rounded-md p-1.5 bg-muted/30 flex-1 truncate">
+              {googleMapsLink}
+            </div>
             <Button 
               variant="outline" 
               size="icon"
-              className="h-9 w-9 flex-shrink-0"
+              className="h-8 w-8 flex-shrink-0"
               onClick={() => window.open(googleMapsLink, '_blank')}
+              title="Open in Google Maps"
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-3 w-3" />
             </Button>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground">No Google Maps link available</div>
+        )}
       </div>
       
       <div className="space-y-1">

@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink, Phone } from 'lucide-react';
 import { EmergencyService } from '@/types/mapTypes';
 import { useMapStore } from '@/store/useMapStore';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
@@ -47,6 +47,7 @@ const HospitalVerification = () => {
   const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(new Date());
   const [comments, setComments] = useState<string>('');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
 
   useEffect(() => {
     // Load all hospitals on component mount
@@ -133,6 +134,7 @@ const HospitalVerification = () => {
     setVerifiedDate(hospital.verification?.verifiedAt ? new Date(hospital.verification.verifiedAt) : new Date());
     setComments(hospital.verification?.comments || '');
     setGoogleMapsLink(hospital.googleMapsLink || '');
+    setPhone(hospital.phone || '');
   };
 
   const handleVerify = async () => {
@@ -149,7 +151,7 @@ const HospitalVerification = () => {
     
     setLoading(true);
     try {
-      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}`);
+      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
       const { error } = await supabase
@@ -158,7 +160,8 @@ const HospitalVerification = () => {
           has_emergency_room: hasER,
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
-          google_maps_link: googleMapsLink || null
+          google_maps_link: googleMapsLink || null,
+          phone: phone || null
         })
         .eq('id', selectedHospital.id);
       
@@ -172,6 +175,7 @@ const HospitalVerification = () => {
           return {
             ...hospital,
             googleMapsLink: googleMapsLink,
+            phone: phone,
             verification: {
               hasEmergencyRoom: hasER,
               verifiedAt: verifiedDate,
@@ -201,6 +205,7 @@ const HospitalVerification = () => {
     setVerifiedDate(new Date());
     setComments('');
     setGoogleMapsLink('');
+    setPhone('');
   };
 
   const getERStatusDisplay = (hospital: EmergencyService) => {
@@ -300,6 +305,11 @@ const HospitalVerification = () => {
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
+                      {hospital.phone && (
+                        <div className="text-sm flex items-center gap-1 text-muted-foreground">
+                          <Phone className="h-3 w-3" /> {hospital.phone}
+                        </div>
+                      )}
                       {getERStatusDisplay(hospital)}
                       {hospital.verification?.verifiedAt && (
                         <div className="text-xs text-muted-foreground mt-1">
@@ -378,24 +388,37 @@ const HospitalVerification = () => {
                   </div>
                   
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Google Maps Link</label>
-                    <div className="flex gap-2">
+                    <label className="text-sm font-medium">Phone Number</label>
+                    <div className="flex gap-2 items-center">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="https://maps.google.com/..."
-                        value={googleMapsLink}
-                        onChange={(e) => setGoogleMapsLink(e.target.value)}
+                        placeholder="(123) 456-7890"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         className="flex-1"
                       />
-                      {googleMapsLink && (
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Google Maps Link</label>
+                    {googleMapsLink ? (
+                      <div className="flex gap-2 items-center">
+                        <div className="text-sm border rounded-md p-2 bg-muted/30 flex-1 break-all">
+                          {googleMapsLink}
+                        </div>
                         <Button 
                           variant="outline" 
                           size="icon"
                           onClick={() => window.open(googleMapsLink, '_blank')}
+                          title="Open in Google Maps"
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No Google Maps link available</div>
+                    )}
                   </div>
                   
                   <div className="space-y-1">

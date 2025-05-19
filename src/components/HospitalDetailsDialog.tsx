@@ -15,7 +15,7 @@ import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, ExternalLink } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Phone } from 'lucide-react';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
@@ -31,6 +31,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
   );
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
+  const [phone, setPhone] = useState<string>(service.phone || '');
   const [isLoading, setIsLoading] = useState(false);
   
   const handleVerify = async () => {
@@ -46,7 +47,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
       const { error } = await supabase
@@ -55,7 +56,8 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
           has_emergency_room: hasER,
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
-          google_maps_link: googleMapsLink || null
+          google_maps_link: googleMapsLink || null,
+          phone: phone || null
         })
         .eq('id', service.id);
       
@@ -70,6 +72,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
         comments: comments
       };
       service.googleMapsLink = googleMapsLink;
+      service.phone = phone;
       
       toast.success(`Successfully verified ${service.name}`);
     } catch (error) {
@@ -140,24 +143,37 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
         </div>
 
         <div className="space-y-2">
-          <h4 className="font-medium">Google Maps Link</h4>
-          <div className="flex gap-2">
+          <h4 className="font-medium">Phone Number</h4>
+          <div className="flex gap-2 items-center">
+            <Phone className="h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="https://maps.google.com/..."
-              value={googleMapsLink}
-              onChange={(e) => setGoogleMapsLink(e.target.value)}
+              placeholder="(123) 456-7890"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="flex-1"
             />
-            {googleMapsLink && (
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="font-medium">Google Maps Link</h4>
+          {googleMapsLink ? (
+            <div className="flex gap-2 items-center">
+              <div className="text-sm border rounded-md p-2 bg-muted/30 flex-1 break-all">
+                {googleMapsLink}
+              </div>
               <Button 
                 variant="outline" 
                 size="icon"
                 onClick={() => window.open(googleMapsLink, '_blank')}
+                title="Open in Google Maps"
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No Google Maps link available</div>
+          )}
         </div>
         
         <div className="space-y-2">
