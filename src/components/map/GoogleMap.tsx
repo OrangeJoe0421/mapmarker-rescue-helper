@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
@@ -80,7 +79,8 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     calculateRoute,
     selectService,
     addCustomMarker,
-    toggleAddingMarker
+    toggleAddingMarker,
+    clearRoutes
   } = useMapStore();
 
   const [selectedMarker, setSelectedMarker] = useState<{
@@ -200,6 +200,14 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
       }
     };
   }, [map, useMapStore.getState().addingMarker]);
+
+  // Monitor userLocation changes to clear routes when location changes
+  useEffect(() => {
+    if (userLocation) {
+      console.log("User location changed in map component - clearing routes");
+      clearRoutes();
+    }
+  }, [userLocation?.latitude, userLocation?.longitude, clearRoutes]);
 
   // Debug log for userLocation
   useEffect(() => {
