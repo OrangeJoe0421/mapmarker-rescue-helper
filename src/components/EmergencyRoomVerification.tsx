@@ -16,8 +16,11 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Check if this is a hospital service - look for "hospital" in the type string (case insensitive)
+  const isHospital = service.type.toLowerCase().includes('hospital');
+  
   // Only show for hospital type services
-  if (service.type !== 'Hospital') {
+  if (!isHospital) {
     return null;
   }
 
