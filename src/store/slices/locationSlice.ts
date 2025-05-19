@@ -18,12 +18,7 @@ export interface LocationState {
 export const DEFAULT_CENTER: [number, number] = [34.0522, -118.2437]; // Los Angeles
 export const DEFAULT_ZOOM = 12;
 
-export const createLocationSlice: StateCreator<
-  LocationState & { 
-    routes?: any[]; 
-    clearRoutes?: () => void;
-  }
-> = (set, get) => ({
+export const createLocationSlice: StateCreator<LocationState> = (set, get) => ({
   userLocation: null,
   mapCenter: DEFAULT_CENTER,
   mapZoom: DEFAULT_ZOOM,
@@ -44,12 +39,6 @@ export const createLocationSlice: StateCreator<
       longitude: location.longitude,
       metadata: location.metadata
     };
-    
-    // Clear old routes when setting a new location
-    const clearRoutes = get().clearRoutes;
-    if (clearRoutes) {
-      clearRoutes();
-    }
     
     set({ 
       userLocation,
