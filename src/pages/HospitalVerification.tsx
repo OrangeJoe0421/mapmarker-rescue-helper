@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink } from 'lucide-react';
 import { EmergencyService } from '@/types/mapTypes';
 import { useMapStore } from '@/store/useMapStore';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
@@ -30,7 +30,8 @@ interface HospitalData {
   has_emergency_room: boolean | null;
   verified_at: string | null;
   created_at: string;
-  comments?: string | null; // Make comments optional with nullable type
+  comments?: string | null;
+  google_maps_link?: string | null;
 }
 
 const HospitalVerification = () => {
@@ -45,6 +46,7 @@ const HospitalVerification = () => {
   const [hasER, setHasER] = useState<boolean | undefined>(undefined);
   const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(new Date());
   const [comments, setComments] = useState<string>('');
+  const [googleMapsLink, setGoogleMapsLink] = useState<string>('');
 
   useEffect(() => {
     // Load all hospitals on component mount
@@ -79,7 +81,8 @@ const HospitalVerification = () => {
           hasEmergencyRoom: item.has_emergency_room,
           verifiedAt: item.verified_at ? new Date(item.verified_at) : undefined,
           comments: item.comments || undefined
-        }
+        },
+        googleMapsLink: item.google_maps_link || ''
       }));
 
       // Calculate distance from project location if available
@@ -129,6 +132,7 @@ const HospitalVerification = () => {
     setHasER(hospital.verification?.hasEmergencyRoom);
     setVerifiedDate(hospital.verification?.verifiedAt ? new Date(hospital.verification.verifiedAt) : new Date());
     setComments(hospital.verification?.comments || '');
+    setGoogleMapsLink(hospital.googleMapsLink || '');
   };
 
   const handleVerify = async () => {
@@ -145,7 +149,7 @@ const HospitalVerification = () => {
     
     setLoading(true);
     try {
-      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}`);
+      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}`);
       
       // Update the database with verification status
       const { error } = await supabase
@@ -153,7 +157,8 @@ const HospitalVerification = () => {
         .update({
           has_emergency_room: hasER,
           verified_at: verifiedDate.toISOString(),
-          comments: comments || null
+          comments: comments || null,
+          google_maps_link: googleMapsLink || null
         })
         .eq('id', selectedHospital.id);
       
@@ -166,6 +171,7 @@ const HospitalVerification = () => {
         if (hospital.id === selectedHospital.id) {
           return {
             ...hospital,
+            googleMapsLink: googleMapsLink,
             verification: {
               hasEmergencyRoom: hasER,
               verifiedAt: verifiedDate,
@@ -194,6 +200,7 @@ const HospitalVerification = () => {
     setHasER(undefined);
     setVerifiedDate(new Date());
     setComments('');
+    setGoogleMapsLink('');
   };
 
   const getERStatusDisplay = (hospital: EmergencyService) => {
@@ -368,6 +375,27 @@ const HospitalVerification = () => {
                         />
                       </PopoverContent>
                     </Popover>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Google Maps Link</label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="https://maps.google.com/..."
+                        value={googleMapsLink}
+                        onChange={(e) => setGoogleMapsLink(e.target.value)}
+                        className="flex-1"
+                      />
+                      {googleMapsLink && (
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => window.open(googleMapsLink, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-1">
