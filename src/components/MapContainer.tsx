@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useMapStore } from '../store/useMapStore';
 import MapCapture from './MapCapture';
 import { mapCaptureService } from '../services/mapCaptureService';
@@ -23,21 +23,26 @@ const MapContainer = () => {
   });
   const [showPreview, setShowPreview] = useState(false);
   const [isInitialRender, setIsInitialRender] = useState(true);
+  const renderCountRef = useRef(0);
   
-  // Stop animations after initial mount
+  // Stop animations after initial mount with RAF to ensure we're past the first render cycle
   useEffect(() => {
     if (isInitialRender) {
-      // Use requestAnimationFrame to ensure we're past the first render cycle
       const animationId = requestAnimationFrame(() => {
         setIsInitialRender(false);
       });
-      
       return () => cancelAnimationFrame(animationId);
     }
   }, [isInitialRender]);
 
   // Update capture status whenever relevant state changes
   useEffect(() => {
+    // Prevent unnecessary updates after initial setup
+    renderCountRef.current += 1;
+    
+    // Skip the first render to avoid initial flashing
+    if (renderCountRef.current <= 1) return;
+    
     const capturedImage = mapCaptureService.getCapturedImage();
     const captureTime = mapCaptureService.getCaptureTimestamp();
     const isStale = mapCaptureService.isCaptureStale();

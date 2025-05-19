@@ -22,16 +22,20 @@ const Index = () => {
   const [dbConnectionStatus, setDbConnectionStatus] = useState<string>("Checking...");
   const [retryCount, setRetryCount] = useState(0);
   const [isInitialRender, setIsInitialRender] = useState(true);
+  const initialCheckCompleteRef = useRef(false);
 
   // Prevent animation flickering on re-renders by tracking initial render
   useEffect(() => {
-    // Set isInitialRender to false after component mounts
-    setIsInitialRender(false);
+    // Use RAF to ensure we're past the first render cycle
+    const animationId = requestAnimationFrame(() => {
+      setIsInitialRender(false);
+    });
+    return () => cancelAnimationFrame(animationId);
   }, []);
 
   // Check database connection on startup with retry mechanism
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || initialCheckCompleteRef.current) return;
 
     async function checkDbConnection() {
       try {
@@ -49,6 +53,7 @@ const Index = () => {
         setDbConnectionStatus(`Connected: ${recordCount} records available`);
         console.log("Database connection successful, found records:", recordCount);
         setRetryCount(0); // Reset retry counter on success
+        initialCheckCompleteRef.current = true;
       } catch (err) {
         console.error("Database check failed:", err);
         
@@ -69,6 +74,7 @@ const Index = () => {
             description: "Unable to connect to the emergency services database after multiple attempts",
             variant: "destructive",
           });
+          initialCheckCompleteRef.current = true;
         }
       }
     }
