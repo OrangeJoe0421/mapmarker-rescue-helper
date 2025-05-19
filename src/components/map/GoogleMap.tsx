@@ -235,12 +235,12 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
           position={{ lat: userLocation.latitude, lng: userLocation.longitude }}
           icon={{
             url: 'data:image/svg+xml;base64,' + btoa(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" fill="#4ade80" stroke="#ffffff" stroke-width="2" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8" fill="#4ade80" stroke="#ffffff" stroke-width="2" />
               </svg>
             `),
-            scaledSize: new google.maps.Size(36, 36),
-            anchor: new google.maps.Point(18, 18)
+            scaledSize: new google.maps.Size(24, 24),
+            anchor: new google.maps.Point(12, 12)
           }}
           onClick={() => handleMarkerClick({
             id: 'user-location', 
