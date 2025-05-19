@@ -54,7 +54,9 @@ function queueRequest(request: () => Promise<void>) {
 export async function fetchServicesFromEdge(latitude: number, longitude: number): Promise<any[]> {
   try {
     console.log(`Fetching services from edge function for coordinates: [${latitude}, ${longitude}]`);
-    const url = `${EDGE_FUNCTION_URL}?lat=${latitude}&lon=${longitude}`;
+    
+    // Using the direct edge function URL with the project ID
+    const url = `https://ljsmrxbbkbleugkpehcl.supabase.co/functions/v1/get-emergency-services?lat=${latitude}&lon=${longitude}`;
     
     console.log("Calling edge function URL:", url);
     
@@ -63,26 +65,39 @@ export async function fetchServicesFromEdge(latitude: number, longitude: number)
       headers: {
         'Content-Type': 'application/json',
       },
-      // Add these options to help with potential CORS or connection issues
       mode: 'cors',
       credentials: 'omit',
+      cache: 'no-cache',
     });
+    
+    console.log("Response status:", response.status, response.statusText);
     
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Edge function error response:", errorText);
-      throw new Error(`Failed to fetch from Edge Function: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to fetch from Edge Function: ${response.status} ${response.statusText}. Details: ${errorText}`);
     }
     
-    const data = await response.json();
-    console.log("Response from edge function:", data);
-
-    if (!data || data.error) {
-      throw new Error(data.error?.message || 'Failed to fetch from Edge Function');
+    const responseText = await response.text();
+    console.log("Raw response text:", responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+    
+    try {
+      const data = JSON.parse(responseText);
+      console.log("Parsed response data:", typeof data, Array.isArray(data) ? `Array with ${data.length} items` : 'Not an array');
+      
+      if (!data) {
+        throw new Error('Empty response from Edge Function');
+      }
+      
+      if (data.error) {
+        throw new Error(data.error?.message || 'Failed to fetch from Edge Function');
+      }
+      
+      return Array.isArray(data) ? data : [];
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      throw new Error(`Failed to parse response: ${parseError.message}`);
     }
-
-    console.log("Raw services data from database:", data);
-    return data || [];
   } catch (err: any) {
     console.error("Edge Function fetch error:", err.message);
     throw err;
