@@ -10,7 +10,6 @@ import { useMapStore } from '@/store/useMapStore';
 import PasswordGate from '@/components/PasswordGate';
 import { DevTools } from '@/components/DevTools';
 import { checkDatabaseConnection } from '@/utils/supabaseHelpers';
-import RouteDetailsDialog from '@/components/RouteDetailsDialog';
 
 const Index = () => {
   const { toast: shadcnToast } = useToast();
