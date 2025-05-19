@@ -29,18 +29,18 @@ export async function fetchNearestEmergencyServices(
       .order('distance') // Order by distance for consistent results
       .limit(limit || 100); // Apply the limit here
 
-    // Use stored procedure for accurate distance calculation
-    // Note: We're using a stored procedure instead of rpc because rpc is not available in the client
-    const { data, error } = await query.filter(
-      `ST_DWithin(ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography, 
-      ST_SetSRID(ST_Point(${longitude}, ${latitude}), 4326)::geography, 
-      ${radiusInKm * 1000})`
-    );
-
     // Apply type filter if provided
     if (types && types.length > 0) {
       query = query.in('type', types);
     }
+
+    // Use stored procedure for accurate distance calculation
+    // Using filter with appropriate PostGIS functions
+    const { data, error } = await query.filter(
+      'ST_DWithin(ST_SetSRID(ST_Point(longitude, latitude), 4326)::geography, ST_SetSRID(ST_Point(${longitude}, ${latitude}), 4326)::geography, ${radiusInKm * 1000})',
+      longitude,
+      latitude
+    );
 
     if (error) {
       console.error("Error fetching services from database:", error);
@@ -162,11 +162,29 @@ export async function fetchRoutePath(
     // Estimate duration based on average speed of 50 km/h
     const duration = distance / 50 * 60; // minutes
     
-    // Simple text directions for the steps
+    // Create route steps that match the RouteStep interface
     const steps = [
-      { text: "Start at the origin point", distance: 0 },
-      { text: "Head toward the destination", distance: distance * 0.5 },
-      { text: "Arrive at the destination", distance: distance * 0.5 }
+      {
+        instructions: "Start at the origin point",
+        distance: 0,
+        duration: 0,
+        startLocation: { lat: startLat, lng: startLng },
+        endLocation: { lat: startLat + (endLat - startLat) * 0.1, lng: startLng + (endLng - startLng) * 0.1 }
+      },
+      {
+        instructions: "Head toward the destination",
+        distance: distance * 0.5,
+        duration: duration * 0.5,
+        startLocation: { lat: startLat + (endLat - startLat) * 0.1, lng: startLng + (endLng - startLng) * 0.1 },
+        endLocation: { lat: startLat + (endLat - startLat) * 0.9, lng: startLng + (endLng - startLng) * 0.9 }
+      },
+      {
+        instructions: "Arrive at the destination",
+        distance: distance * 0.5,
+        duration: duration * 0.5,
+        startLocation: { lat: startLat + (endLat - startLat) * 0.9, lng: startLng + (endLng - startLng) * 0.9 },
+        endLocation: { lat: endLat, lng: endLng }
+      }
     ];
     
     return {
