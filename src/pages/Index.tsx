@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import EmergencySidebar from '@/components/EmergencySidebar';
 import ExportButton from '@/components/ExportButton';
@@ -10,6 +11,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useMapStore } from '@/store/useMapStore';
 import PasswordGate from '@/components/PasswordGate';
 import { DevTools } from '@/components/DevTools';
+import { Button } from '@/components/ui/button';
+import { Hospital } from 'lucide-react';
 import { checkDatabaseConnection } from '@/utils/supabaseHelpers';
 
 const Index = () => {
@@ -128,6 +131,12 @@ const Index = () => {
             )}
           </div>
           <div className="flex gap-2">
+            <Link to="/hospital-verification">
+              <Button variant="outline" className="gap-2">
+                <Hospital className="h-4 w-4" />
+                Verify Hospitals
+              </Button>
+            </Link>
             <DevTools />
             <ClearButton />
             <ExportButton />

@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, MapPin, Navigation, X, Info } from 'lucide-react';
+import { Phone, Clock, MapPin, Navigation, X, Info, CheckCircle, XCircle } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import HospitalDetailsDialog from './HospitalDetailsDialog';
-import EmergencyRoomVerification from './EmergencyRoomVerification';
+import { Link } from 'react-router-dom';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -16,17 +16,11 @@ interface ServiceDetailsCardProps {
 
 const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClose }) => {
   const { calculateRoute } = useMapStore();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (!service) return null;
 
   const handleRouteClick = () => {
     calculateRoute(service.id, true);
-  };
-
-  const handleVerificationUpdate = () => {
-    // Trigger a re-render when verification is updated
-    setRefreshTrigger(prev => prev + 1);
   };
 
   const getServiceColor = () => {
@@ -49,6 +43,33 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
 
   // Check if it's a hospital
   const isHospital = service.type.toLowerCase().includes('hospital');
+
+  // Display ER Status for hospitals
+  const renderERStatus = () => {
+    if (!isHospital) return null;
+    
+    if (service.verification?.hasEmergencyRoom === true) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-green-600">
+          <CheckCircle className="h-4 w-4 shrink-0" />
+          <span>ER Available</span>
+        </div>
+      );
+    } else if (service.verification?.hasEmergencyRoom === false) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-red-600">
+          <XCircle className="h-4 w-4 shrink-0" />
+          <span>No ER</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>ER Status: Unknown</span>
+        </div>
+      );
+    }
+  };
 
   return (
     <Card className="absolute bottom-4 right-4 w-80 shadow-lg z-[1000] animate-in slide-in-from-bottom-5 duration-300">
@@ -96,13 +117,13 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           </div>
         )}
 
-        {/* Display emergency room verification component for hospitals */}
-        {isHospital && (
-          <EmergencyRoomVerification 
-            service={service}
-            onVerificationUpdate={handleVerificationUpdate}
-            key={`verification-${service.id}-${refreshTrigger}`}
-          />
+        {/* Display emergency room status for hospitals */}
+        {renderERStatus()}
+
+        {isHospital && service.verification?.verifiedAt && (
+          <div className="text-xs text-muted-foreground">
+            Last verified: {new Date(service.verification.verifiedAt).toLocaleDateString()}
+          </div>
         )}
       </CardContent>
       
@@ -117,19 +138,32 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
         </Button>
         
         {isHospital && (
-          <Dialog>
-            <DialogTrigger asChild>
+          <>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2"
+                  size="sm"
+                >
+                  <Info className="h-4 w-4" />
+                  Hospital Details
+                </Button>
+              </DialogTrigger>
+              <HospitalDetailsDialog service={service} />
+            </Dialog>
+            
+            <Link to="/hospital-verification" className="w-full">
               <Button 
-                variant="outline" 
+                variant="secondary"
                 className="w-full gap-2"
                 size="sm"
               >
-                <Info className="h-4 w-4" />
-                Hospital Details
+                <CheckCircle className="h-4 w-4" />
+                Update Verification
               </Button>
-            </DialogTrigger>
-            <HospitalDetailsDialog service={service} />
-          </Dialog>
+            </Link>
+          </>
         )}
       </CardFooter>
     </Card>
