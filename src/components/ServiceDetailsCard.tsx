@@ -21,7 +21,6 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
     calculateRoute(service.id, true);
   };
 
-  // Determine service type for styling
   const getServiceColor = () => {
     const type = service.type.toLowerCase();
     if (type.includes('hospital')) return 'bg-red-600';
@@ -85,23 +84,24 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
             <span>{service.road_distance.toFixed(2)} km from project</span>
           </div>
         )}
-        
-        {/* Visible Test Radio Group - added to all cards with distinctive styling */}
-        <div className="mt-2 border-t pt-2 bg-gray-50 p-2 rounded">
-          <div className="text-sm font-medium mb-2 text-red-500">Test Radio Group</div>
-          <RadioGroup defaultValue="option1">
-            <div className="flex items-center space-x-2 mb-1">
-              <RadioGroupItem value="option1" id="option1" />
-              <label htmlFor="option1" className="text-sm">Option 1</label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="option2" id="option2" />
-              <label htmlFor="option2" className="text-sm">Option 2</label>
-            </div>
-          </RadioGroup>
-        </div>
-        
-        {/* Keep the EmergencyRoomVerification component */}
+
+        {/* Only show for Hospital types */}
+        {service.type.toLowerCase().includes("hospital") && (
+          <div className="mt-2 border-t pt-2 bg-gray-50 p-2 rounded">
+            <div className="text-sm font-medium mb-2 text-red-500">Select Hospital Option</div>
+            <RadioGroup defaultValue="option1">
+              <div className="flex items-center space-x-2 mb-1">
+                <RadioGroupItem value="option1" id={`option1-${service.id}`} />
+                <label htmlFor={`option1-${service.id}`} className="text-sm">Option 1</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="option2" id={`option2-${service.id}`} />
+                <label htmlFor={`option2-${service.id}`} className="text-sm">Option 2</label>
+              </div>
+            </RadioGroup>
+          </div>
+        )}
+
         <EmergencyRoomVerification service={service} />
       </CardContent>
       
