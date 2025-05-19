@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,10 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, Home, Search, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle } from 'lucide-react';
 import { EmergencyService } from '@/types/mapTypes';
+import { useMapStore } from '@/store/useMapStore';
+import { calculateHaversineDistance } from '@/utils/mapUtils';
 
 // Define an interface for the database response
 interface HospitalData {
@@ -37,6 +40,7 @@ const HospitalVerification = () => {
   const [hospitals, setHospitals] = useState<EmergencyService[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<EmergencyService | null>(null);
+  const userLocation = useMapStore(state => state.userLocation);
   
   // Verification form state
   const [hasER, setHasER] = useState<boolean | undefined>(undefined);
@@ -62,7 +66,7 @@ const HospitalVerification = () => {
       }
 
       // Map the data to match the EmergencyService type
-      const hospitalServices = (data as HospitalData[]).map((item): EmergencyService => ({
+      let hospitalServices = (data as HospitalData[]).map((item): EmergencyService => ({
         id: item.id,
         name: item.name || '',
         type: item.type || '',
@@ -78,6 +82,25 @@ const HospitalVerification = () => {
           comments: item.comments || undefined
         }
       }));
+
+      // Calculate distance from project location if available
+      if (userLocation) {
+        hospitalServices = hospitalServices.map(hospital => {
+          const distance = calculateHaversineDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            hospital.latitude,
+            hospital.longitude
+          );
+          return {
+            ...hospital,
+            distance
+          };
+        });
+        
+        // Sort by distance
+        hospitalServices.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      }
 
       setHospitals(hospitalServices);
     } catch (error) {
@@ -226,6 +249,7 @@ const HospitalVerification = () => {
                 <CardTitle>Hospitals</CardTitle>
                 <CardDescription>
                   {hospitals.length} hospitals in database
+                  {userLocation && <span> • Sorted by distance to project</span>}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -250,21 +274,32 @@ const HospitalVerification = () => {
                     </div>
                   )}
 
-                  {!loading && filteredHospitals.map((hospital) => (
+                  {!loading && filteredHospitals.map((hospital, index) => (
                     <div
                       key={hospital.id}
                       className={cn(
                         "p-3 border-b cursor-pointer hover:bg-muted transition-colors",
-                        selectedHospital?.id === hospital.id && "bg-muted"
+                        selectedHospital?.id === hospital.id && "bg-muted",
+                        index === 0 && userLocation && "bg-blue-50 dark:bg-blue-950/30 border-l-4 border-l-blue-500"
                       )}
                       onClick={() => handleSelectHospital(hospital)}
                     >
-                      <div className="font-medium">{hospital.name}</div>
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium">{hospital.name}</div>
+                        {index === 0 && userLocation && (
+                          <MapPin className="h-4 w-4 text-blue-500 flex-shrink-0 mt-1" />
+                        )}
+                      </div>
                       <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
                       {getERStatusDisplay(hospital)}
                       {hospital.verification?.verifiedAt && (
                         <div className="text-xs text-muted-foreground mt-1">
                           Verified: {format(new Date(hospital.verification.verifiedAt), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                      {hospital.distance !== undefined && (
+                        <div className="text-xs font-medium mt-1 text-blue-600 dark:text-blue-400">
+                          {hospital.distance.toFixed(1)} km from project
                         </div>
                       )}
                     </div>
