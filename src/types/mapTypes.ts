@@ -29,9 +29,14 @@ export interface EmergencyService {
   address?: string;
   phone?: string;
   hours?: string;
-  distance?: number;
-  road_distance?: number; 
-  verification?: Verification;
+  state?: string;
+  distance?: number;  // As the crow flies distance from project
+  road_distance?: number;  // Road network distance from project
+  verification?: {
+    hasEmergencyRoom?: boolean;
+    verifiedAt?: Date;
+    comments?: string;
+  };
 }
 
 export interface CustomMarker {

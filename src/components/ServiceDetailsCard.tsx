@@ -2,10 +2,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, MapPin, Navigation, X } from 'lucide-react';
+import { Phone, Clock, MapPin, Navigation, X, Info } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import EmergencyRoomVerification from './EmergencyRoomVerification';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import HospitalDetailsDialog from './HospitalDetailsDialog';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -89,7 +91,7 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
         <EmergencyRoomVerification service={service} />
       </CardContent>
       
-      <CardFooter className="pt-0">
+      <CardFooter className="pt-0 flex flex-col space-y-2">
         <Button 
           onClick={handleRouteClick} 
           className="w-full gap-2"
@@ -98,6 +100,23 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           <Navigation className="h-4 w-4" />
           Route to Project
         </Button>
+        
+        {/* Only show details button for hospitals */}
+        {service.type === 'Hospital' && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2" 
+                size="sm"
+              >
+                <Info className="h-4 w-4" />
+                Hospital Details
+              </Button>
+            </DialogTrigger>
+            <HospitalDetailsDialog service={service} />
+          </Dialog>
+        )}
       </CardFooter>
     </Card>
   );
