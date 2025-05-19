@@ -14,7 +14,7 @@ import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, X } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
@@ -25,7 +25,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
   const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(
     service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : undefined
   );
-  const [comments, setComments] = useState<string>('');
+  const [comments, setComments] = useState<string>(service.verification?.comments || '');
   const [isLoading, setIsLoading] = useState(false);
   
   const handleVerify = async () => {
@@ -41,10 +41,10 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}`);
       
       // Update the database with verification status
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('emergency_services')
         .update({
           has_emergency_room: hasER,
@@ -126,7 +126,6 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
                 selected={verifiedDate}
                 onSelect={setVerifiedDate}
                 initialFocus
-                className={cn("p-3 pointer-events-auto")}
                 disabled={(date) => date > new Date()}
               />
             </PopoverContent>

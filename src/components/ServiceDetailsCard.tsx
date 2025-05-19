@@ -107,7 +107,7 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
             <DialogTrigger asChild>
               <Button 
                 variant="outline" 
-                className="w-full gap-2" 
+                className="w-full gap-2"
                 size="sm"
               >
                 <Info className="h-4 w-4" />

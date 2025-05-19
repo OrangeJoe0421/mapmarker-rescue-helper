@@ -21,6 +21,9 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
     return null;
   }
 
+  console.log('Rendering EmergencyRoomVerification for hospital:', service.name);
+  console.log('Verification status:', service.verification);
+
   const handleVerify = async () => {
     if (hasER === undefined) {
       toast.error("Please select whether this hospital has an emergency room");
