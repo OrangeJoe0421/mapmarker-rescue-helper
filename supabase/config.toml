@@ -1,5 +1,1 @@
-
 project_id = "ljsmrxbbkbleugkpehcl"
-
-[functions.get-emergency-services]
-verify_jwt = false

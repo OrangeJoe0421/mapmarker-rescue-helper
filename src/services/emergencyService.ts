@@ -1,10 +1,11 @@
+
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
-import { supabase } from '@/integrations/supabase/client';
 
 // API Keys and URLs
 const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4"; // Using the same key from GoogleMap.tsx
+const EDGE_FUNCTION_URL = "https://ljsmrxbbkbleugkpehcl.supabase.co/functions/v1/get-emergency-services";
 
 // === Request Queue for Google Directions API Rate Limiting ===
 const requestQueue: (() => Promise<void>)[] = [];
@@ -48,32 +49,29 @@ function queueRequest(request: () => Promise<void>) {
   processQueue();
 }
 
-// === Fetch directly from Supabase database ===
+// === Fetch from Supabase Edge Function ===
 // Export this function so it can be imported by other modules
-export async function fetchServicesFromDatabase(latitude: number, longitude: number): Promise<any[]> {
+export async function fetchServicesFromEdge(latitude: number, longitude: number): Promise<any[]> {
   try {
-    console.log(`Fetching services directly from database for coordinates: [${latitude}, ${longitude}]`);
+    console.log(`Fetching services from edge function for coordinates: [${latitude}, ${longitude}]`);
+    const url = `${EDGE_FUNCTION_URL}?lat=${latitude}&lon=${longitude}`;
+    const response = await fetch(url);
     
-    const { data, error } = await supabase
-      .from('emergency_services')
-      .select('*')
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null);
-    
-    if (error) {
-      console.error("Supabase query error:", error);
-      throw new Error(`Failed to fetch from database: ${error.message}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch from Edge Function: ${errorText}`);
     }
     
-    if (!data || data.length === 0) {
-      console.log("No emergency services found in the database");
-      return [];
+    const json = await response.json();
+
+    if (json.error) {
+      throw new Error(json.error?.message || 'Failed to fetch from Edge Function');
     }
-    
-    console.log(`Found ${data.length} emergency services in the database`);
-    return data;
+
+    console.log("Raw services data from database:", json.data);
+    return json.data || [];
   } catch (err: any) {
-    console.error("Database fetch error:", err.message);
+    console.error("Edge Function fetch error:", err.message);
     throw err;
   }
 }
@@ -87,13 +85,13 @@ export async function fetchNearestEmergencyServices(
   limit?: number
 ): Promise<EmergencyService[]> {
   try {
-    console.log(`Fetching services from database near [${latitude}, ${longitude}]`);
+    console.log(`Fetching services from Edge Function near [${latitude}, ${longitude}]`);
 
     let data: any[];
     try {
-      data = await fetchServicesFromDatabase(latitude, longitude);
+      data = await fetchServicesFromEdge(latitude, longitude);
     } catch (error) {
-      console.error("Failed to fetch emergency services from database:", error);
+      console.error("Failed to fetch emergency services from edge:", error);
       toast.error("Failed to fetch emergency services from database");
       return [];
     }

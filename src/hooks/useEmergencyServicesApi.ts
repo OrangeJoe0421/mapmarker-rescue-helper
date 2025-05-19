@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { EmergencyService } from '@/types/mapTypes';
 import { toast } from 'sonner';
 import { fetchNearestEmergencyServices } from '@/services/emergencyService';
-import { supabase } from '@/integrations/supabase/client';
 
 export function useEmergencyServicesApi() {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +25,7 @@ export function useEmergencyServicesApi() {
     
     try {
       // Use the fetchNearestEmergencyServices function from emergencyService.ts
-      // Which now calls the database directly
+      // Which now calls the edge function with lat/lon parameters
       const services = await fetchNearestEmergencyServices(
         lat,
         lng,
@@ -54,7 +53,9 @@ export function useEmergencyServicesApi() {
   };
 
   /**
-   * Imports emergency services in batches using direct Supabase access
+   * Imports emergency services in batches to avoid payload size limits
+   * This function is no longer using direct Supabase calls, but for backwards compatibility,
+   * we'll keep the function signature and update the implementation
    */
   const batchImportServices = async (services: EmergencyService[]): Promise<{success: boolean, imported: number, errors: number}> => {
     setIsLoading(true);
@@ -62,60 +63,16 @@ export function useEmergencyServicesApi() {
     setUploadProgress(0);
     
     try {
-      if (!services || services.length === 0) {
-        return { success: true, imported: 0, errors: 0 };
-      }
+      // This functionality is now handled by the Edge Function
+      // Here we could make a call to an edge function that handles batch imports if needed
+      console.log('This functionality has been migrated to use Edge Functions');
+      toast.warning('Batch import is currently not supported through the Edge Function');
       
-      console.log(`Importing ${services.length} emergency services`);
-      
-      const batchSize = 100;
-      let imported = 0;
-      let errors = 0;
-      
-      // Process in batches to avoid payload size limits
-      for (let i = 0; i < services.length; i += batchSize) {
-        const batch = services.slice(i, i + batchSize);
-        
-        // Convert EmergencyService objects to database format
-        const dbRecords = batch.map(service => ({
-          id: service.id,
-          name: service.name,
-          type: service.type,
-          latitude: service.latitude,
-          longitude: service.longitude,
-          address: service.address || null,
-          phone: service.phone || null,
-          hours: service.hours || null
-        }));
-        
-        const { data, error } = await supabase
-          .from('emergency_services')
-          .upsert(dbRecords, { 
-            onConflict: 'id',
-            ignoreDuplicates: false
-          });
-          
-        if (error) {
-          console.error("Batch import error:", error);
-          errors += batch.length;
-        } else {
-          imported += batch.length;
-        }
-        
-        // Update progress
-        setUploadProgress(Math.round((i + batch.length) / services.length * 100));
-      }
-      
-      const success = errors === 0;
-      if (success) {
-        toast.success(`Successfully imported ${imported} emergency services`);
-      } else if (imported > 0) {
-        toast.warning(`Partially imported emergency services: ${imported} succeeded, ${errors} failed`);
-      } else {
-        toast.error(`Failed to import emergency services`);
-      }
-      
-      return { success, imported, errors };
+      return { 
+        success: false, 
+        imported: 0, 
+        errors: 0
+      };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(errorMessage);
