@@ -12,7 +12,12 @@ export type Database = {
           address: string | null
           phone: string | null
           hours: string | null
+          state: string | null
           created_at: string
+          has_emergency_room: boolean | null
+          verified_at: string | null
+          comments: string | null
+          google_maps_link: string | null
         }
         Insert: {
           id: string
@@ -23,7 +28,12 @@ export type Database = {
           address?: string | null
           phone?: string | null
           hours?: string | null
+          state?: string | null
           created_at?: string
+          has_emergency_room?: boolean | null
+          verified_at?: string | null
+          comments?: string | null
+          google_maps_link?: string | null
         }
         Update: {
           id?: string
@@ -34,7 +44,12 @@ export type Database = {
           address?: string | null
           phone?: string | null
           hours?: string | null
+          state?: string | null
           created_at?: string
+          has_emergency_room?: boolean | null
+          verified_at?: string | null
+          comments?: string | null
+          google_maps_link?: string | null
         }
       }
     }

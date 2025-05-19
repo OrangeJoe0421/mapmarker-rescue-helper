@@ -12,7 +12,9 @@ export type Database = {
       emergency_services: {
         Row: {
           address: string | null
+          comments: string | null
           created_at: string
+          google_maps_link: string | null
           has_emergency_room: boolean | null
           hours: string | null
           id: string
@@ -26,7 +28,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          comments?: string | null
           created_at?: string
+          google_maps_link?: string | null
           has_emergency_room?: boolean | null
           hours?: string | null
           id: string
@@ -40,7 +44,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          comments?: string | null
           created_at?: string
+          google_maps_link?: string | null
           has_emergency_room?: boolean | null
           hours?: string | null
           id?: string

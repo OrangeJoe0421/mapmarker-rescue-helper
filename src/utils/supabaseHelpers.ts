@@ -78,7 +78,25 @@ export async function fetchEmergencyServicesWithinRadius(
     }
     
     console.log(`Found ${data?.length || 0} services within the bounding box`);
-    return data || [];
+    
+    // Map the database columns to our application model
+    return data?.map(item => ({
+      id: item.id,
+      name: item.name || '',
+      type: item.type || '',
+      latitude: item.latitude || 0,
+      longitude: item.longitude || 0,
+      address: item.address || '',
+      phone: item.phone || '',
+      hours: item.hours || '',
+      state: item.state || '',
+      googleMapsLink: item.google_maps_link || '',
+      verification: item.has_emergency_room !== null ? {
+        hasEmergencyRoom: item.has_emergency_room,
+        verifiedAt: item.verified_at ? new Date(item.verified_at) : undefined,
+        comments: item.comments || undefined
+      } : undefined
+    })) || [];
   } catch (error) {
     console.error("Failed to fetch emergency services:", error);
     throw error;

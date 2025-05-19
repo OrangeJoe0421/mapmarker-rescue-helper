@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, MapPin, Navigation, X, Info, CheckCircle, XCircle } from 'lucide-react';
+import { Phone, Clock, MapPin, Navigation, X, Info, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
@@ -123,6 +123,20 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
         {isHospital && service.verification?.verifiedAt && (
           <div className="text-xs text-muted-foreground">
             Last verified: {new Date(service.verification.verifiedAt).toLocaleDateString()}
+          </div>
+        )}
+        
+        {service.googleMapsLink && (
+          <div className="flex items-center mt-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              className="w-full gap-2 text-xs"
+              onClick={() => window.open(service.googleMapsLink!, '_blank')}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              View on Google Maps
+            </Button>
           </div>
         )}
       </CardContent>

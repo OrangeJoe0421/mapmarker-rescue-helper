@@ -9,12 +9,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink } from 'lucide-react';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
@@ -29,6 +30,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : undefined
   );
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
+  const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
   const [isLoading, setIsLoading] = useState(false);
   
   const handleVerify = async () => {
@@ -44,7 +46,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}`);
       
       // Update the database with verification status
       const { error } = await supabase
@@ -52,7 +54,8 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
         .update({
           has_emergency_room: hasER,
           verified_at: verifiedDate.toISOString(),
-          comments: comments || null
+          comments: comments || null,
+          google_maps_link: googleMapsLink || null
         })
         .eq('id', service.id);
       
@@ -66,6 +69,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
         verifiedAt: verifiedDate,
         comments: comments
       };
+      service.googleMapsLink = googleMapsLink;
       
       toast.success(`Successfully verified ${service.name}`);
     } catch (error) {
@@ -133,6 +137,27 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
               />
             </PopoverContent>
           </Popover>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="font-medium">Google Maps Link</h4>
+          <div className="flex gap-2">
+            <Input
+              placeholder="https://maps.google.com/..."
+              value={googleMapsLink}
+              onChange={(e) => setGoogleMapsLink(e.target.value)}
+              className="flex-1"
+            />
+            {googleMapsLink && (
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => window.open(googleMapsLink, '_blank')}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
         
         <div className="space-y-2">

@@ -85,7 +85,11 @@ export function useEmergencyServicesApi() {
           longitude: service.longitude,
           address: service.address || null,
           phone: service.phone || null,
-          hours: service.hours || null
+          hours: service.hours || null,
+          google_maps_link: service.googleMapsLink || null,
+          has_emergency_room: service.verification?.hasEmergencyRoom || null,
+          verified_at: service.verification?.verifiedAt ? service.verification.verifiedAt.toISOString() : null,
+          comments: service.verification?.comments || null
         }));
         
         const { data, error } = await supabase

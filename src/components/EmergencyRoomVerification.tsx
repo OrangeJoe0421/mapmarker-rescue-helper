@@ -6,11 +6,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, ExternalLink, XCircle } from 'lucide-react';
 
 interface EmergencyRoomVerificationProps {
   service: EmergencyService;
@@ -26,6 +27,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
     service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : new Date()
   );
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
+  const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -42,7 +44,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}`);
       
       // Update the database with verification status
       const { error } = await supabase
@@ -50,7 +52,8 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
         .update({
           has_emergency_room: hasER,
           verified_at: verifiedDate.toISOString(),
-          comments: comments || null
+          comments: comments || null,
+          google_maps_link: googleMapsLink || null
         })
         .eq('id', service.id);
       
@@ -64,6 +67,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
         verifiedAt: verifiedDate,
         comments: comments
       };
+      service.googleMapsLink = googleMapsLink;
       
       toast.success(`Successfully verified ${service.name}`);
       
@@ -189,6 +193,28 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
             />
           </PopoverContent>
         </Popover>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Google Maps Link</label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="https://maps.google.com/..."
+            value={googleMapsLink}
+            onChange={(e) => setGoogleMapsLink(e.target.value)}
+            className="text-sm"
+          />
+          {googleMapsLink && (
+            <Button 
+              variant="outline" 
+              size="icon"
+              className="h-9 w-9 flex-shrink-0"
+              onClick={() => window.open(googleMapsLink, '_blank')}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="space-y-1">
