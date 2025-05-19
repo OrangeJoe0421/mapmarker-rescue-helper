@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Shield, ShieldCheck, ShieldX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface EmergencyRoomVerificationProps {
   service: EmergencyService;
@@ -15,12 +16,9 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Check if this is a hospital service - look for "hospital" in the type string (case insensitive)
-  const isHospital = service.type.toLowerCase().includes('hospital');
   
-  // Only show for hospital type services
-  if (!isHospital) {
+  // Only show for Hospital type services with exact match
+  if (service.type !== 'Hospital') {
     return null;
   }
 
@@ -103,32 +101,29 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
       ) : (
         <div className="space-y-3">
           <div className="text-sm font-medium">Does this hospital have an emergency room?</div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="has-er" 
-              checked={hasER === true}
-              onCheckedChange={() => setHasER(true)}
-            />
-            <label htmlFor="has-er" className="text-sm">
-              Yes, emergency room available
-            </label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="no-er" 
-              checked={hasER === false}
-              onCheckedChange={() => setHasER(false)}
-            />
-            <label htmlFor="no-er" className="text-sm">
-              No emergency room
-            </label>
-          </div>
+          <RadioGroup 
+            value={hasER === true ? "yes" : hasER === false ? "no" : undefined}
+            onValueChange={(value) => setHasER(value === "yes")}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="yes" id="has-er" />
+              <label htmlFor="has-er" className="text-sm">
+                Yes, emergency room available
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="no" id="no-er" />
+              <label htmlFor="no-er" className="text-sm">
+                No emergency room
+              </label>
+            </div>
+          </RadioGroup>
           <div className="flex gap-2">
             <Button 
               variant="default" 
               size="sm" 
               onClick={handleVerify}
-              disabled={isLoading}
+              disabled={isLoading || hasER === undefined}
             >
               {isLoading ? "Saving..." : "Save"}
             </Button>
