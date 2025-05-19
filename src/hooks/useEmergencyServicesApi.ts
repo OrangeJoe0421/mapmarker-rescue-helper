@@ -26,7 +26,7 @@ export function useEmergencyServicesApi() {
     
     try {
       // Use the fetchNearestEmergencyServices function from emergencyService.ts
-      // Which now calls the database directly
+      // Which now uses geographic filtering at the database level
       const services = await fetchNearestEmergencyServices(
         lat,
         lng,

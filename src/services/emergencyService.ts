@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
+import { fetchEmergencyServicesWithinRadius } from '../utils/supabaseHelpers';
 import { supabase } from '@/integrations/supabase/client';
 
 // API Keys and URLs
@@ -48,30 +49,14 @@ function queueRequest(request: () => Promise<void>) {
   processQueue();
 }
 
-// === Fetch directly from Supabase database ===
+// === Fetch directly from Supabase database with geographic filtering ===
 // Export this function so it can be imported by other modules
-export async function fetchServicesFromDatabase(latitude: number, longitude: number): Promise<any[]> {
+export async function fetchServicesFromDatabase(latitude: number, longitude: number, radiusKm: number = 30): Promise<any[]> {
+  console.log(`Fetching filtered services from database for coordinates: [${latitude}, ${longitude}] within ${radiusKm}km`);
+  
   try {
-    console.log(`Fetching services directly from database for coordinates: [${latitude}, ${longitude}]`);
-    
-    const { data, error } = await supabase
-      .from('emergency_services')
-      .select('*')
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null);
-    
-    if (error) {
-      console.error("Supabase query error:", error);
-      throw new Error(`Failed to fetch from database: ${error.message}`);
-    }
-    
-    if (!data || data.length === 0) {
-      console.log("No emergency services found in the database");
-      return [];
-    }
-    
-    console.log(`Found ${data.length} emergency services in the database`);
-    return data;
+    // Use the new helper function that applies geographic filtering
+    return await fetchEmergencyServicesWithinRadius(latitude, longitude, radiusKm);
   } catch (err: any) {
     console.error("Database fetch error:", err.message);
     throw err;
@@ -87,11 +72,12 @@ export async function fetchNearestEmergencyServices(
   limit?: number
 ): Promise<EmergencyService[]> {
   try {
-    console.log(`Fetching services from database near [${latitude}, ${longitude}]`);
+    console.log(`Fetching services from database near [${latitude}, ${longitude}] within ${radius}km`);
 
     let data: any[];
     try {
-      data = await fetchServicesFromDatabase(latitude, longitude);
+      // Use the geographically filtered fetch
+      data = await fetchServicesFromDatabase(latitude, longitude, radius);
     } catch (error) {
       console.error("Failed to fetch emergency services from database:", error);
       toast.error("Failed to fetch emergency services from database");
@@ -109,19 +95,35 @@ export async function fetchNearestEmergencyServices(
     const typesInDatabase = new Set(data.map(service => service.type));
     console.log("Service types found in database:", Array.from(typesInDatabase));
 
+    // Further refine results by calculating exact distances
     const servicesWithDistance = await Promise.all(
       data.map(async service => {
         try {
           // Standardize service type before processing
           const standardType = standardizeServiceType(service.type);
-          console.log(`Processing service: ${service.name}, original type: ${service.type}, standard type: ${standardType}`);
-
-          const roadDistance = await fetchRouteDistance(
-            latitude,
-            longitude,
-            service.latitude,
+          
+          // Calculate accurate distance
+          const haversineDistance = calculateHaversineDistance(
+            latitude, 
+            longitude, 
+            service.latitude, 
             service.longitude
           );
+          
+          // Only attempt to get road distance for nearby services (within 20km as the crow flies)
+          let roadDistance = haversineDistance * 1.3; // Rough approximation
+          if (haversineDistance < 20) {
+            try {
+              roadDistance = await fetchRouteDistance(
+                latitude,
+                longitude,
+                service.latitude,
+                service.longitude
+              ) || roadDistance;
+            } catch (error) {
+              console.warn(`Could not calculate road distance for ${service.name}:`, error);
+            }
+          }
 
           const emergencyService: EmergencyService = {
             id: service.id,
@@ -132,23 +134,23 @@ export async function fetchNearestEmergencyServices(
             address: service.address || undefined,
             phone: service.phone || undefined,
             hours: service.hours || undefined,
-            road_distance: roadDistance || service.distance
+            road_distance: roadDistance
           };
 
           return emergencyService;
         } catch (error) {
-          console.warn(`Could not calculate road distance for ${service.name}:`, error);
+          console.warn(`Could not process service ${service.name}:`, error);
 
           return {
             id: service.id,
             name: service.name,
-            type: standardizeServiceType(service.type), // Use standardized type for consistency
+            type: standardizeServiceType(service.type),
             latitude: service.latitude,
             longitude: service.longitude,
             address: service.address || undefined,
             phone: service.phone || undefined,
             hours: service.hours || undefined,
-            road_distance: service.distance || calculateHaversineDistance(latitude, longitude, service.latitude, service.longitude) * 1.3
+            road_distance: calculateHaversineDistance(latitude, longitude, service.latitude, service.longitude) * 1.3
           };
         }
       })
