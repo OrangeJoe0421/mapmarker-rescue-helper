@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Phone, Clock, MapPin, Navigation, X, Info } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
-import EmergencyRoomVerification from './EmergencyRoomVerification';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import HospitalDetailsDialog from './HospitalDetailsDialog';
 
@@ -41,7 +40,7 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
     return <span className="text-xl">📍</span>;
   };
 
-  // Single consistent check for hospitals
+  // Check if it's a hospital
   const isHospital = service.type.toLowerCase().includes('hospital');
 
   return (
@@ -90,7 +89,22 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           </div>
         )}
 
-        {isHospital && <EmergencyRoomVerification service={service} />}
+        {/* Display emergency room info if available but don't show verification UI */}
+        {isHospital && service.verification?.hasEmergencyRoom !== undefined && (
+          <div className="flex items-center gap-2 text-sm">
+            {service.verification.hasEmergencyRoom ? (
+              <div className="flex items-center gap-1 text-green-600">
+                <span className="text-sm">✓</span>
+                <span>Emergency Room Available</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-red-600">
+                <span className="text-sm">✕</span>
+                <span>No Emergency Room</span>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
       
       <CardFooter className="pt-0 flex flex-col space-y-2">
