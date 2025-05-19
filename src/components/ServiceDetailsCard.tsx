@@ -86,11 +86,11 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           </div>
         )}
         
-        {/* Test Radio Group - added to all cards */}
-        <div className="mt-2 border-t pt-2">
-          <div className="text-sm font-medium mb-2">Test Radio Group</div>
+        {/* Visible Test Radio Group - added to all cards with distinctive styling */}
+        <div className="mt-2 border-t pt-2 bg-gray-50 p-2 rounded">
+          <div className="text-sm font-medium mb-2 text-red-500">Test Radio Group</div>
           <RadioGroup defaultValue="option1">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 mb-1">
               <RadioGroupItem value="option1" id="option1" />
               <label htmlFor="option1" className="text-sm">Option 1</label>
             </div>
