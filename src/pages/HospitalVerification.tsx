@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,12 @@ import { useMapStore } from '@/store/useMapStore';
 import EmergencyRoomVerification from '@/components/EmergencyRoomVerification';
 import { EmergencyService } from '@/types/mapTypes';
 import { cn } from '@/lib/utils';
+import { 
+  GOOGLE_MAPS_API_KEY, 
+  GOOGLE_MAPS_LIBRARIES, 
+  GOOGLE_MAPS_LOADER_ID,
+  MAP_OPTIONS 
+} from '@/config/mapsConfig';
 
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
@@ -96,11 +101,11 @@ const HospitalVerification = () => {
     setMapCenter: setMapCenterStore,
   } = useMapStore();
 
-  // Load Google Maps API with Places library
+  // Load Google Maps API with centralized config
   const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
+    id: GOOGLE_MAPS_LOADER_ID,
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['places']
+    libraries: GOOGLE_MAPS_LIBRARIES
   });
 
   useEffect(() => {
@@ -297,7 +302,7 @@ const HospitalVerification = () => {
                       { lat: 37.7749, lng: -122.4194 }
                     }
                     zoom={11}
-                    options={mapOptions}
+                    options={MAP_OPTIONS}
                   >
                     {/* Add user location marker (project location) */}
                     {userLocation && (

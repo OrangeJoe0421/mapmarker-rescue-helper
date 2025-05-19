@@ -1,68 +1,17 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline, DirectionsRenderer } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
 import { Route, EmergencyService } from '@/types/mapTypes';
-
-// Google Maps API key
-const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
+import { 
+  GOOGLE_MAPS_API_KEY, 
+  GOOGLE_MAPS_LIBRARIES, 
+  GOOGLE_MAPS_LOADER_ID,
+  MAP_OPTIONS
+} from '@/config/mapsConfig';
 
 const containerStyle = {
   width: '100%',
   height: '100%'
-};
-
-// Map styling to match dark theme and hide default places
-const mapOptions = {
-  styles: [
-    {
-      "elementType": "geometry",
-      "stylers": [{ "color": "#242f3e" }]
-    },
-    {
-      "elementType": "labels.text.fill",
-      "stylers": [{ "color": "#746855" }]
-    },
-    {
-      "elementType": "labels.text.stroke",
-      "stylers": [{ "color": "#242f3e" }]
-    },
-    {
-      "featureType": "poi",
-      "elementType": "all",
-      "stylers": [{ "visibility": "off" }]
-    },
-    {
-      "featureType": "transit",
-      "elementType": "all",
-      "stylers": [{ "visibility": "off" }]
-    },
-    {
-      "featureType": "road",
-      "elementType": "geometry",
-      "stylers": [{ "color": "#38414e" }]
-    },
-    {
-      "featureType": "road",
-      "elementType": "geometry.stroke",
-      "stylers": [{ "color": "#212a37" }]
-    },
-    {
-      "featureType": "road",
-      "elementType": "labels.text.fill",
-      "stylers": [{ "color": "#9ca5b3" }]
-    },
-    {
-      "featureType": "water",
-      "elementType": "geometry",
-      "stylers": [{ "color": "#17263c" }]
-    }
-  ],
-  disableDefaultUI: false,
-  zoomControl: true,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: true
 };
 
 interface GoogleMapComponentProps {
@@ -90,11 +39,11 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     content: string;
   } | null>(null);
 
-  // Load Google Maps API with Places library
+  // Load Google Maps API with centralized config
   const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
+    id: GOOGLE_MAPS_LOADER_ID,
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['places', 'geometry']
+    libraries: GOOGLE_MAPS_LIBRARIES
   });
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -211,7 +160,7 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
       mapContainerStyle={containerStyle}
       center={center}
       zoom={mapZoom}
-      options={mapOptions}
+      options={MAP_OPTIONS}
       onLoad={onLoad}
       onUnmount={onUnmount}
       onClick={handleMapClick}
