@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { EmergencyService } from '@/types/mapTypes';
 import { Button } from '@/components/ui/button';
@@ -149,6 +148,20 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
         </Button>
       </div>
       
+      {service.googleMapsLink && (
+        <div className="flex items-center gap-1 text-blue-600 text-xs">
+          <ExternalLink className="h-3 w-3" />
+          <a 
+            href={service.googleMapsLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            Google Link
+          </a>
+        </div>
+      )}
+      
       <div className="space-y-2">
         <RadioGroup 
           value={hasER === true ? "yes" : hasER === false ? "no" : undefined}
@@ -209,28 +222,6 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
             className="text-sm"
           />
         </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Google Maps Link</label>
-        {googleMapsLink ? (
-          <div className="flex gap-2 items-center">
-            <div className="text-xs border rounded-md p-1.5 bg-muted/30 flex-1 truncate">
-              {googleMapsLink}
-            </div>
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="h-8 w-8 flex-shrink-0"
-              onClick={() => window.open(googleMapsLink, '_blank')}
-              title="Open in Google Maps"
-            >
-              <ExternalLink className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <div className="text-sm text-muted-foreground">No Google Maps link available</div>
-        )}
       </div>
       
       <div className="space-y-1">
