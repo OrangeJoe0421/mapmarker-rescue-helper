@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Phone, Clock, MapPin, Navigation, X, Info } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import HospitalDetailsDialog from './HospitalDetailsDialog';
+import EmergencyRoomVerification from './EmergencyRoomVerification';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -15,11 +16,17 @@ interface ServiceDetailsCardProps {
 
 const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClose }) => {
   const { calculateRoute } = useMapStore();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   if (!service) return null;
 
   const handleRouteClick = () => {
     calculateRoute(service.id, true);
+  };
+
+  const handleVerificationUpdate = () => {
+    // Trigger a re-render when verification is updated
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const getServiceColor = () => {
@@ -89,21 +96,13 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           </div>
         )}
 
-        {/* Display emergency room info if available but don't show verification UI */}
-        {isHospital && service.verification?.hasEmergencyRoom !== undefined && (
-          <div className="flex items-center gap-2 text-sm">
-            {service.verification.hasEmergencyRoom ? (
-              <div className="flex items-center gap-1 text-green-600">
-                <span className="text-sm">✓</span>
-                <span>Emergency Room Available</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-red-600">
-                <span className="text-sm">✕</span>
-                <span>No Emergency Room</span>
-              </div>
-            )}
-          </div>
+        {/* Display emergency room verification component for hospitals */}
+        {isHospital && (
+          <EmergencyRoomVerification 
+            service={service}
+            onVerificationUpdate={handleVerificationUpdate}
+            key={`verification-${service.id}-${refreshTrigger}`}
+          />
         )}
       </CardContent>
       
