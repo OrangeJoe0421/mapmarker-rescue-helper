@@ -55,6 +55,7 @@ export async function fetchServicesFromEdge(latitude: number, longitude: number)
   try {
     console.log(`Fetching services from edge function for coordinates: [${latitude}, ${longitude}]`);
     const url = `${EDGE_FUNCTION_URL}?lat=${latitude}&lon=${longitude}`;
+    
     const response = await fetch(url);
     
     if (!response.ok) {

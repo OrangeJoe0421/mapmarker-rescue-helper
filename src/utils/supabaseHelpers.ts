@@ -13,6 +13,8 @@ export async function checkDatabaseConnection(): Promise<{ success: boolean, mes
     // Use default coordinates for connection testing (San Francisco coordinates)
     const defaultLat = 37.7749;
     const defaultLon = -122.4194;
+    
+    // Try to fetch data from the edge function
     const data = await fetchServicesFromEdge(defaultLat, defaultLon);
     
     if (!data || !Array.isArray(data)) {
