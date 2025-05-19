@@ -21,6 +21,9 @@ interface HospitalDetailsDialogProps {
 }
 
 const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }) => {
+  console.log('HospitalDetailsDialog rendering for:', service.name);
+  console.log('Initial verification data:', service.verification);
+
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(
     service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : undefined

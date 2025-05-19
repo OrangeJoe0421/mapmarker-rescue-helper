@@ -16,8 +16,11 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Check if the service type is a hospital (case-insensitive)
+  const isHospital = service.type === 'Hospital' || service.type.toLowerCase().includes('hospital');
+  
   // Only show for Hospital type services 
-  if (service.type !== 'Hospital') {
+  if (!isHospital) {
     return null;
   }
 
@@ -35,7 +38,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ s
       console.log(`Verifying ${service.name}, hasER: ${hasER}`);
       
       // Update the database with verification status
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('emergency_services')
         .update({
           has_emergency_room: hasER,
