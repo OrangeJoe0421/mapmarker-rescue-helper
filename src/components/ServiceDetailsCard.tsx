@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Phone, Clock, MapPin, Navigation, X } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import EmergencyRoomVerification from './EmergencyRoomVerification';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -86,7 +86,22 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           </div>
         )}
         
-        {/* Add EmergencyRoomVerification component for hospitals */}
+        {/* Test Radio Group - added to all cards */}
+        <div className="mt-2 border-t pt-2">
+          <div className="text-sm font-medium mb-2">Test Radio Group</div>
+          <RadioGroup defaultValue="option1">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="option1" id="option1" />
+              <label htmlFor="option1" className="text-sm">Option 1</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="option2" id="option2" />
+              <label htmlFor="option2" className="text-sm">Option 2</label>
+            </div>
+          </RadioGroup>
+        </div>
+        
+        {/* Keep the EmergencyRoomVerification component */}
         <EmergencyRoomVerification service={service} />
       </CardContent>
       
