@@ -40,17 +40,14 @@ export const useMapStore = create<MapState>()(
         ...routesSlice,
 
         clearAll: () => {
-          // First directly use the clearRoutes action from the routesSlice
-          routesSlice.clearRoutes();
-          
-          // Then reset all other state values
+          // Reset all state values
           set({
             userLocation: null,
             emergencyServices: [],
             customMarkers: [],
             selectedService: null,
             selectedMarker: null,
-            routes: [], // Explicitly clear routes here too for redundancy
+            routes: [], // Explicitly ensure routes are empty
             mapCenter: DEFAULT_CENTER,
             mapZoom: DEFAULT_ZOOM,
           });
