@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -88,24 +89,6 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
         <DialogTitle>Hospital Details</DialogTitle>
         <DialogDescription>
           Verify emergency room status and other details for {service.name}
-          {service.address && (
-            <div className="mt-1 text-muted-foreground text-xs">
-              {service.address}
-            </div>
-          )}
-          {service.googleMapsLink && (
-            <div className="mt-1 flex items-center gap-1 text-blue-600 text-xs">
-              <ExternalLink className="h-3 w-3" />
-              <a 
-                href={service.googleMapsLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                Google Link
-              </a>
-            </div>
-          )}
         </DialogDescription>
       </DialogHeader>
       
@@ -170,6 +153,27 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
               className="flex-1"
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <h4 className="font-medium">Google Maps Link</h4>
+          {googleMapsLink ? (
+            <div className="flex gap-2 items-center">
+              <div className="text-sm border rounded-md p-2 bg-muted/30 flex-1 break-all">
+                {googleMapsLink}
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => window.open(googleMapsLink, '_blank')}
+                title="Open in Google Maps"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No Google Maps link available</div>
+          )}
         </div>
         
         <div className="space-y-2">
