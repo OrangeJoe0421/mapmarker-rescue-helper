@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMapStore } from '@/store/useMapStore';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,8 @@ const EmergencySidebar = () => {
     selectMarker,
     calculateRoute,
     calculateRoutesForAllEMS,
-    addCustomMarker
+    addCustomMarker,
+    clearRoutes
   } = useMapStore();
 
   const markerBeingEdited = editingMarkerId ? 
@@ -102,6 +102,9 @@ const EmergencySidebar = () => {
         return;
       }
 
+      // Clear routes explicitly BEFORE searching
+      clearRoutes();
+      
       setIsSearching(true);
       toast.info("Searching for emergency services...");
       

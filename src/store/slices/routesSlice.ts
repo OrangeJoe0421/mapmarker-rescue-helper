@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
@@ -196,9 +195,8 @@ export const createRoutesSlice: StateCreator<
       return;
     }
     
-    // Clear all existing routes before calculating new ones
-    // This is intentional as this is a "calculate ALL routes" action
-    set({ routes: [] });
+    // Note: We don't automatically clear routes here anymore
+    // Only done explicitly via clearRoutes()
     
     // Mark any existing captures as stale
     mapCaptureService.markCaptureStaleDueToRouteChange();

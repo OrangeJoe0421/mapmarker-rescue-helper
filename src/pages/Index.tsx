@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Toaster } from 'sonner';
 import { toast } from 'sonner';
@@ -23,7 +22,6 @@ const Index = () => {
     calculateRouteToNearestHospital, 
     setMapCenter,
     routes,
-    clearRoutes
   } = useMapStore();
   const routesCalculatedRef = useRef(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -120,7 +118,7 @@ const Index = () => {
       setMapCenter([userLocation.latitude, userLocation.longitude]);
       userLocationInitializedRef.current = true;
     }
-  }, [userLocation?.latitude, userLocation?.longitude, setMapCenter, routes.length]);
+  }, [userLocation, setMapCenter, routes.length]);
 
   // Debug log for userLocation
   useEffect(() => {
