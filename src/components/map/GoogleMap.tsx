@@ -1,6 +1,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
 import { Route, EmergencyService } from '@/types/mapTypes';
 
@@ -201,6 +201,15 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     };
   }, [map, useMapStore.getState().addingMarker]);
 
+  // Debug log for userLocation
+  useEffect(() => {
+    if (userLocation) {
+      console.log("User location in map component:", userLocation);
+    } else {
+      console.log("User location is null in map component");
+    }
+  }, [userLocation]);
+
   if (!isLoaded) return <div className="h-full w-full flex items-center justify-center">Loading Maps...</div>;
 
   // Add default center coordinates if mapCenter is undefined
@@ -226,12 +235,12 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
           position={{ lat: userLocation.latitude, lng: userLocation.longitude }}
           icon={{
             url: 'data:image/svg+xml;base64,' + btoa(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="8" fill="#38a169" stroke="#ffffff" stroke-width="2" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="#4ade80" stroke="#ffffff" stroke-width="2" />
               </svg>
             `),
-            scaledSize: new google.maps.Size(24, 24),
-            anchor: new google.maps.Point(12, 12)
+            scaledSize: new google.maps.Size(36, 36),
+            anchor: new google.maps.Point(18, 18)
           }}
           onClick={() => handleMarkerClick({
             id: 'user-location', 

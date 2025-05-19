@@ -17,7 +17,7 @@ import { checkDatabaseConnection } from '@/utils/supabaseHelpers';
 
 const Index = () => {
   const { toast: shadcnToast } = useToast();
-  const { userLocation, emergencyServices, calculateRoutesForAllEMS } = useMapStore();
+  const { userLocation, emergencyServices, calculateRoutesForAllEMS, setMapCenter } = useMapStore();
   const routesCalculatedRef = useRef(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem("auth") === "true";
@@ -26,6 +26,7 @@ const Index = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [isInitialRender, setIsInitialRender] = useState(true);
   const initialCheckCompleteRef = useRef(false);
+  const userLocationInitializedRef = useRef(false);
 
   // Prevent animation flickering on re-renders by tracking initial render
   useEffect(() => {
@@ -101,7 +102,19 @@ const Index = () => {
   // Reset the calculation flag when the user location changes
   useEffect(() => {
     routesCalculatedRef.current = false;
-  }, [userLocation?.latitude, userLocation?.longitude]);
+
+    // Ensure the map is centered on user location when it changes
+    if (userLocation && !userLocationInitializedRef.current) {
+      console.log("Centering map on user location:", [userLocation.latitude, userLocation.longitude]);
+      setMapCenter([userLocation.latitude, userLocation.longitude]);
+      userLocationInitializedRef.current = true;
+    }
+  }, [userLocation?.latitude, userLocation?.longitude, setMapCenter]);
+
+  // Debug log for userLocation
+  useEffect(() => {
+    console.log("User location in Index:", userLocation);
+  }, [userLocation]);
 
   if (!isAuthenticated) {
     return <PasswordGate onCorrectPassword={() => setIsAuthenticated(true)} />;

@@ -46,6 +46,8 @@ export const createLocationSlice: StateCreator<LocationState> = (set, get) => ({
       mapZoom: 13 
     });
     
+    // Log to confirm the state has been updated
+    console.log(`User location set to [${location.latitude}, ${location.longitude}]`);
     toast.success('Location set successfully');
   },
 
@@ -71,17 +73,21 @@ export const createLocationSlice: StateCreator<LocationState> = (set, get) => ({
       filteredMetadata.projectType = metadata.projectType.trim();
     }
 
+    const updatedUserLocation = {
+      ...userLocation,
+      metadata: Object.keys(filteredMetadata).length > 0 ? filteredMetadata : undefined
+    };
+
     set({
-      userLocation: {
-        ...userLocation,
-        metadata: Object.keys(filteredMetadata).length > 0 ? filteredMetadata : undefined
-      }
+      userLocation: updatedUserLocation
     });
 
+    console.log('Updated user location metadata:', updatedUserLocation);
     toast.success('Location metadata updated');
   },
 
   setMapCenter: (center) => {
+    console.log('Setting map center to:', center);
     set({ mapCenter: center });
   },
 
