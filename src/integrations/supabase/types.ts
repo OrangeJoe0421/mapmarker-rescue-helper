@@ -15,93 +15,42 @@ export type Database = {
           created_at: string
           hours: string | null
           id: string
-          latitude: number
-          longitude: number
-          name: string
+          latitude: number | null
+          longitude: number | null
+          name: string | null
           phone: string | null
           state: string | null
-          type: string
+          type: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string
           hours?: string | null
           id: string
-          latitude: number
-          longitude: number
-          name: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
           phone?: string | null
           state?: string | null
-          type: string
+          type?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string
           hours?: string | null
           id?: string
-          latitude?: number
-          longitude?: number
-          name?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
           phone?: string | null
           state?: string | null
-          type?: string
+          type?: string | null
         }
         Relationships: []
       }
-      hospital_verifications: {
-        Row: {
-          created_at: string | null
-          has_emergency_room: boolean
-          id: string
-          service_id: string
-          verified_at: string
-          verified_by: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          has_emergency_room: boolean
-          id?: string
-          service_id: string
-          verified_at?: string
-          verified_by?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          has_emergency_room?: boolean
-          id?: string
-          service_id?: string
-          verified_at?: string
-          verified_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_service_id"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "emergency_services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
-      latest_hospital_verifications: {
-        Row: {
-          has_emergency_room: boolean | null
-          service_id: string | null
-          verified_at: string | null
-          verified_by: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_service_id"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "emergency_services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
