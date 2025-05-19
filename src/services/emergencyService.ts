@@ -1,11 +1,10 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 // API Keys and URLs
 const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4"; // Using the same key from GoogleMap.tsx
-const EDGE_FUNCTION_URL = "https://ljsmrxbbkbleugkpehcl.supabase.co/functions/v1/get-emergency-services";
 
 // === Request Queue for Google Directions API Rate Limiting ===
 const requestQueue: (() => Promise<void>)[] = [];
@@ -49,57 +48,32 @@ function queueRequest(request: () => Promise<void>) {
   processQueue();
 }
 
-// === Fetch from Supabase Edge Function ===
+// === Fetch directly from Supabase database ===
 // Export this function so it can be imported by other modules
-export async function fetchServicesFromEdge(latitude: number, longitude: number): Promise<any[]> {
+export async function fetchServicesFromDatabase(latitude: number, longitude: number): Promise<any[]> {
   try {
-    console.log(`Fetching services from edge function for coordinates: [${latitude}, ${longitude}]`);
+    console.log(`Fetching services directly from database for coordinates: [${latitude}, ${longitude}]`);
     
-    // Using the direct edge function URL with the project ID
-    const url = `https://ljsmrxbbkbleugkpehcl.supabase.co/functions/v1/get-emergency-services?lat=${latitude}&lon=${longitude}`;
+    const { data, error } = await supabase
+      .from('emergency_services')
+      .select('*')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
     
-    console.log("Calling edge function URL:", url);
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      mode: 'cors',
-      credentials: 'omit',
-      cache: 'no-cache',
-    });
-    
-    console.log("Response status:", response.status, response.statusText);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Edge function error response:", errorText);
-      throw new Error(`Failed to fetch from Edge Function: ${response.status} ${response.statusText}. Details: ${errorText}`);
+    if (error) {
+      console.error("Supabase query error:", error);
+      throw new Error(`Failed to fetch from database: ${error.message}`);
     }
     
-    const responseText = await response.text();
-    console.log("Raw response text:", responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
-    
-    try {
-      const data = JSON.parse(responseText);
-      console.log("Parsed response data:", typeof data, Array.isArray(data) ? `Array with ${data.length} items` : 'Not an array');
-      
-      if (!data) {
-        throw new Error('Empty response from Edge Function');
-      }
-      
-      if (data.error) {
-        throw new Error(data.error?.message || 'Failed to fetch from Edge Function');
-      }
-      
-      return Array.isArray(data) ? data : [];
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError);
-      throw new Error(`Failed to parse response: ${parseError.message}`);
+    if (!data || data.length === 0) {
+      console.log("No emergency services found in the database");
+      return [];
     }
+    
+    console.log(`Found ${data.length} emergency services in the database`);
+    return data;
   } catch (err: any) {
-    console.error("Edge Function fetch error:", err.message);
+    console.error("Database fetch error:", err.message);
     throw err;
   }
 }
@@ -113,13 +87,13 @@ export async function fetchNearestEmergencyServices(
   limit?: number
 ): Promise<EmergencyService[]> {
   try {
-    console.log(`Fetching services from Edge Function near [${latitude}, ${longitude}]`);
+    console.log(`Fetching services from database near [${latitude}, ${longitude}]`);
 
     let data: any[];
     try {
-      data = await fetchServicesFromEdge(latitude, longitude);
+      data = await fetchServicesFromDatabase(latitude, longitude);
     } catch (error) {
-      console.error("Failed to fetch emergency services from edge:", error);
+      console.error("Failed to fetch emergency services from database:", error);
       toast.error("Failed to fetch emergency services from database");
       return [];
     }
