@@ -15,11 +15,15 @@ export async function checkDatabaseConnection(): Promise<{ success: boolean, mes
     const defaultLon = -122.4194;
     
     // Try to fetch data from the edge function
+    console.log("Calling fetchServicesFromEdge with coordinates:", defaultLat, defaultLon);
     const data = await fetchServicesFromEdge(defaultLat, defaultLon);
     
     if (!data || !Array.isArray(data)) {
+      console.error("Invalid response format:", data);
       throw new Error("Invalid response from service");
     }
+    
+    console.log("Connection successful, got data:", data.length, "records");
     
     return {
       success: true,

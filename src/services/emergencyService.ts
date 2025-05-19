@@ -56,14 +56,23 @@ export async function fetchServicesFromEdge(latitude: number, longitude: number)
     console.log(`Fetching services from edge function for coordinates: [${latitude}, ${longitude}]`);
     const url = `${EDGE_FUNCTION_URL}?lat=${latitude}&lon=${longitude}`;
     
-    const response = await fetch(url);
+    console.log("Calling edge function URL:", url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to fetch from Edge Function: ${errorText}`);
+      console.error("Edge function error response:", errorText);
+      throw new Error(`Failed to fetch from Edge Function: ${response.status} ${response.statusText}`);
     }
     
     const json = await response.json();
+    console.log("Response from edge function:", json);
 
     if (json.error) {
       throw new Error(json.error?.message || 'Failed to fetch from Edge Function');

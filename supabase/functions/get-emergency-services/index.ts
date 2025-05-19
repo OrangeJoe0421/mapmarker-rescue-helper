@@ -15,9 +15,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("Edge function called: get-emergency-services")
+    
     const url = new URL(req.url)
     const lat = url.searchParams.get('lat')
     const lon = url.searchParams.get('lon')
+
+    console.log(`Received parameters: lat=${lat}, lon=${lon}`)
 
     if (!lat || !lon) {
       return new Response(
@@ -31,7 +35,9 @@ Deno.serve(async (req) => {
 
     // Create a Supabase client with the service role key, which bypasses RLS
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-
+    
+    console.log("Querying emergency_services table...")
+    
     // Query emergency services data
     const { data, error } = await supabase
       .from('emergency_services')
@@ -47,6 +53,8 @@ Deno.serve(async (req) => {
       })
     }
 
+    console.log(`Found ${data?.length || 0} emergency services`)
+    
     // Return the data
     return new Response(JSON.stringify({ data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
