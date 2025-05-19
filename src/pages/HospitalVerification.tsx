@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,23 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, CheckCircle, Home, Search, XCircle } from 'lucide-react';
 import { EmergencyService } from '@/types/mapTypes';
+
+// Define an interface for the database response
+interface HospitalData {
+  id: string;
+  name: string;
+  type: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  phone: string;
+  hours: string;
+  state: string;
+  has_emergency_room: boolean | null;
+  verified_at: string | null;
+  created_at: string;
+  comments?: string | null; // Make comments optional with nullable type
+}
 
 const HospitalVerification = () => {
   const navigate = useNavigate();
@@ -46,7 +62,7 @@ const HospitalVerification = () => {
       }
 
       // Map the data to match the EmergencyService type
-      const hospitalServices = data.map((item): EmergencyService => ({
+      const hospitalServices = (data as HospitalData[]).map((item): EmergencyService => ({
         id: item.id,
         name: item.name || '',
         type: item.type || '',
@@ -59,7 +75,7 @@ const HospitalVerification = () => {
         verification: {
           hasEmergencyRoom: item.has_emergency_room,
           verifiedAt: item.verified_at ? new Date(item.verified_at) : undefined,
-          comments: item.comments
+          comments: item.comments || undefined
         }
       }));
 
