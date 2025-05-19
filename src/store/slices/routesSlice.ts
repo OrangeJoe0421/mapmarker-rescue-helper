@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
@@ -87,7 +88,7 @@ export const createRoutesSlice: StateCreator<
       
       console.info(`Fetching route from [${startCoords.latitude}, ${startCoords.longitude}] to [${endCoords.latitude}, ${endCoords.longitude}]`);
       
-      // Call the routing service to get a real route
+      // Call the Google Maps routing service to get a real route
       const routeData = await fetchRoutePath(
         startCoords.latitude,
         startCoords.longitude,

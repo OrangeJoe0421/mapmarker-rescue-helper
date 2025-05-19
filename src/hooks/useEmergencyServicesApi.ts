@@ -76,7 +76,7 @@ export function useEmergencyServicesApi() {
       for (let i = 0; i < services.length; i += batchSize) {
         const batch = services.slice(i, i + batchSize);
         
-        // Convert EmergencyService objects to database format and include verification data
+        // Convert EmergencyService objects to database format
         const dbRecords = batch.map(service => ({
           id: service.id,
           name: service.name,
@@ -85,9 +85,7 @@ export function useEmergencyServicesApi() {
           longitude: service.longitude,
           address: service.address || null,
           phone: service.phone || null,
-          hours: service.hours || null,
-          has_emergency_room: service.verification?.hasEmergencyRoom || null,
-          verified_at: service.verification?.verifiedAt ? service.verification.verifiedAt.toISOString() : null
+          hours: service.hours || null
         }));
         
         const { data, error } = await supabase
