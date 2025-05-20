@@ -14,18 +14,32 @@ interface ServiceDetailsCardProps {
 }
 
 const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClose }) => {
-  const { calculateRoute, emergencyServices } = useMapStore();
+  const { calculateRoute, emergencyServices, addHospitalReplacingOthers } = useMapStore();
 
   if (!service) return null;
 
+  // Check if it's a hospital
+  const isHospital = service.type.toLowerCase().includes('hospital');
+  
   // Modified function to calculate route without clearing other services
   const handleRouteClick = () => {
-    // Get current routes and remove any existing routes from this service
-    const currentState = useMapStore.getState();
-    const updatedRoutes = currentState.routes.filter(route => route.fromId !== service.id);
-    
-    // Update the routes state without affecting other state
-    useMapStore.setState({ routes: updatedRoutes });
+    // If this is a hospital, replace any existing hospitals
+    if (isHospital) {
+      // Get current routes and remove any existing routes from hospitals
+      const currentState = useMapStore.getState();
+      const hospitalServices = currentState.emergencyServices.filter(
+        s => s.type.toLowerCase().includes('hospital')
+      );
+      const updatedRoutes = currentState.routes.filter(route => 
+        !hospitalServices.some(hospital => hospital.id === route.fromId)
+      );
+      
+      // Update the routes state without affecting other state
+      useMapStore.setState({ routes: updatedRoutes });
+      
+      // Add this hospital replacing any existing hospitals
+      addHospitalReplacingOthers(service);
+    }
     
     // Calculate new route
     calculateRoute(service.id, true);
@@ -34,24 +48,24 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
   // Modified function to test redirection without clearing other services
   const handleTestRedirection = () => {
     if (service.verification?.hasEmergencyRoom === false && service.redirectHospitalId) {
-      // Get current state
-      const currentState = useMapStore.getState();
-      
-      // Only clear routes related to this service
-      const updatedRoutes = currentState.routes.filter(route => route.fromId !== service.id);
-      useMapStore.setState({ routes: updatedRoutes });
-      
       // Find the redirect hospital
       const redirectHospital = emergencyServices.find(h => h.id === service.redirectHospitalId);
       
-      // Ensure the redirect hospital is in the services array if found
       if (redirectHospital) {
-        const existingServices = [...currentState.emergencyServices];
-        const redirectIndex = existingServices.findIndex(s => s.id === redirectHospital.id);
-        if (redirectIndex === -1) {
-          existingServices.push(redirectHospital);
-          useMapStore.setState({ emergencyServices: existingServices });
-        }
+        // Get current state
+        const currentState = useMapStore.getState();
+        
+        // Only clear routes related to hospitals
+        const hospitalServices = currentState.emergencyServices.filter(
+          s => s.type.toLowerCase().includes('hospital')
+        );
+        const updatedRoutes = currentState.routes.filter(route => 
+          !hospitalServices.some(hospital => hospital.id === route.fromId)
+        );
+        useMapStore.setState({ routes: updatedRoutes });
+        
+        // Add this hospital replacing any existing hospitals
+        addHospitalReplacingOthers(service);
       }
       
       calculateRoute(service.id, true);
@@ -75,9 +89,6 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
     if (type.includes('ems')) return <span className="text-xl">🚑</span>;
     return <span className="text-xl">📍</span>;
   };
-
-  // Check if it's a hospital
-  const isHospital = service.type.toLowerCase().includes('hospital');
 
   // Get redirect hospital if applicable
   const redirectHospital = service.redirectHospitalId ? 

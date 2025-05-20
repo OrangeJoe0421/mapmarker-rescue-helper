@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { EmergencyService } from '@/types/mapTypes';
@@ -11,6 +10,9 @@ export interface ServicesState {
   setEmergencyServices: (services: EmergencyService[]) => void;
   selectService: (service: EmergencyService | null) => void;
   updateService: (updatedService: EmergencyService) => void;
+  
+  // New function to add a hospital while replacing any existing hospitals
+  addHospitalReplacingOthers: (hospital: EmergencyService) => void;
 }
 
 export const createServicesSlice: StateCreator<
@@ -102,5 +104,27 @@ export const createServicesSlice: StateCreator<
           updatedService : state.selectedService
       };
     });
+  },
+  
+  // New function to add a hospital while replacing any existing hospitals
+  addHospitalReplacingOthers: (hospital) => {
+    set(state => {
+      // Filter out any existing hospitals (keep non-hospital services)
+      const nonHospitalServices = state.emergencyServices.filter(
+        service => !service.type.toLowerCase().includes('hospital')
+      );
+      
+      // Add the new hospital to the filtered services
+      const newServices = [...nonHospitalServices, hospital];
+      console.log(`Added hospital ${hospital.name}, replacing any existing hospitals`);
+      
+      return {
+        emergencyServices: newServices,
+        selectedService: hospital,
+        mapCenter: [hospital.latitude, hospital.longitude],
+      };
+    });
+    
+    toast.success(`Set ${hospital.name} as the only hospital in results`);
   }
 });
