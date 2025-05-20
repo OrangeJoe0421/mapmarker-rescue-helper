@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
@@ -5,6 +6,9 @@ import { Route, EmergencyService } from '@/types/mapTypes';
 
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
+
+// Define libraries as a constant to prevent reloads
+const GOOGLE_MAPS_LIBRARIES = ['places', 'geometry'];
 
 const containerStyle = {
   width: '100%',
@@ -89,11 +93,11 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
     content: string;
   } | null>(null);
 
-  // Load Google Maps API with Places library
+  // Load Google Maps API with Places library using constant libraries array
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['places', 'geometry']
+    libraries: GOOGLE_MAPS_LIBRARIES
   });
 
   const [map, setMap] = useState<google.maps.Map | null>(null);

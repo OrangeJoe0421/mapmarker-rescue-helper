@@ -102,7 +102,7 @@ export async function fetchNearestEmergencyServices(
           // Standardize service type before processing
           const standardType = standardizeServiceType(service.type);
           
-          // Calculate accurate distance
+          // Calculate approximate distance using haversine (as crow flies)
           const haversineDistance = calculateHaversineDistance(
             latitude, 
             longitude, 
@@ -110,20 +110,9 @@ export async function fetchNearestEmergencyServices(
             service.longitude
           );
           
-          // Only attempt to get road distance for nearby services (within 20km as the crow flies)
-          let roadDistance = haversineDistance * 1.3; // Rough approximation
-          if (haversineDistance < 20) {
-            try {
-              roadDistance = await fetchRouteDistance(
-                latitude,
-                longitude,
-                service.latitude,
-                service.longitude
-              ) || roadDistance;
-            } catch (error) {
-              console.warn(`Could not calculate road distance for ${service.name}:`, error);
-            }
-          }
+          // Estimate road distance as 1.3x the haversine distance
+          // We're removing the Distance Matrix API call since it's redundant
+          const roadDistance = haversineDistance * 1.3; 
 
           // Create verification object if verification data exists
           const verification = service.has_emergency_room !== null || service.verified_at ? {
@@ -240,66 +229,25 @@ function standardizeServiceType(type: string): string {
 }
 
 // === Fetch Route Distance via Google Maps Directions API ===
+// Remove the fetchRouteDistance function that used the Distance Matrix API
+// and replace it with a simpler version that just uses haversine distance
+
 export async function fetchRouteDistance(
   startLat: number,
   startLon: number,
   endLat: number,
   endLon: number
 ): Promise<number | null> {
+  // Simply use haversine distance with a road factor multiplier
+  // This avoids using the Distance Matrix API which was causing REQUEST_DENIED errors
   try {
-    // Use Google Maps Distance Matrix API
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${startLat},${startLon}&destinations=${endLat},${endLon}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
-    
-    // We need to use a proxy or Edge Function as the client-side can't directly call this API
-    // For now, we'll simulate the response with the browser's native fetch
-    
-    // Note: In production, you should route this through a server-side proxy or Edge Function
-    // This direct fetch will likely fail due to CORS issues
-    const distance = await calculateGoogleRouteDistance(
-      { lat: startLat, lng: startLon },
-      { lat: endLat, lng: endLon }
-    );
-    
-    return distance / 1000; // Convert meters to kilometers
+    const haversineDistance = calculateHaversineDistance(startLat, startLon, endLat, endLon);
+    // Apply a typical road factor of 1.3 to approximate road distance
+    return haversineDistance * 1.3;
   } catch (error) {
     console.error("Error calculating route distance:", error);
-    return calculateHaversineDistance(startLat, startLon, endLat, endLon) * 1.3;
+    return null;
   }
-}
-
-// Use client-side Google Maps API to calculate distance
-// This works because you already loaded the Google Maps JavaScript API
-async function calculateGoogleRouteDistance(
-  origin: { lat: number, lng: number },
-  destination: { lat: number, lng: number }
-): Promise<number> {
-  return new Promise((resolve, reject) => {
-    // Ensure Google Maps API is loaded
-    if (!window.google || !window.google.maps) {
-      console.error("Google Maps API not loaded");
-      reject(new Error("Google Maps API not loaded"));
-      return;
-    }
-
-    const service = new google.maps.DistanceMatrixService();
-    service.getDistanceMatrix(
-      {
-        origins: [origin],
-        destinations: [destination],
-        travelMode: google.maps.TravelMode.DRIVING,
-        unitSystem: google.maps.UnitSystem.METRIC,
-      },
-      (response, status) => {
-        if (status === google.maps.DistanceMatrixStatus.OK && response) {
-          const distance = response.rows[0].elements[0].distance.value;
-          resolve(distance);
-        } else {
-          console.error("Distance Matrix failed:", status);
-          reject(new Error(`Distance Matrix failed: ${status}`));
-        }
-      }
-    );
-  });
 }
 
 // === Fetch Route Path with Waypoints (Google Maps) ===

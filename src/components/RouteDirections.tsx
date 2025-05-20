@@ -17,6 +17,12 @@ const RouteDirections: React.FC<RouteDirectionsProps> = ({ route, service }) => 
 
   // Check if we have detailed steps or just using fallback
   const hasDetailedDirections = route.steps && route.steps.length > 0;
+  
+  // Debug log to verify if steps are available
+  console.log(`RouteDirections: Route has ${hasDetailedDirections ? route.steps!.length : 0} steps`);
+  if (hasDetailedDirections && route.steps) {
+    console.log("Sample step:", route.steps[0]);
+  }
 
   return (
     <Card className="mt-4">
@@ -59,7 +65,7 @@ const RouteDirections: React.FC<RouteDirectionsProps> = ({ route, service }) => 
           
           {hasDetailedDirections ? (
             // Detailed Google Maps directions
-            route.steps.map((step, idx) => (
+            route.steps!.map((step, idx) => (
               <li key={idx} className="flex items-start gap-3 pb-2 border-b">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground font-medium">
                   {idx + 2}
