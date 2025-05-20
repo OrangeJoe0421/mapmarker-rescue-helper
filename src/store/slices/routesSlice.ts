@@ -119,7 +119,14 @@ export const createRoutesSlice: StateCreator<
       );
       
       if (!routeData) {
-        throw new Error("Could not calculate route");
+        throw new Error("Could not calculate route - no route data returned");
+      }
+      
+      // Check if detailed steps are available
+      if (!routeData.steps || routeData.steps.length === 0) {
+        console.warn("No detailed steps returned in route data - will use simplified route");
+      } else {
+        console.info(`Retrieved ${routeData.steps.length} detailed direction steps`);
       }
       
       // Create route points from the fetched route
@@ -153,8 +160,20 @@ export const createRoutesSlice: StateCreator<
       } else {
         toast.success(`Route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration)} min)`);
       }
+      
+      // Log a success message with step info
+      if (routeData.steps && routeData.steps.length > 0) {
+        console.info(`Route calculated with ${routeData.steps.length} turn-by-turn directions`);
+      }
+      
     } catch (error) {
       console.error("Error calculating route:", error);
+      
+      // Log more details about the error
+      console.warn("Falling back to simple straight line route due to API error");
+      toast.warning("Google Maps couldn't calculate the route. Using simplified route instead.", {
+        description: "This could be due to API limits, invalid coordinates, or server issues."
+      });
       
       // Fallback to simple straight line if API fails
       const startPoint: RoutePoint = {

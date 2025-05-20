@@ -312,14 +312,22 @@ export async function fetchRoutePath(
   return new Promise((resolve) => {
     queueRequest(async () => {
       try {
+        console.info(`Fetching route path from [${startLat}, ${startLon}] to [${endLat}, ${endLon}]`);
         const result = await getGoogleDirectionsRoute(
           { lat: startLat, lng: startLon },
           { lat: endLat, lng: endLon }
         );
         
+        if (result.steps && result.steps.length > 0) {
+          console.info(`Retrieved detailed directions with ${result.steps.length} steps`);
+        } else {
+          console.warn("No detailed direction steps returned from Google Maps API");
+        }
+        
         resolve(result);
       } catch (error) {
         console.error("Error fetching route path:", error);
+        console.warn("Using fallback straight-line route due to Google Maps API error");
         const fallbackPoints: [number, number][] = [
           [startLat, startLon],
           [endLat, endLon]
@@ -348,6 +356,7 @@ async function getGoogleDirectionsRoute(
       return;
     }
 
+    console.info(`Requesting directions from Google Maps API: [${origin.lat}, ${origin.lng}] to [${destination.lat}, ${destination.lng}]`);
     const directionsService = new google.maps.DirectionsService();
     directionsService.route(
       {
@@ -356,7 +365,12 @@ async function getGoogleDirectionsRoute(
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
+        console.info(`Google Maps Directions API status: ${status}`);
+        
         if (status === google.maps.DirectionsStatus.OK && result) {
+          // Log full route object to inspect structure
+          console.info("Google Maps route result:", result);
+          
           // Extract path points from the result
           const route = result.routes[0];
           const path = route.overview_path;
@@ -368,24 +382,44 @@ async function getGoogleDirectionsRoute(
           const distance = route.legs[0].distance?.value || 0;
           const duration = route.legs[0].duration?.value || 0;
           
-          // Extract detailed steps with instructions, making sure to preserve HTML instructions
-          const steps = route.legs[0].steps.map(step => ({
-            instructions: step.instructions, // This contains HTML formatted instructions
-            plainInstructions: step.instructions.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, " "), // Plain text version
-            distance: step.distance?.value || 0,
-            duration: step.duration?.value || 0,
-            startLocation: {
-              lat: step.start_location.lat(),
-              lng: step.start_location.lng()
-            },
-            endLocation: {
-              lat: step.end_location.lat(),
-              lng: step.end_location.lng()
-            },
-            maneuver: step.maneuver || ''
-          }));
+          // Check if we have legs with steps
+          if (!route.legs || !route.legs[0] || !route.legs[0].steps || route.legs[0].steps.length === 0) {
+            console.warn("Google Maps returned route without steps");
+            reject(new Error("No steps in Google Maps response"));
+            return;
+          }
           
-          console.log("Google Maps returned route with", steps.length, "steps");
+          // Extract detailed steps with instructions, making sure to preserve HTML instructions
+          const steps = route.legs[0].steps.map(step => {
+            // Log each step to inspect content
+            console.debug("Step details:", {
+              instructions: step.instructions,
+              distance: step.distance?.value,
+              maneuver: step.maneuver
+            });
+            
+            return {
+              instructions: step.instructions, // This contains HTML formatted instructions
+              plainInstructions: step.instructions.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, " "), // Plain text version
+              distance: step.distance?.value || 0,
+              duration: step.duration?.value || 0,
+              startLocation: {
+                lat: step.start_location.lat(),
+                lng: step.start_location.lng()
+              },
+              endLocation: {
+                lat: step.end_location.lat(),
+                lng: step.end_location.lng()
+              },
+              maneuver: step.maneuver || ''
+            };
+          });
+          
+          console.info(`Google Maps returned route with ${steps.length} steps`);
+          // Log first few steps to debug instructions content
+          if (steps.length > 0) {
+            console.debug("Sample step instructions:", steps.slice(0, 2));
+          }
           
           resolve({
             points,
@@ -394,7 +428,28 @@ async function getGoogleDirectionsRoute(
             steps
           });
         } else {
-          console.error("Directions request failed:", status);
+          console.error(`Directions request failed: ${status}`);
+          // Log detailed error information based on status
+          switch (status) {
+            case google.maps.DirectionsStatus.ZERO_RESULTS:
+              console.error("No route could be found between the origin and destination.");
+              break;
+            case google.maps.DirectionsStatus.MAX_WAYPOINTS_EXCEEDED:
+              console.error("Too many waypoints were provided.");
+              break;
+            case google.maps.DirectionsStatus.INVALID_REQUEST:
+              console.error("Invalid request - may have missing required fields.");
+              break;
+            case google.maps.DirectionsStatus.OVER_QUERY_LIMIT:
+              console.error("API quota exceeded - check your Google Maps API billing and usage limits.");
+              break;
+            case google.maps.DirectionsStatus.REQUEST_DENIED:
+              console.error("Request denied - the API key may be missing or invalid, or the service may not be enabled.");
+              break;
+            case google.maps.DirectionsStatus.UNKNOWN_ERROR:
+              console.error("Unknown server error - try again later.");
+              break;
+          }
           reject(new Error(`Directions request failed: ${status}`));
         }
       }
