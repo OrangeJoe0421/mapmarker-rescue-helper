@@ -84,6 +84,7 @@ export const createRoutesSlice: StateCreator<
     }
     
     // Clear any existing routes with this source to avoid clutter
+    // But keep all other routes intact by using an update function that doesn't replace other state
     set(state => ({
       routes: state.routes.filter(route => route.fromId !== fromId)
     }));

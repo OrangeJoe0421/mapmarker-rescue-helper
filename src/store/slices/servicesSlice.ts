@@ -15,7 +15,7 @@ export interface ServicesState {
 
 export const createServicesSlice: StateCreator<
   ServicesState & { mapCenter?: [number, number] }
-> = (set) => ({
+> = (set, get) => ({
   emergencyServices: [],
   selectedService: null,
 
@@ -52,22 +52,55 @@ export const createServicesSlice: StateCreator<
   },
 
   selectService: (service) => {
+    // Make sure the service is in the emergencyServices array first
+    if (service) {
+      const state = get();
+      const existingServices = state.emergencyServices;
+      const serviceIndex = existingServices.findIndex(s => s.id === service.id);
+      
+      // If the service isn't in our list yet, add it
+      if (serviceIndex === -1) {
+        set(state => ({
+          emergencyServices: [...state.emergencyServices, service],
+          selectedService: service,
+          mapCenter: [service.latitude, service.longitude],
+        }));
+        return;
+      }
+    }
+    
+    // Normal selection
     set({
       selectedService: service,
       mapCenter: service ? [service.latitude, service.longitude] : undefined,
     });
   },
   
-  // Add new function to update a single service
+  // Enhanced function to update a single service
   updateService: (updatedService) => {
-    set(state => ({
-      emergencyServices: state.emergencyServices.map(service => 
-        service.id === updatedService.id ? updatedService : service
-      ),
-      // If this was the selected service, update it there too
-      selectedService: state.selectedService?.id === updatedService.id ? 
-        updatedService : state.selectedService
-    }));
-    console.log(`Service updated: ${updatedService.name}`);
+    set(state => {
+      const currentServices = state.emergencyServices;
+      const serviceIndex = currentServices.findIndex(service => service.id === updatedService.id);
+      
+      let newServices;
+      if (serviceIndex === -1) {
+        // Service not found in the list, add it
+        newServices = [...currentServices, updatedService];
+        console.log(`Service added to list: ${updatedService.name}`);
+      } else {
+        // Update existing service
+        newServices = currentServices.map(service => 
+          service.id === updatedService.id ? updatedService : service
+        );
+        console.log(`Service updated: ${updatedService.name}`);
+      }
+      
+      return {
+        emergencyServices: newServices,
+        // If this was the selected service, update it there too
+        selectedService: state.selectedService?.id === updatedService.id ? 
+          updatedService : state.selectedService
+      };
+    });
   }
 });

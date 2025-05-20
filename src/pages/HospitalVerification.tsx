@@ -262,11 +262,32 @@ const HospitalVerification = () => {
   const handleViewOnMap = () => {
     if (!selectedHospital) return;
     
-    // Update the service in the global state to ensure it's in the emergencyServices array
-    updateService(selectedHospital);
+    // First ensure the hospital exists in the emergencyServices array
+    const store = useMapStore.getState();
+    const existingServices = [...(store.emergencyServices || [])];
     
-    // Select this hospital
+    // Check if this hospital is already in the services array
+    const hospitalIndex = existingServices.findIndex(s => s.id === selectedHospital.id);
+    
+    if (hospitalIndex === -1) {
+      // If not found, add it to the array
+      existingServices.push(selectedHospital);
+      useMapStore.setState({ emergencyServices: existingServices });
+    } else {
+      // If found, update it
+      existingServices[hospitalIndex] = {
+        ...existingServices[hospitalIndex],
+        ...selectedHospital
+      };
+      useMapStore.setState({ emergencyServices: existingServices });
+    }
+    
+    // Select this hospital to show details
     selectService(selectedHospital);
+    
+    // Set map center to the hospital location
+    useMapStore.setState({ mapCenter: [selectedHospital.latitude, selectedHospital.longitude] });
+    
     navigate('/');
     toast.success(`${selectedHospital.name} selected on map`);
   };
@@ -275,19 +296,36 @@ const HospitalVerification = () => {
   const handleRouteToProject = () => {
     if (!selectedHospital) return;
     
-    // Update the service in the global state to ensure it's in the emergencyServices array
-    updateService(selectedHospital);
+    // First ensure the hospital exists in the emergencyServices array
+    const store = useMapStore.getState();
+    const existingServices = [...(store.emergencyServices || [])];
     
-    // Only clear routes related to this hospital to avoid removing other routes
-    const routes = useMapStore.getState().routes;
-    const updatedRoutes = routes.filter(route => route.fromId !== selectedHospital.id);
-    useMapStore.setState({ routes: updatedRoutes });
+    // Check if this hospital is already in the services array
+    const hospitalIndex = existingServices.findIndex(s => s.id === selectedHospital.id);
     
-    // Select this hospital and calculate its route without clearing other service types
+    if (hospitalIndex === -1) {
+      // If not found, add it to the array
+      existingServices.push(selectedHospital);
+      useMapStore.setState({ emergencyServices: existingServices });
+    } else {
+      // If found, update it
+      existingServices[hospitalIndex] = {
+        ...existingServices[hospitalIndex],
+        ...selectedHospital
+      };
+      useMapStore.setState({ emergencyServices: existingServices });
+    }
+    
+    // Only clear routes related to this hospital
+    const routes = store.routes.filter(route => route.fromId !== selectedHospital.id);
+    useMapStore.setState({ routes });
+    
+    // Select this hospital to show details
     selectService(selectedHospital);
+    
+    // Calculate route without clearing other service types
     calculateRoute(selectedHospital.id, true);
     
-    // Navigate to map
     navigate('/');
     toast.success(`Route calculated from ${selectedHospital.name} to project`);
   };
@@ -301,22 +339,48 @@ const HospitalVerification = () => {
       return;
     }
     
-    // Update the service in the global state to ensure it's in the emergencyServices array
-    updateService(selectedHospital);
+    // First ensure the hospital exists in the emergencyServices array
+    const store = useMapStore.getState();
+    const existingServices = [...(store.emergencyServices || [])];
     
-    // Only clear routes related to this hospital
-    const routes = useMapStore.getState().routes;
-    const updatedRoutes = routes.filter(route => route.fromId !== selectedHospital.id);
-    useMapStore.setState({ routes: updatedRoutes });
+    // Check if this hospital is already in the services array
+    const hospitalIndex = existingServices.findIndex(s => s.id === selectedHospital.id);
     
-    // Calculate route which should trigger the redirection
-    selectService(selectedHospital);
-    calculateRoute(selectedHospital.id, true);
+    if (hospitalIndex === -1) {
+      // If not found, add it to the array
+      existingServices.push(selectedHospital);
+      useMapStore.setState({ emergencyServices: existingServices });
+    } else {
+      // If found, update it
+      existingServices[hospitalIndex] = {
+        ...existingServices[hospitalIndex],
+        ...selectedHospital
+      };
+      useMapStore.setState({ emergencyServices: existingServices });
+    }
     
     // Find redirect hospital
     const redirectHospital = hospitals.find(h => h.id === selectedHospital.redirectHospitalId);
     
-    // Navigate to map
+    // Also ensure the redirect hospital exists in the array
+    if (redirectHospital) {
+      const redirectIndex = existingServices.findIndex(s => s.id === redirectHospital.id);
+      if (redirectIndex === -1) {
+        existingServices.push(redirectHospital);
+        useMapStore.setState({ emergencyServices: existingServices });
+      }
+    }
+    
+    // Only clear routes related to this hospital
+    const routes = store.routes.filter(route => route.fromId !== selectedHospital.id);
+    useMapStore.setState({ routes });
+    
+    // Select this hospital to show details
+    selectService(selectedHospital);
+    
+    // Calculate route which should trigger the redirection
+    calculateRoute(selectedHospital.id, true);
+    
     navigate('/');
     toast.success(`Testing redirection from ${selectedHospital.name} to ${redirectHospital?.name || 'another hospital'}`);
   };

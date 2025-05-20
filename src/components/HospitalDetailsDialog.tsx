@@ -122,10 +122,32 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
   
   // Modified function to set as only hospital
   const handleSetAsOnlyHospital = () => {
-    // Instead of clearing all existing routes, just clear routes for this hospital
-    const routes = useMapStore.getState().routes;
-    const updatedRoutes = routes.filter(route => route.fromId !== service.id);
-    useMapStore.setState({ routes: updatedRoutes });
+    // Get current state
+    const currentState = useMapStore.getState();
+    const existingServices = currentState.emergencyServices;
+    
+    // Make sure this service is in the list
+    const serviceIndex = existingServices.findIndex(s => s.id === service.id);
+    if (serviceIndex === -1) {
+      // Service not found, add it to the list first
+      const updatedService = {
+        ...service,
+        // Include any verification updates that might not be saved yet
+        verification: {
+          hasEmergencyRoom: hasER,
+          verifiedAt: verifiedDate,
+          comments: comments
+        },
+        googleMapsLink,
+        phone,
+        redirectHospitalId: hasER === false ? redirectHospitalId : undefined
+      };
+      updateService(updatedService);
+    }
+    
+    // Only clear routes for this hospital
+    const routes = currentState.routes.filter(route => route.fromId !== service.id);
+    useMapStore.setState({ routes });
     
     // Select this hospital
     selectService(service);
@@ -146,10 +168,34 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
     if (hasER === false && redirectHospitalId) {
       const redirectHospital = emergencyServices.find(h => h.id === redirectHospitalId);
       if (redirectHospital) {
+        // Get current state
+        const currentState = useMapStore.getState();
+        
         // Only clear routes related to this hospital
-        const routes = useMapStore.getState().routes;
-        const updatedRoutes = routes.filter(route => route.fromId !== service.id);
-        useMapStore.setState({ routes: updatedRoutes });
+        const routes = currentState.routes.filter(route => route.fromId !== service.id);
+        useMapStore.setState({ routes });
+        
+        // Make sure the updated service is in the list
+        const updatedService = {
+          ...service,
+          verification: {
+            hasEmergencyRoom: hasER,
+            verifiedAt: verifiedDate,
+            comments: comments
+          },
+          googleMapsLink,
+          phone,
+          redirectHospitalId
+        };
+        updateService(updatedService);
+        
+        // Also ensure the redirect hospital exists in the array
+        const existingServices = [...currentState.emergencyServices];
+        const redirectIndex = existingServices.findIndex(s => s.id === redirectHospital.id);
+        if (redirectIndex === -1) {
+          existingServices.push(redirectHospital);
+          useMapStore.setState({ emergencyServices: existingServices });
+        }
         
         selectService(service);
         calculateRoute(service.id, true);

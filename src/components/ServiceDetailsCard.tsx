@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,8 +21,10 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
   // Modified function to calculate route without clearing other services
   const handleRouteClick = () => {
     // Get current routes and remove any existing routes from this service
-    const routes = useMapStore.getState().routes;
-    const updatedRoutes = routes.filter(route => route.fromId !== service.id);
+    const currentState = useMapStore.getState();
+    const updatedRoutes = currentState.routes.filter(route => route.fromId !== service.id);
+    
+    // Update the routes state without affecting other state
     useMapStore.setState({ routes: updatedRoutes });
     
     // Calculate new route
@@ -33,10 +34,25 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
   // Modified function to test redirection without clearing other services
   const handleTestRedirection = () => {
     if (service.verification?.hasEmergencyRoom === false && service.redirectHospitalId) {
+      // Get current state
+      const currentState = useMapStore.getState();
+      
       // Only clear routes related to this service
-      const routes = useMapStore.getState().routes;
-      const updatedRoutes = routes.filter(route => route.fromId !== service.id);
+      const updatedRoutes = currentState.routes.filter(route => route.fromId !== service.id);
       useMapStore.setState({ routes: updatedRoutes });
+      
+      // Find the redirect hospital
+      const redirectHospital = emergencyServices.find(h => h.id === service.redirectHospitalId);
+      
+      // Ensure the redirect hospital is in the services array if found
+      if (redirectHospital) {
+        const existingServices = [...currentState.emergencyServices];
+        const redirectIndex = existingServices.findIndex(s => s.id === redirectHospital.id);
+        if (redirectIndex === -1) {
+          existingServices.push(redirectHospital);
+          useMapStore.setState({ emergencyServices: existingServices });
+        }
+      }
       
       calculateRoute(service.id, true);
     }

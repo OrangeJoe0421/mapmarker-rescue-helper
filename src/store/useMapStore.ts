@@ -20,6 +20,9 @@ interface MapState extends
   RoutesState {
   // Global actions
   clearAll: () => void;
+  
+  // Ensure we expose the setState method
+  setState: (state: Partial<MapState>) => void;
 }
 
 export const useMapStore = create<MapState>()(
@@ -38,6 +41,9 @@ export const useMapStore = create<MapState>()(
         ...servicesSlice,
         ...markersSlice,
         ...routesSlice,
+        
+        // Add the setState method for direct state updates
+        setState: (state) => set(state),
 
         clearAll: () => {
           // Reset all state values
