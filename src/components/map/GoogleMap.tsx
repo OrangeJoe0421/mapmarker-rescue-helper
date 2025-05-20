@@ -7,8 +7,9 @@ import { Route, EmergencyService } from '@/types/mapTypes';
 // Google Maps API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyBYXWPdOpB690ph_f9T2ubD9m4fgEqFUl4";
 
-// Define libraries as a constant to prevent reloads
-const GOOGLE_MAPS_LIBRARIES = ['places', 'geometry'];
+// Define libraries as a constant with proper typing to prevent reloads
+// Use the specific type that @react-google-maps/api expects
+const GOOGLE_MAPS_LIBRARIES: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ['places', 'geometry'];
 
 const containerStyle = {
   width: '100%',
