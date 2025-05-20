@@ -11,19 +11,16 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, ExternalLink, MapPin, Phone, XCircle, Navigation } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar as CalendarIcon, CheckCircle, ExternalLink, MapPin, Phone, XCircle } from 'lucide-react';
 
 interface EmergencyRoomVerificationProps {
   service: EmergencyService;
   onVerificationUpdate?: (updated: boolean) => void;
-  availableHospitals?: EmergencyService[];
 }
 
 const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({ 
   service,
-  onVerificationUpdate,
-  availableHospitals = []
+  onVerificationUpdate 
 }) => {
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(
@@ -32,7 +29,6 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
   const [phone, setPhone] = useState<string>(service.phone || '');
-  const [redirectHospitalId, setRedirectHospitalId] = useState<string | null>(service.redirectHospitalId || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -43,21 +39,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
     setComments(service.verification?.comments || '');
     setGoogleMapsLink(service.googleMapsLink || '');
     setPhone(service.phone || '');
-    setRedirectHospitalId(service.redirectHospitalId || null);
   }, [service]);
-
-  // Get hospitals that have ERs for redirect options
-  const getRedirectOptions = () => {    
-    return availableHospitals
-      .filter(h => 
-        // Has an ER and is not the current hospital
-        h.id !== service.id && 
-        h.verification?.hasEmergencyRoom === true
-      )
-      .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-  };
-
-  const redirectOptions = getRedirectOptions();
 
   const handleVerify = async () => {
     if (hasER === undefined) {
@@ -72,7 +54,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}, redirectHospitalId: ${redirectHospitalId}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
       const { data, error } = await supabase
@@ -82,8 +64,7 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
           google_maps_link: googleMapsLink || null,
-          phone: phone || null,
-          redirect_hospital_id: !hasER ? redirectHospitalId : null // Only set redirect if hospital has no ER
+          phone: phone || null
         })
         .eq('id', service.id);
       
@@ -102,7 +83,6 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
       };
       service.googleMapsLink = googleMapsLink;
       service.phone = phone;
-      service.redirectHospitalId = !hasER ? redirectHospitalId : null;
       
       toast.success(`Successfully verified ${service.name}`);
       
@@ -142,12 +122,6 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
                 <div className="flex items-center gap-1 text-red-600">
                   <XCircle className="h-4 w-4" />
                   <span className="text-sm font-medium">No ER</span>
-                  {service.redirectHospitalId && (
-                    <div className="flex items-center gap-1 text-blue-600 ml-2">
-                      <Navigation className="h-3 w-3" />
-                      <span className="text-xs">Redirects to another hospital</span>
-                    </div>
-                  )}
                 </div>
               )
             ) : (
@@ -207,35 +181,6 @@ const EmergencyRoomVerification: React.FC<EmergencyRoomVerificationProps> = ({
           </div>
         </RadioGroup>
       </div>
-      
-      {/* Redirect Hospital Selection - only show if "No ER" is selected */}
-      {hasER === false && redirectOptions.length > 0 && (
-        <div className="space-y-1 border-l-2 border-blue-500 pl-3">
-          <label className="text-sm font-medium">Redirect to Hospital with ER</label>
-          <Select
-            value={redirectHospitalId || ''}
-            onValueChange={(value) => setRedirectHospitalId(value || null)}
-          >
-            <SelectTrigger className="w-full text-sm h-8">
-              <SelectValue placeholder="Select a hospital with ER..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">
-                <em>No redirection</em>
-              </SelectItem>
-              {redirectOptions.map((hospital) => (
-                <SelectItem key={hospital.id} value={hospital.id}>
-                  {hospital.name} 
-                  {hospital.distance && ` (${hospital.distance.toFixed(1)} km)`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Select a hospital with an ER to route emergency services to
-          </p>
-        </div>
-      )}
       
       <div className="space-y-1">
         <label className="text-sm font-medium">Address</label>

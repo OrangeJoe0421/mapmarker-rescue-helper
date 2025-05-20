@@ -1,4 +1,3 @@
-
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -33,8 +32,7 @@ export interface EmergencyService {
   state?: string;
   distance?: number;  // As the crow flies distance from project
   road_distance?: number;  // Road network distance from project
-  googleMapsLink?: string;  
-  redirectHospitalId?: string;  // Added property to store the ID of a hospital with ER for routing
+  googleMapsLink?: string;  // Added this property to fix the TypeScript errors
   verification?: {
     hasEmergencyRoom?: boolean;
     verifiedAt?: Date;

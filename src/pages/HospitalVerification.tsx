@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,11 +12,10 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink, Phone, Navigation } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink, Phone } from 'lucide-react';
 import { EmergencyService } from '@/types/mapTypes';
 import { useMapStore } from '@/store/useMapStore';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Define an interface for the database response
 interface HospitalData {
@@ -33,7 +33,6 @@ interface HospitalData {
   created_at: string;
   comments?: string | null;
   google_maps_link?: string | null;
-  redirect_hospital_id?: string | null;
 }
 
 const HospitalVerification = () => {
@@ -50,7 +49,6 @@ const HospitalVerification = () => {
   const [comments, setComments] = useState<string>('');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
-  const [redirectHospitalId, setRedirectHospitalId] = useState<string | null>(null);
 
   useEffect(() => {
     // Load all hospitals on component mount
@@ -86,8 +84,7 @@ const HospitalVerification = () => {
           verifiedAt: item.verified_at ? new Date(item.verified_at) : undefined,
           comments: item.comments || undefined
         },
-        googleMapsLink: item.google_maps_link || '',
-        redirectHospitalId: item.redirect_hospital_id || undefined
+        googleMapsLink: item.google_maps_link || ''
       }));
 
       // Calculate distance from project location if available
@@ -139,7 +136,6 @@ const HospitalVerification = () => {
     setComments(hospital.verification?.comments || '');
     setGoogleMapsLink(hospital.googleMapsLink || '');
     setPhone(hospital.phone || '');
-    setRedirectHospitalId(hospital.redirectHospitalId || null);
   };
 
   const handleVerify = async () => {
@@ -156,7 +152,7 @@ const HospitalVerification = () => {
     
     setLoading(true);
     try {
-      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}, redirectHospitalId: ${redirectHospitalId}`);
+      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
       
       // Update the database with verification status
       const { data, error } = await supabase
@@ -166,8 +162,7 @@ const HospitalVerification = () => {
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
           google_maps_link: googleMapsLink || null,
-          phone: phone || null,
-          redirect_hospital_id: !hasER ? redirectHospitalId : null // Only set redirect if hospital has no ER
+          phone: phone || null
         })
         .eq('id', selectedHospital.id);
       
@@ -185,7 +180,6 @@ const HospitalVerification = () => {
             ...hospital,
             googleMapsLink: googleMapsLink,
             phone: phone,
-            redirectHospitalId: !hasER ? redirectHospitalId : null,
             verification: {
               hasEmergencyRoom: hasER,
               verifiedAt: verifiedDate,
@@ -216,7 +210,6 @@ const HospitalVerification = () => {
     setComments('');
     setGoogleMapsLink('');
     setPhone('');
-    setRedirectHospitalId(null);
   };
 
   const getERStatusDisplay = (hospital: EmergencyService) => {
@@ -237,34 +230,6 @@ const HospitalVerification = () => {
     } else {
       return <div className="text-sm text-muted-foreground">ER Status: Unknown</div>;
     }
-  };
-
-  // Get hospitals that have ERs for redirect options
-  const getRedirectOptions = () => {
-    if (!selectedHospital) return [];
-    
-    return hospitals
-      .filter(h => 
-        // Has an ER and is not the current hospital
-        h.id !== selectedHospital.id && 
-        h.verification?.hasEmergencyRoom === true
-      )
-      .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-  };
-
-  const getHospitalRedirectInfo = (hospital: EmergencyService) => {
-    if (hospital.redirectHospitalId) {
-      const redirectHospital = hospitals.find(h => h.id === hospital.redirectHospitalId);
-      if (redirectHospital) {
-        return (
-          <div className="flex items-center gap-1 text-blue-600">
-            <Navigation className="h-4 w-4" />
-            <span className="text-sm font-medium">Redirect to: {redirectHospital.name}</span>
-          </div>
-        );
-      }
-    }
-    return null;
   };
 
   const filteredHospitals = searchTerm.trim() 
@@ -346,7 +311,7 @@ const HospitalVerification = () => {
                       <div className="text-sm text-muted-foreground truncate">{hospital.address}</div>
                       
                       {hospital.googleMapsLink && (
-                        <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                        <div className="flex items-center gap-1 text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           <a 
                             href={hospital.googleMapsLink}
@@ -365,9 +330,6 @@ const HospitalVerification = () => {
                         </div>
                       )}
                       {getERStatusDisplay(hospital)}
-                      
-                      {getHospitalRedirectInfo(hospital)}
-                      
                       {hospital.verification?.verifiedAt && (
                         <div className="text-xs text-muted-foreground mt-1">
                           Verified: {format(new Date(hospital.verification.verifiedAt), 'MMM d, yyyy')}
@@ -429,35 +391,6 @@ const HospitalVerification = () => {
                       </div>
                     </RadioGroup>
                   </div>
-                  
-                  {/* Redirect Hospital Selection - only show if "No ER" is selected */}
-                  {hasER === false && (
-                    <div className="space-y-1 border-l-2 border-blue-500 pl-3">
-                      <label className="text-sm font-medium">Redirect to Hospital with ER</label>
-                      <Select
-                        value={redirectHospitalId || ''}
-                        onValueChange={(value) => setRedirectHospitalId(value || null)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a hospital with ER..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            <em>No redirection</em>
-                          </SelectItem>
-                          {getRedirectOptions().map((hospital) => (
-                            <SelectItem key={hospital.id} value={hospital.id}>
-                              {hospital.name} 
-                              {hospital.distance && ` (${hospital.distance.toFixed(1)} km)`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Select a hospital with an ER to route emergency services to
-                      </p>
-                    </div>
-                  )}
                   
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Date Verified</label>
