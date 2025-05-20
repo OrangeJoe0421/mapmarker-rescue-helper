@@ -15,7 +15,7 @@ interface ServiceDetailsCardProps {
 }
 
 const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClose }) => {
-  const { calculateRoute } = useMapStore();
+  const { calculateRoute, emergencyServices } = useMapStore();
 
   if (!service) return null;
 
@@ -43,6 +43,11 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
 
   // Check if it's a hospital
   const isHospital = service.type.toLowerCase().includes('hospital');
+
+  // Get redirect hospital if applicable
+  const redirectHospital = service.redirectHospitalId ? 
+    emergencyServices.find(h => h.id === service.redirectHospitalId) : 
+    undefined;
 
   // Display ER Status for hospitals
   const renderERStatus = () => {
@@ -119,6 +124,17 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
 
         {/* Display emergency room status for hospitals */}
         {renderERStatus()}
+
+        {/* Show redirect hospital information if applicable */}
+        {service.verification?.hasEmergencyRoom === false && redirectHospital && (
+          <div className="flex items-center gap-2 text-sm bg-amber-50 p-2 rounded-md border border-amber-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+            <span className="text-amber-700">Redirects to: {redirectHospital.name}</span>
+          </div>
+        )}
 
         {isHospital && service.verification?.verifiedAt && (
           <div className="text-xs text-muted-foreground">

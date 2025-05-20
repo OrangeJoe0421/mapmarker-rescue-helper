@@ -36,7 +36,10 @@ export const RedirectHospitalSection: React.FC<RedirectHospitalSectionProps> = (
         <SelectContent>
           <SelectItem value="none">No redirection</SelectItem>
           {otherHospitals.map(hospital => (
-            <SelectItem key={hospital.id} value={hospital.id}>{hospital.name}</SelectItem>
+            <SelectItem key={hospital.id} value={hospital.id}>
+              {hospital.name}
+              {hospital.distance !== undefined && ` (${hospital.distance.toFixed(1)} km)`}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>

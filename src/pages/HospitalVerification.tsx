@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, E
 import { EmergencyService } from '@/types/mapTypes';
 import { useMapStore } from '@/store/useMapStore';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Define an interface for the database response
 interface HospitalData {
@@ -33,6 +33,7 @@ interface HospitalData {
   created_at: string;
   comments?: string | null;
   google_maps_link?: string | null;
+  redirect_hospital_id?: string | null;
 }
 
 const HospitalVerification = () => {
@@ -49,6 +50,7 @@ const HospitalVerification = () => {
   const [comments, setComments] = useState<string>('');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
+  const [redirectHospitalId, setRedirectHospitalId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     // Load all hospitals on component mount
@@ -84,7 +86,8 @@ const HospitalVerification = () => {
           verifiedAt: item.verified_at ? new Date(item.verified_at) : undefined,
           comments: item.comments || undefined
         },
-        googleMapsLink: item.google_maps_link || ''
+        googleMapsLink: item.google_maps_link || '',
+        redirectHospitalId: item.redirect_hospital_id
       }));
 
       // Calculate distance from project location if available
@@ -136,6 +139,7 @@ const HospitalVerification = () => {
     setComments(hospital.verification?.comments || '');
     setGoogleMapsLink(hospital.googleMapsLink || '');
     setPhone(hospital.phone || '');
+    setRedirectHospitalId(hospital.redirectHospitalId);
   };
 
   const handleVerify = async () => {
@@ -152,7 +156,7 @@ const HospitalVerification = () => {
     
     setLoading(true);
     try {
-      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
+      console.log(`Verifying ${selectedHospital.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}, redirectHospitalId: ${redirectHospitalId}`);
       
       // Update the database with verification status
       const { data, error } = await supabase
@@ -162,7 +166,8 @@ const HospitalVerification = () => {
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
           google_maps_link: googleMapsLink || null,
-          phone: phone || null
+          phone: phone || null,
+          redirect_hospital_id: hasER === false ? redirectHospitalId || null : null // Only set redirect if no ER
         })
         .eq('id', selectedHospital.id);
       
@@ -180,6 +185,7 @@ const HospitalVerification = () => {
             ...hospital,
             googleMapsLink: googleMapsLink,
             phone: phone,
+            redirectHospitalId: hasER === false ? redirectHospitalId : undefined,
             verification: {
               hasEmergencyRoom: hasER,
               verifiedAt: verifiedDate,
@@ -210,6 +216,7 @@ const HospitalVerification = () => {
     setComments('');
     setGoogleMapsLink('');
     setPhone('');
+    setRedirectHospitalId(undefined);
   };
 
   const getERStatusDisplay = (hospital: EmergencyService) => {
@@ -231,6 +238,11 @@ const HospitalVerification = () => {
       return <div className="text-sm text-muted-foreground">ER Status: Unknown</div>;
     }
   };
+
+  // Filter other hospitals to exclude current one (for redirect dropdown)
+  const otherHospitals = hospitals.filter(h => 
+    selectedHospital && h.id !== selectedHospital.id && h.type.toLowerCase().includes('hospital')
+  );
 
   const filteredHospitals = searchTerm.trim() 
     ? hospitals.filter(h => 
@@ -335,6 +347,18 @@ const HospitalVerification = () => {
                           Verified: {format(new Date(hospital.verification.verifiedAt), 'MMM d, yyyy')}
                         </div>
                       )}
+                      
+                      {/* Show redirect hospital information if applicable */}
+                      {hospital.verification?.hasEmergencyRoom === false && hospital.redirectHospitalId && (
+                        <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                          </svg>
+                          Redirects to: {hospitals.find(h => h.id === hospital.redirectHospitalId)?.name || 'Unknown hospital'}
+                        </div>
+                      )}
+                      
                       {hospital.distance !== undefined && (
                         <div className="text-xs font-medium mt-1 text-[#F97316]">
                           {hospital.distance.toFixed(1)} km from project
@@ -392,6 +416,30 @@ const HospitalVerification = () => {
                     </RadioGroup>
                   </div>
                   
+                  {/* Redirect Hospital Dropdown - Only visible if hasER is false */}
+                  {hasER === false && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm">Redirect to Hospital</h4>
+                      <p className="text-xs text-muted-foreground">
+                        When this hospital doesn't have an emergency room, where should patients be redirected?
+                      </p>
+                      <Select
+                        value={redirectHospitalId || "none"}
+                        onValueChange={(value) => setRedirectHospitalId(value === "none" ? undefined : value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a hospital" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No redirection</SelectItem>
+                          {otherHospitals.map(hospital => (
+                            <SelectItem key={hospital.id} value={hospital.id}>{hospital.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Date Verified</label>
                     <Popover>
@@ -427,6 +475,19 @@ const HospitalVerification = () => {
                         placeholder="(123) 456-7890"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Google Maps Link</label>
+                    <div className="flex gap-2 items-center">
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="https://maps.google.com/..."
+                        value={googleMapsLink}
+                        onChange={(e) => setGoogleMapsLink(e.target.value)}
                         className="flex-1"
                       />
                     </div>
