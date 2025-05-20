@@ -5,27 +5,16 @@ import {
   DialogFooter 
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
 import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin, Route } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Route } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
+import { EmergencyRoomStatusSection } from './hospital/EmergencyRoomStatusSection';
+import { RedirectHospitalSection } from './hospital/RedirectHospitalSection';
+import { VerificationDatePicker } from './hospital/VerificationDatePicker';
+import { HospitalContactInfo } from './hospital/HospitalContactInfo';
+import { HospitalComments } from './hospital/HospitalComments';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
@@ -134,11 +123,6 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
       onClose();
     }
   };
-  
-  // Find the redirect hospital name if it exists
-  const redirectHospitalName = redirectHospitalId ? 
-    emergencyServices.find(h => h.id === redirectHospitalId)?.name || "Unknown Hospital" : 
-    undefined;
 
   return (
     <DialogContent className="sm:max-w-md">
@@ -150,123 +134,38 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
       </DialogHeader>
       
       <div className="grid gap-4 py-4">
-        <div className="space-y-2">
-          <h4 className="font-medium">Emergency Room Status</h4>
-          <RadioGroup 
-            value={hasER === true ? "yes" : hasER === false ? "no" : undefined}
-            onValueChange={(value) => setHasER(value === "yes")}
-            className="space-y-1"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yes" id={`details-er-yes-${service.id}`} />
-              <label htmlFor={`details-er-yes-${service.id}`} className="text-sm">
-                Yes, emergency room available
-              </label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id={`details-er-no-${service.id}`} />
-              <label htmlFor={`details-er-no-${service.id}`} className="text-sm">
-                No emergency room
-              </label>
-            </div>
-          </RadioGroup>
-        </div>
+        <EmergencyRoomStatusSection 
+          hasER={hasER}
+          serviceId={service.id}
+          onChange={setHasER}
+        />
         
         {/* Redirect Hospital Dropdown - Only visible if hasER is false */}
         {hasER === false && (
-          <div className="space-y-2">
-            <h4 className="font-medium">Redirect to Hospital</h4>
-            <p className="text-xs text-muted-foreground">
-              When this hospital doesn't have an emergency room, where should patients be redirected?
-            </p>
-            <Select
-              value={redirectHospitalId || "none"}
-              onValueChange={(value) => setRedirectHospitalId(value === "none" ? undefined : value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a hospital" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No redirection</SelectItem>
-                {otherHospitals.map(hospital => (
-                  <SelectItem key={hospital.id} value={hospital.id}>{hospital.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <RedirectHospitalSection
+            otherHospitals={otherHospitals}
+            selectedRedirectId={redirectHospitalId}
+            onChange={setRedirectHospitalId}
+          />
         )}
         
-        <div className="space-y-2">
-          <h4 className="font-medium">Address</h4>
-          <div className="text-sm border rounded-md p-2 bg-muted/30">
-            {service.address || 'No address available'}
-          </div>
+        <HospitalContactInfo
+          address={service.address}
+          googleMapsLink={googleMapsLink}
+          phone={phone}
+          onGoogleMapsLinkChange={setGoogleMapsLink}
+          onPhoneChange={setPhone}
+        />
 
-          {googleMapsLink && (
-            <div className="flex gap-2 items-center">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <a 
-                href={googleMapsLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline truncate"
-              >
-                Google Link
-              </a>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <h4 className="font-medium">Date Verified</h4>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !verifiedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {verifiedDate ? format(verifiedDate, "PPP") : <span>Select date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={verifiedDate}
-                onSelect={setVerifiedDate}
-                initialFocus
-                disabled={(date) => date > new Date()}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="space-y-2">
-          <h4 className="font-medium">Phone Number</h4>
-          <div className="flex gap-2 items-center">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="(123) 456-7890"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="flex-1"
-            />
-          </div>
-        </div>
+        <VerificationDatePicker
+          date={verifiedDate}
+          onChange={setVerifiedDate}
+        />
         
-        <div className="space-y-2">
-          <h4 className="font-medium">Comments</h4>
-          <Textarea 
-            placeholder="Add any additional information about this hospital"
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-            className="resize-none"
-            rows={3}
-          />
-        </div>
+        <HospitalComments
+          comments={comments}
+          onChange={setComments}
+        />
         
         <div className="pt-2">
           <Button 
@@ -274,6 +173,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
             variant="default"
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
+            <Route className="mr-2 h-4 w-4" />
             Set as Only Hospital on Map
           </Button>
         </div>
