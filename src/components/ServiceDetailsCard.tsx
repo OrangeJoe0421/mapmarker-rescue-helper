@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, MapPin, Navigation, X, Info, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { Phone, Clock, MapPin, Navigation, X, Info, CheckCircle, XCircle, ExternalLink, Route } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';

@@ -102,7 +102,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
       // Re-calculate any existing routes that might use this service
       // to make sure redirection is applied immediately
       if (hasER === false && redirectHospitalId) {
-        const existingRoute = get().routes.find(r => r.fromId === service.id);
+        const existingRoute = useMapStore.getState().routes.find(r => r.fromId === service.id);
         if (existingRoute) {
           calculateRoute(service.id, true);
         }
