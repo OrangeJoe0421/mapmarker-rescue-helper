@@ -39,7 +39,7 @@ const RouteDirections: React.FC<RouteDirectionsProps> = ({ route, service }) => 
       </CardHeader>
       <CardContent>
         {!hasDetailedDirections && (
-          <Alert variant="warning" className="mb-3 bg-amber-50 text-amber-800 border-amber-200">
+          <Alert variant="destructive" className="mb-3 bg-amber-50 text-amber-800 border-amber-200">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Using simplified directions. Detailed turn-by-turn directions could not be retrieved.
