@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,12 +19,25 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
 
   if (!service) return null;
 
+  // Modified function to calculate route without clearing other services
   const handleRouteClick = () => {
+    // Get current routes and remove any existing routes from this service
+    const routes = useMapStore.getState().routes;
+    const updatedRoutes = routes.filter(route => route.fromId !== service.id);
+    useMapStore.setState({ routes: updatedRoutes });
+    
+    // Calculate new route
     calculateRoute(service.id, true);
   };
   
+  // Modified function to test redirection without clearing other services
   const handleTestRedirection = () => {
     if (service.verification?.hasEmergencyRoom === false && service.redirectHospitalId) {
+      // Only clear routes related to this service
+      const routes = useMapStore.getState().routes;
+      const updatedRoutes = routes.filter(route => route.fromId !== service.id);
+      useMapStore.setState({ routes: updatedRoutes });
+      
       calculateRoute(service.id, true);
     }
   };

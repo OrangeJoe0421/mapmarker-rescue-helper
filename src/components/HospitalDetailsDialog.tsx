@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Route } from 'lucide-react';
+import { Route as RouteIcon } from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyRoomStatusSection } from './hospital/EmergencyRoomStatusSection';
 import { RedirectHospitalSection } from './hospital/RedirectHospitalSection';
@@ -114,9 +114,12 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
     }
   };
   
+  // Modified function to set as only hospital
   const handleSetAsOnlyHospital = () => {
-    // Clear all existing routes
-    clearRoutes();
+    // Instead of clearing all existing routes, just clear routes for this hospital
+    const routes = useMapStore.getState().routes;
+    const updatedRoutes = routes.filter(route => route.fromId !== service.id);
+    useMapStore.setState({ routes: updatedRoutes });
     
     // Select this hospital
     selectService(service);
@@ -132,12 +135,16 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
     }
   };
   
-  // Function to test redirection
+  // Modified function to test redirection
   const handleTestRedirection = () => {
     if (hasER === false && redirectHospitalId) {
       const redirectHospital = emergencyServices.find(h => h.id === redirectHospitalId);
       if (redirectHospital) {
-        clearRoutes();
+        // Only clear routes related to this hospital
+        const routes = useMapStore.getState().routes;
+        const updatedRoutes = routes.filter(route => route.fromId !== service.id);
+        useMapStore.setState({ routes: updatedRoutes });
+        
         selectService(service);
         calculateRoute(service.id, true);
         toast.info(`Testing redirection from ${service.name} to ${redirectHospital.name}`);
@@ -201,7 +208,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
             variant="default"
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
-            <Route className="mr-2 h-4 w-4" />
+            <RouteIcon className="mr-2 h-4 w-4" />
             Set as Only Hospital on Map
           </Button>
           
@@ -211,7 +218,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
               variant="secondary"
               className="w-full"
             >
-              <Route className="mr-2 h-4 w-4" />
+              <RouteIcon className="mr-2 h-4 w-4" />
               Test Redirection
             </Button>
           )}

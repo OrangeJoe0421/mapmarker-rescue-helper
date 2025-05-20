@@ -252,24 +252,27 @@ const HospitalVerification = () => {
       )
     : hospitals;
 
-  // New function to view hospital on map
+  // New function to view hospital on map without clearing other services
   const handleViewOnMap = () => {
     if (!selectedHospital) return;
     
-    // Select this hospital and go to map
+    // Select this hospital without clearing other service types
     selectService(selectedHospital);
     navigate('/');
     toast.success(`${selectedHospital.name} selected on map`);
   };
   
-  // New function to route to project
+  // New function to route to project without clearing other services
   const handleRouteToProject = () => {
     if (!selectedHospital) return;
     
-    // Clear existing routes
-    clearRoutes();
+    // Only clear routes related to this hospital to avoid removing other routes
+    const routes = useMapStore.getState().routes;
+    const updatedRoutes = routes.filter(route => route.fromId !== selectedHospital.id);
+    useMapStore.setState({ routes: updatedRoutes });
     
-    // Calculate route from hospital to project
+    // Select this hospital and calculate its route without clearing other service types
+    selectService(selectedHospital);
     calculateRoute(selectedHospital.id, true);
     
     // Navigate to map
@@ -277,7 +280,7 @@ const HospitalVerification = () => {
     toast.success(`Route calculated from ${selectedHospital.name} to project`);
   };
   
-  // New function to test redirect
+  // New function to test redirect while preserving other services
   const handleTestRedirection = () => {
     if (!selectedHospital || 
         selectedHospital.verification?.hasEmergencyRoom !== false || 
@@ -286,10 +289,13 @@ const HospitalVerification = () => {
       return;
     }
     
-    // Clear existing routes
-    clearRoutes();
+    // Only clear routes related to this hospital
+    const routes = useMapStore.getState().routes;
+    const updatedRoutes = routes.filter(route => route.fromId !== selectedHospital.id);
+    useMapStore.setState({ routes: updatedRoutes });
     
     // Calculate route which should trigger the redirection
+    selectService(selectedHospital);
     calculateRoute(selectedHospital.id, true);
     
     // Find redirect hospital
