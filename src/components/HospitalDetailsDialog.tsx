@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin, Navigation } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMapStore } from '@/store/useMapStore';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
@@ -26,6 +27,9 @@ interface HospitalDetailsDialogProps {
 const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, availableHospitals = [] }) => {
   console.log('HospitalDetailsDialog rendering for:', service.name);
   console.log('Initial verification data:', service.verification);
+
+  // Add mapStore state and actions
+  const { clearRoutes, calculateRoute, setEmergencyServices } = useMapStore();
 
   const [hasER, setHasER] = useState<boolean | undefined>(service.verification?.hasEmergencyRoom);
   const [verifiedDate, setVerifiedDate] = useState<Date | undefined>(
@@ -112,6 +116,24 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // New function to set this hospital as the only one on map and route to project
+  const handleSetAsOnlyHospital = () => {
+    // Clear existing routes
+    clearRoutes();
+    
+    // Set only this hospital as the emergency service
+    setEmergencyServices([service]);
+    
+    // Calculate route from this hospital to the user location
+    calculateRoute(service.id, true);
+    
+    toast.success(`Set ${service.name} as active hospital and calculated route`);
+    
+    // Close the dialog by simulating an Escape key press
+    const event = new KeyboardEvent('keydown', { key: 'Escape' });
+    document.dispatchEvent(event);
   };
 
   return (
@@ -245,6 +267,21 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
             className="resize-none"
             rows={3}
           />
+        </div>
+        
+        {/* New section - Set as only hospital button */}
+        <div className="space-y-2 mt-2 pt-2 border-t">
+          <Button
+            variant="secondary"
+            className="w-full flex items-center gap-2"
+            onClick={handleSetAsOnlyHospital}
+          >
+            <Navigation className="h-4 w-4" />
+            <span>Set as Only Hospital on Map</span>
+          </Button>
+          <p className="text-xs text-muted-foreground text-center">
+            This will clear other hospitals and routes, and calculate a route from this hospital to the project location
+          </p>
         </div>
       </div>
       
