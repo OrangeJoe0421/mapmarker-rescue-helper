@@ -10,6 +10,7 @@ export interface ServicesState {
   // Actions
   setEmergencyServices: (services: EmergencyService[]) => void;
   selectService: (service: EmergencyService | null) => void;
+  updateService: (updatedService: EmergencyService) => void;
 }
 
 export const createServicesSlice: StateCreator<
@@ -56,4 +57,17 @@ export const createServicesSlice: StateCreator<
       mapCenter: service ? [service.latitude, service.longitude] : undefined,
     });
   },
+  
+  // Add new function to update a single service
+  updateService: (updatedService) => {
+    set(state => ({
+      emergencyServices: state.emergencyServices.map(service => 
+        service.id === updatedService.id ? updatedService : service
+      ),
+      // If this was the selected service, update it there too
+      selectedService: state.selectedService?.id === updatedService.id ? 
+        updatedService : state.selectedService
+    }));
+    console.log(`Service updated: ${updatedService.name}`);
+  }
 });

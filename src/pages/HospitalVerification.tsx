@@ -43,7 +43,7 @@ const HospitalVerification = () => {
   const [loading, setLoading] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<EmergencyService | null>(null);
   const userLocation = useMapStore(state => state.userLocation);
-  const { calculateRoute, clearRoutes, selectService } = useMapStore();
+  const { calculateRoute, clearRoutes, selectService, updateService } = useMapStore();
   
   // Verification form state
   const [hasER, setHasER] = useState<boolean | undefined>(undefined);
@@ -179,20 +179,26 @@ const HospitalVerification = () => {
       
       console.log('Supabase update response:', data);
       
-      // Update local data
+      // Create updated service object
+      const updatedHospital = {
+        ...selectedHospital,
+        googleMapsLink: googleMapsLink,
+        phone: phone,
+        redirectHospitalId: hasER === false ? redirectHospitalId : undefined,
+        verification: {
+          hasEmergencyRoom: hasER,
+          verifiedAt: verifiedDate,
+          comments: comments
+        }
+      };
+      
+      // Update local data and global state
+      updateService(updatedHospital);
+      
+      // Update local hospitals array
       const updatedHospitals = hospitals.map(hospital => {
         if (hospital.id === selectedHospital.id) {
-          return {
-            ...hospital,
-            googleMapsLink: googleMapsLink,
-            phone: phone,
-            redirectHospitalId: hasER === false ? redirectHospitalId : undefined,
-            verification: {
-              hasEmergencyRoom: hasER,
-              verifiedAt: verifiedDate,
-              comments: comments
-            }
-          };
+          return updatedHospital;
         }
         return hospital;
       });
@@ -256,7 +262,10 @@ const HospitalVerification = () => {
   const handleViewOnMap = () => {
     if (!selectedHospital) return;
     
-    // Select this hospital without clearing other service types
+    // Update the service in the global state to ensure it's in the emergencyServices array
+    updateService(selectedHospital);
+    
+    // Select this hospital
     selectService(selectedHospital);
     navigate('/');
     toast.success(`${selectedHospital.name} selected on map`);
@@ -265,6 +274,9 @@ const HospitalVerification = () => {
   // New function to route to project without clearing other services
   const handleRouteToProject = () => {
     if (!selectedHospital) return;
+    
+    // Update the service in the global state to ensure it's in the emergencyServices array
+    updateService(selectedHospital);
     
     // Only clear routes related to this hospital to avoid removing other routes
     const routes = useMapStore.getState().routes;
@@ -288,6 +300,9 @@ const HospitalVerification = () => {
       toast.error("This hospital doesn't have a redirection set up");
       return;
     }
+    
+    // Update the service in the global state to ensure it's in the emergencyServices array
+    updateService(selectedHospital);
     
     // Only clear routes related to this hospital
     const routes = useMapStore.getState().routes;

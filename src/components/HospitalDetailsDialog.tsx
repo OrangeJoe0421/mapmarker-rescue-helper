@@ -34,7 +34,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
   const [redirectHospitalId, setRedirectHospitalId] = useState<string | undefined>(service.redirectHospitalId);
   const [isLoading, setIsLoading] = useState(false);
   
-  const { emergencyServices, clearRoutes, selectService, calculateRoute } = useMapStore();
+  const { emergencyServices, clearRoutes, selectService, calculateRoute, updateService } = useMapStore();
   
   // Filter hospitals to exclude current one
   const otherHospitals = emergencyServices.filter(h => 
@@ -86,15 +86,21 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
       
       console.log('Supabase update response:', data);
       
-      // Update local service data
-      service.verification = {
-        hasEmergencyRoom: hasER,
-        verifiedAt: verifiedDate,
-        comments: comments
+      // Create updated service object
+      const updatedService = {
+        ...service,
+        verification: {
+          hasEmergencyRoom: hasER,
+          verifiedAt: verifiedDate,
+          comments: comments
+        },
+        googleMapsLink: googleMapsLink,
+        phone: phone,
+        redirectHospitalId: hasER === false ? redirectHospitalId : undefined
       };
-      service.googleMapsLink = googleMapsLink;
-      service.phone = phone;
-      service.redirectHospitalId = hasER === false ? redirectHospitalId : undefined;
+      
+      // Update in the global state
+      updateService(updatedService);
       
       toast.success(`Successfully verified ${service.name}`);
       
