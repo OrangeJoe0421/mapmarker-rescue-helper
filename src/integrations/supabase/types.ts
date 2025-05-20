@@ -22,6 +22,7 @@ export type Database = {
           longitude: number | null
           name: string | null
           phone: string | null
+          redirect_hospital_id: string | null
           state: string | null
           type: string | null
           verified_at: string | null
@@ -38,6 +39,7 @@ export type Database = {
           longitude?: number | null
           name?: string | null
           phone?: string | null
+          redirect_hospital_id?: string | null
           state?: string | null
           type?: string | null
           verified_at?: string | null
@@ -54,11 +56,20 @@ export type Database = {
           longitude?: number | null
           name?: string | null
           phone?: string | null
+          redirect_hospital_id?: string | null
           state?: string | null
           type?: string | null
           verified_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "emergency_services_redirect_hospital_id_fkey"
+            columns: ["redirect_hospital_id"]
+            isOneToOne: false
+            referencedRelation: "emergency_services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
