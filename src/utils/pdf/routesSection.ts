@@ -206,14 +206,14 @@ export const addDetailedRouteInformation = (
       
       // Process each step from the Google Directions API
       route.steps.forEach((step, idx) => {
-        // Clean up HTML from Google's instructions
-        const cleanInstructions = step.instructions
-          .replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
-          .replace(/&nbsp;/g, " "); // Replace &nbsp; with spaces
+        // Use plainInstructions if available, otherwise clean the HTML
+        const instructions = step.plainInstructions || 
+          step.instructions.replace(/<\/?[^>]+(>|$)/g, "") // Remove HTML tags
+                           .replace(/&nbsp;/g, " "); // Replace &nbsp; with spaces
         
         tableData.push([
           (idx + 2).toString(), // Step number (starting from 2)
-          cleanInstructions,
+          instructions,
           (step.distance / 1000).toFixed(2) // Convert to km
         ]);
       });

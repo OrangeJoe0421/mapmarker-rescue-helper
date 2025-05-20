@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { EmergencyService } from '../types/mapTypes';
 import { calculateHaversineDistance } from '../utils/mapUtils';
@@ -369,9 +368,10 @@ async function getGoogleDirectionsRoute(
           const distance = route.legs[0].distance?.value || 0;
           const duration = route.legs[0].duration?.value || 0;
           
-          // Extract detailed steps with instructions
+          // Extract detailed steps with instructions, making sure to preserve HTML instructions
           const steps = route.legs[0].steps.map(step => ({
-            instructions: step.instructions,
+            instructions: step.instructions, // This contains HTML formatted instructions
+            plainInstructions: step.instructions.replace(/<\/?[^>]+(>|$)/g, "").replace(/&nbsp;/g, " "), // Plain text version
             distance: step.distance?.value || 0,
             duration: step.duration?.value || 0,
             startLocation: {

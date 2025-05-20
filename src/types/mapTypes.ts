@@ -59,7 +59,8 @@ export interface RoutePoint {
 }
 
 export interface RouteStep {
-  instructions: string;
+  instructions: string;     // HTML instructions from Google Maps
+  plainInstructions?: string; // Plain text version (no HTML)
   distance: number;
   duration: number;
   startLocation: {

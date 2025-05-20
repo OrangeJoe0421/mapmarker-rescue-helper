@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Clock, MapPin, Navigation, X, Info, CheckCircle, XCircle, ExternalLink, Route } from 'lucide-react';
+import { 
+  Phone, Clock, MapPin, Navigation, X, Info, 
+  CheckCircle, XCircle, ExternalLink, Route, ChevronDown, ChevronUp 
+} from 'lucide-react';
 import { useMapStore } from '@/store/useMapStore';
 import { EmergencyService } from '@/types/mapTypes';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import HospitalDetailsDialog from './HospitalDetailsDialog';
 import { Link } from 'react-router-dom';
+import RouteDirections from './RouteDirections';
 
 interface ServiceDetailsCardProps {
   service: EmergencyService | null;
@@ -14,7 +18,8 @@ interface ServiceDetailsCardProps {
 }
 
 const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClose }) => {
-  const { calculateRoute, emergencyServices, addHospitalReplacingOthers } = useMapStore();
+  const { calculateRoute, emergencyServices, addHospitalReplacingOthers, routes } = useMapStore();
+  const [showDirections, setShowDirections] = useState(false);
 
   if (!service) return null;
 
@@ -43,6 +48,9 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
     
     // Calculate new route
     calculateRoute(service.id, true);
+    
+    // Show directions after route is calculated
+    setShowDirections(true);
   };
   
   // Modified function to test redirection without clearing other services
@@ -69,8 +77,14 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
       }
       
       calculateRoute(service.id, true);
+      
+      // Show directions after route is calculated
+      setShowDirections(true);
     }
   };
+
+  // Find route for this service if exists
+  const serviceRoute = routes.find(route => route.fromId === service.id);
 
   const getServiceColor = () => {
     const type = service.type.toLowerCase();
@@ -215,6 +229,25 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           Route to Project
         </Button>
         
+        {serviceRoute && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDirections(!showDirections)}
+            className="w-full flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <Route className="h-4 w-4" />
+              {showDirections ? "Hide Directions" : "Show Directions"}
+            </span>
+            {showDirections ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+        
         {service.verification?.hasEmergencyRoom === false && redirectHospital && (
           <Button 
             onClick={handleTestRedirection}
@@ -254,6 +287,13 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
               </Button>
             </Link>
           </>
+        )}
+
+        {/* Display turn-by-turn directions if available and requested */}
+        {showDirections && serviceRoute && (
+          <div className="pt-2">
+            <RouteDirections route={serviceRoute} service={service} />
+          </div>
         )}
       </CardFooter>
     </Card>
