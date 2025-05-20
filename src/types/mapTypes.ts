@@ -1,3 +1,4 @@
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -38,6 +39,7 @@ export interface EmergencyService {
     verifiedAt?: Date;
     comments?: string;
   };
+  redirectHospitalId?: string; // Added to support hospital redirection
 }
 
 export interface CustomMarker {

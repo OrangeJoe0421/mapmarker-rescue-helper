@@ -46,6 +46,21 @@ export const createRoutesSlice: StateCreator<
       return;
     }
 
+    // Check if this is a hospital without an emergency room and has a redirect
+    if (!toHospitalId && sourceMarker.type?.toLowerCase().includes('hospital') && 
+        sourceMarker.verification?.hasEmergencyRoom === false && 
+        sourceMarker.redirectHospitalId) {
+      // Find the redirect hospital
+      const redirectHospital = state.emergencyServices?.find(
+        service => service.id === sourceMarker.redirectHospitalId
+      );
+      
+      if (redirectHospital) {
+        toHospitalId = redirectHospital.id;
+        toast.info(`Redirecting to ${redirectHospital.name} (this hospital doesn't have an emergency room)`);
+      }
+    }
+
     // If routing to a hospital, find the destination hospital
     let destinationMarker;
     if (toHospitalId) {

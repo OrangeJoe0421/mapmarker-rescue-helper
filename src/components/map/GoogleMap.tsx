@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useMapStore } from '../../store/useMapStore';
@@ -175,6 +174,20 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
   // Get marker icon based on service type
   const getMarkerIcon = (service: EmergencyService) => {
     const type = service.type.toLowerCase();
+    
+    // If this is a hospital without an ER that has a redirect, use a different icon or modify the existing one
+    if (type.includes('hospital') && 
+        service.verification?.hasEmergencyRoom === false && 
+        service.redirectHospitalId) {
+      // Return a modified hospital icon to indicate redirection
+      return 'data:image/svg+xml;base64,' + btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#E53935">
+          <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 12h-2v-4H7V9h3V7h2v2h3v2h-3v4zm-3-9h4v2h-4V6z"/>
+          <path d="M10 14h4l-2 3z" fill="#FFC107"/>
+        </svg>
+      `);
+    }
+    
     if (type.includes('hospital')) return '/hospital-marker.svg';
     if (type.includes('ems') || type.includes('ambulance')) return '/ems-marker.svg';
     if (type.includes('fire')) return '/fire-marker.svg';
@@ -251,18 +264,28 @@ const GoogleMapComponent: React.FC<GoogleMapComponentProps> = ({ className }) =>
       )}
 
       {/* Emergency Service Markers */}
-      {emergencyServices.map(service => (
-        <Marker
-          key={service.id}
-          position={{ lat: service.latitude, lng: service.longitude }}
-          icon={{
-            url: getMarkerIcon(service),
-            scaledSize: new google.maps.Size(30, 30),
-            anchor: new google.maps.Point(15, 15)
-          }}
-          onClick={() => handleMarkerClick(service, true, false)}
-        />
-      ))}
+      {emergencyServices.map(service => {
+        // Determine if this service has a redirection (no ER, redirects to another hospital)
+        const hasRedirect = service.verification?.hasEmergencyRoom === false && service.redirectHospitalId;
+        
+        // Find the redirect hospital if applicable
+        const redirectHospital = hasRedirect ? 
+          emergencyServices.find(h => h.id === service.redirectHospitalId) : undefined;
+        
+        return (
+          <Marker
+            key={service.id}
+            position={{ lat: service.latitude, lng: service.longitude }}
+            icon={{
+              url: getMarkerIcon(service),
+              scaledSize: new google.maps.Size(30, 30),
+              anchor: new google.maps.Point(15, 15)
+            }}
+            onClick={() => handleMarkerClick(service, true, false)}
+            title={hasRedirect ? `${service.name} (Redirects to ${redirectHospital?.name || 'another hospital'})` : service.name}
+          />
+        );
+      })}
 
       {/* Custom Markers */}
       {customMarkers.map(marker => (

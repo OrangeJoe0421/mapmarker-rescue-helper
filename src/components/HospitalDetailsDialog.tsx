@@ -15,13 +15,24 @@ import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin, RoutingIcon } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useMapStore } from '@/store/useMapStore';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
+  onClose?: () => void;
 }
 
-const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }) => {
+const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, onClose }) => {
   console.log('HospitalDetailsDialog rendering for:', service.name);
   console.log('Initial verification data:', service.verification);
 
@@ -32,15 +43,24 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
   const [phone, setPhone] = useState<string>(service.phone || '');
+  const [redirectHospitalId, setRedirectHospitalId] = useState<string | undefined>(service.redirectHospitalId);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const { emergencyServices, clearRoutes, selectService, calculateRoute } = useMapStore();
+  
+  // Filter hospitals to exclude current one
+  const otherHospitals = emergencyServices.filter(h => 
+    h.id !== service.id && h.type.toLowerCase().includes('hospital')
+  );
   
   // Update local state when service changes
   useEffect(() => {
     setHasER(service.verification?.hasEmergencyRoom);
-    setVerifiedDate(service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : undefined);
+    setVerifiedDate(service.verification?.verifiedAt ? new Date(service.verification.verifiedDate) : undefined);
     setComments(service.verification?.comments || '');
     setGoogleMapsLink(service.googleMapsLink || '');
     setPhone(service.phone || '');
+    setRedirectHospitalId(service.redirectHospitalId);
   }, [service]);
   
   const handleVerify = async () => {
@@ -56,7 +76,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}, redirectHospitalId: ${redirectHospitalId}`);
       
       // Update the database with verification status
       const { data, error } = await supabase
@@ -66,7 +86,8 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
           google_maps_link: googleMapsLink || null,
-          phone: phone || null
+          phone: phone || null,
+          redirect_hospital_id: hasER === false ? redirectHospitalId || null : null // Only set redirect if no ER
         })
         .eq('id', service.id);
       
@@ -85,6 +106,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
       };
       service.googleMapsLink = googleMapsLink;
       service.phone = phone;
+      service.redirectHospitalId = hasER === false ? redirectHospitalId : undefined;
       
       toast.success(`Successfully verified ${service.name}`);
     } catch (error) {
@@ -94,6 +116,29 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
       setIsLoading(false);
     }
   };
+  
+  const handleSetAsOnlyHospital = () => {
+    // Clear all existing routes
+    clearRoutes();
+    
+    // Select this hospital
+    selectService(service);
+    
+    // Calculate a route from this hospital to the user location
+    calculateRoute(service.id, true);
+    
+    toast.success(`Set ${service.name} as the only hospital on map`);
+    
+    // Close the dialog if onClose is provided
+    if (onClose) {
+      onClose();
+    }
+  };
+  
+  // Find the redirect hospital name if it exists
+  const redirectHospitalName = redirectHospitalId ? 
+    emergencyServices.find(h => h.id === redirectHospitalId)?.name || "Unknown Hospital" : 
+    undefined;
 
   return (
     <DialogContent className="sm:max-w-md">
@@ -126,6 +171,30 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
             </div>
           </RadioGroup>
         </div>
+        
+        {/* Redirect Hospital Dropdown - Only visible if hasER is false */}
+        {hasER === false && (
+          <div className="space-y-2">
+            <h4 className="font-medium">Redirect to Hospital</h4>
+            <p className="text-xs text-muted-foreground">
+              When this hospital doesn't have an emergency room, where should patients be redirected?
+            </p>
+            <Select
+              value={redirectHospitalId || "none"}
+              onValueChange={(value) => setRedirectHospitalId(value === "none" ? undefined : value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a hospital" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No redirection</SelectItem>
+                {otherHospitals.map(hospital => (
+                  <SelectItem key={hospital.id} value={hospital.id}>{hospital.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         
         <div className="space-y-2">
           <h4 className="font-medium">Address</h4>
@@ -197,6 +266,16 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
             className="resize-none"
             rows={3}
           />
+        </div>
+        
+        <div className="pt-2">
+          <Button 
+            onClick={handleSetAsOnlyHospital}
+            variant="default"
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            Set as Only Hospital on Map
+          </Button>
         </div>
       </div>
       
