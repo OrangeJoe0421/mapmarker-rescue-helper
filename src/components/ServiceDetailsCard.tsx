@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,12 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
 
   const handleRouteClick = () => {
     calculateRoute(service.id, true);
+  };
+  
+  const handleTestRedirection = () => {
+    if (service.verification?.hasEmergencyRoom === false && service.redirectHospitalId) {
+      calculateRoute(service.id, true);
+    }
   };
 
   const getServiceColor = () => {
@@ -132,7 +137,9 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
               <path d="M5 12h14" />
               <path d="m12 5 7 7-7 7" />
             </svg>
-            <span className="text-amber-700">Redirects to: {redirectHospital.name}</span>
+            <span className="text-amber-700">
+              <span className="font-medium">Redirects to:</span> {redirectHospital.name}
+            </span>
           </div>
         )}
 
@@ -166,6 +173,18 @@ const ServiceDetailsCard: React.FC<ServiceDetailsCardProps> = ({ service, onClos
           <Navigation className="h-4 w-4" />
           Route to Project
         </Button>
+        
+        {service.verification?.hasEmergencyRoom === false && redirectHospital && (
+          <Button 
+            onClick={handleTestRedirection}
+            variant="outline"
+            className="w-full gap-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+            size="sm"
+          >
+            <Route className="h-4 w-4" />
+            Test Redirection to {redirectHospital.name}
+          </Button>
+        )}
         
         {isHospital && (
           <>

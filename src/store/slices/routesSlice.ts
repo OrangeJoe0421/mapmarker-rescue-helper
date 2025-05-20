@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { StateCreator } from 'zustand';
 import { Route, RoutePoint, EmergencyService } from '@/types/mapTypes';
@@ -47,7 +46,8 @@ export const createRoutesSlice: StateCreator<
     }
 
     // Check if this is a hospital without an emergency room and has a redirect
-    if (!toHospitalId && sourceMarker.type?.toLowerCase().includes('hospital') && 
+    let isRedirected = false;
+    if (sourceMarker.type?.toLowerCase().includes('hospital') && 
         sourceMarker.verification?.hasEmergencyRoom === false && 
         sourceMarker.redirectHospitalId) {
       // Find the redirect hospital
@@ -57,7 +57,12 @@ export const createRoutesSlice: StateCreator<
       
       if (redirectHospital) {
         toHospitalId = redirectHospital.id;
-        toast.info(`Redirecting to ${redirectHospital.name} (this hospital doesn't have an emergency room)`);
+        toUserLocation = false; // Override to route to the hospital instead of user
+        toast.info(`Redirecting to ${redirectHospital.name} (this hospital doesn't have an emergency room)`, {
+          duration: 4000,
+          position: 'top-center',
+        });
+        isRedirected = true;
       }
     }
 
@@ -87,7 +92,7 @@ export const createRoutesSlice: StateCreator<
     mapCaptureService.markCaptureStaleDueToRouteChange();
     console.info('Calculating new route, marking capture as stale');
 
-    toast.info('Calculating route using Google Maps...');
+    toast.info(isRedirected ? 'Calculating redirected route...' : 'Calculating route using Google Maps...');
 
     try {
       // Get start and end coordinates
@@ -102,6 +107,7 @@ export const createRoutesSlice: StateCreator<
       };
       
       console.info(`Fetching route from [${startCoords.latitude}, ${startCoords.longitude}] to [${endCoords.latitude}, ${endCoords.longitude}]`);
+      console.info(`Is redirect: ${isRedirected}`);
       
       // Call the Google Maps routing service to get a real route
       const routeData = await fetchRoutePath(
@@ -141,7 +147,11 @@ export const createRoutesSlice: StateCreator<
         routes: [...state.routes, newRoute]
       }));
       
-      toast.success(`Route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration)} min)`);
+      if (isRedirected) {
+        toast.success(`Redirected route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration)} min)`);
+      } else {
+        toast.success(`Route calculated: ${routeData.distance.toFixed(2)} km (${Math.ceil(routeData.duration)} min)`);
+      }
     } catch (error) {
       console.error("Error calculating route:", error);
       

@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Info } from 'lucide-react';
 
 interface RedirectHospitalSectionProps {
   otherHospitals: EmergencyService[];
@@ -22,7 +23,13 @@ export const RedirectHospitalSection: React.FC<RedirectHospitalSectionProps> = (
 }) => {
   return (
     <div className="space-y-2">
-      <h4 className="font-medium">Redirect to Hospital</h4>
+      <div className="flex items-start gap-2">
+        <h4 className="font-medium">Redirect to Hospital</h4>
+        <div className="bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded text-xs flex items-center">
+          <Info className="h-3 w-3 mr-1" />
+          Important
+        </div>
+      </div>
       <p className="text-xs text-muted-foreground">
         When this hospital doesn't have an emergency room, where should patients be redirected?
       </p>

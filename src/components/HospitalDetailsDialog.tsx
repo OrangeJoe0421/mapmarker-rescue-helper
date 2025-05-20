@@ -98,6 +98,15 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
       service.redirectHospitalId = hasER === false ? redirectHospitalId : undefined;
       
       toast.success(`Successfully verified ${service.name}`);
+      
+      // Re-calculate any existing routes that might use this service
+      // to make sure redirection is applied immediately
+      if (hasER === false && redirectHospitalId) {
+        const existingRoute = get().routes.find(r => r.fromId === service.id);
+        if (existingRoute) {
+          calculateRoute(service.id, true);
+        }
+      }
     } catch (error) {
       console.error('Error verifying hospital:', error);
       toast.error("Failed to update verification status");
@@ -121,6 +130,26 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
     // Close the dialog if onClose is provided
     if (onClose) {
       onClose();
+    }
+  };
+  
+  // Function to test redirection
+  const handleTestRedirection = () => {
+    if (hasER === false && redirectHospitalId) {
+      const redirectHospital = emergencyServices.find(h => h.id === redirectHospitalId);
+      if (redirectHospital) {
+        clearRoutes();
+        selectService(service);
+        calculateRoute(service.id, true);
+        toast.info(`Testing redirection from ${service.name} to ${redirectHospital.name}`);
+        
+        // Close the dialog if onClose is provided
+        if (onClose) {
+          onClose();
+        }
+      }
+    } else {
+      toast.error("No redirection set up for this hospital");
     }
   };
 
@@ -167,7 +196,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
           onChange={setComments}
         />
         
-        <div className="pt-2">
+        <div className="space-y-2 pt-2">
           <Button 
             onClick={handleSetAsOnlyHospital}
             variant="default"
@@ -176,6 +205,17 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
             <Route className="mr-2 h-4 w-4" />
             Set as Only Hospital on Map
           </Button>
+          
+          {hasER === false && redirectHospitalId && (
+            <Button 
+              onClick={handleTestRedirection}
+              variant="secondary"
+              className="w-full"
+            >
+              <Route className="mr-2 h-4 w-4" />
+              Test Redirection
+            </Button>
+          )}
         </div>
       </div>
       
