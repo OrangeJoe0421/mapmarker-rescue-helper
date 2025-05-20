@@ -15,7 +15,7 @@ import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin, RoutingIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin, Route } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -56,7 +56,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
   // Update local state when service changes
   useEffect(() => {
     setHasER(service.verification?.hasEmergencyRoom);
-    setVerifiedDate(service.verification?.verifiedAt ? new Date(service.verification.verifiedDate) : undefined);
+    setVerifiedDate(service.verification?.verifiedAt ? new Date(service.verification.verifiedAt) : undefined);
     setComments(service.verification?.comments || '');
     setGoogleMapsLink(service.googleMapsLink || '');
     setPhone(service.phone || '');
