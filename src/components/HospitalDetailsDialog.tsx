@@ -158,7 +158,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
                 <SelectValue placeholder="Select a hospital with ER..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">
+                <SelectItem value="none">
                   <em>No redirection</em>
                 </SelectItem>
                 {redirectOptions.map((hospital) => (

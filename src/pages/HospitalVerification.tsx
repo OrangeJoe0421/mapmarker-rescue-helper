@@ -442,7 +442,7 @@ const HospitalVerification = () => {
                           <SelectValue placeholder="Select a hospital with ER..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">
+                          <SelectItem value="none">
                             <em>No redirection</em>
                           </SelectItem>
                           {getRedirectOptions().map((hospital) => (
