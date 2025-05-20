@@ -46,10 +46,34 @@ export const createRoutesSlice: StateCreator<
       return;
     }
 
-    // If routing to a hospital, find the destination hospital
+    // If we're routing to a hospital, find the destination hospital
     let destinationMarker;
+    let actualToHospitalId = toHospitalId;
+    
     if (toHospitalId) {
+      // Find the destination hospital
       destinationMarker = state.emergencyServices?.find(service => service.id === toHospitalId);
+      
+      // If the destination hospital doesn't have an ER but has a redirect, use the redirect hospital
+      if (destinationMarker && 
+          destinationMarker.verification?.hasEmergencyRoom === false && 
+          destinationMarker.redirectHospitalId) {
+        
+        // Find the redirect hospital
+        const redirectHospital = state.emergencyServices?.find(
+          service => service.id === destinationMarker.redirectHospitalId
+        );
+        
+        if (redirectHospital) {
+          console.log(`Hospital ${destinationMarker.name} has no ER, redirecting to ${redirectHospital.name}`);
+          toast.info(`${destinationMarker.name} has no ER, redirecting to ${redirectHospital.name}`);
+          
+          // Update the destination to the redirect hospital
+          destinationMarker = redirectHospital;
+          actualToHospitalId = redirectHospital.id;
+        }
+      }
+      
       if (!destinationMarker) {
         toast.error('Destination hospital not found');
         return;
@@ -115,7 +139,7 @@ export const createRoutesSlice: StateCreator<
         id: routeId,
         points: routePoints,
         fromId: sourceMarker.id,
-        toId: toHospitalId || null,
+        toId: actualToHospitalId || null,
         distance: routeData.distance,
         duration: routeData.duration,
         steps: routeData.steps // Include the step-by-step directions
@@ -138,7 +162,7 @@ export const createRoutesSlice: StateCreator<
       
       const endPoint: RoutePoint = toUserLocation 
         ? { latitude: state.userLocation!.latitude, longitude: state.userLocation!.longitude }
-        : { latitude: 0, longitude: 0 };
+        : { latitude: destination.latitude, longitude: destination.longitude };
       
       // Create a simple route with just start and end points
       const routePoints = [startPoint];
@@ -167,7 +191,7 @@ export const createRoutesSlice: StateCreator<
         id: routeId,
         points: routePoints,
         fromId: sourceMarker.id,
-        toId: toUserLocation ? null : "destination-id",
+        toId: actualToHospitalId || null,
         distance: distance,
         duration: distance / 50 * 60 // Rough estimate: 50 km/h average speed
       };
@@ -218,10 +242,23 @@ export const createRoutesSlice: StateCreator<
     
     for (const service of hospitalsToRoute) {
       try {
+        // Check if this hospital has an ER or uses a redirect
+        let actualHospital = service;
+        
+        // If the hospital doesn't have an ER but has a redirect, use the redirect hospital
+        if (service.verification?.hasEmergencyRoom === false && service.redirectHospitalId) {
+          const redirectHospital = state.emergencyServices.find(h => h.id === service.redirectHospitalId);
+          
+          if (redirectHospital) {
+            console.log(`Hospital ${service.name} has no ER, using redirect to ${redirectHospital.name}`);
+            actualHospital = redirectHospital;
+          }
+        }
+        
         // Get start and end coordinates
         const startCoords = {
-          latitude: service.latitude,
-          longitude: service.longitude
+          latitude: actualHospital.latitude,
+          longitude: actualHospital.longitude
         };
         
         const endCoords = { 
@@ -238,7 +275,7 @@ export const createRoutesSlice: StateCreator<
         );
         
         if (!routeData) {
-          throw new Error(`Could not calculate route for ${service.name}`);
+          throw new Error(`Could not calculate route for ${actualHospital.name}`);
         }
         
         // Create route points from the fetched route
@@ -248,13 +285,13 @@ export const createRoutesSlice: StateCreator<
         }));
         
         // Create a unique ID for the route
-        const routeId = `route-${service.id}-${Date.now()}`;
+        const routeId = `route-${actualHospital.id}-${Date.now()}`;
         
         // Create the route object
         const newRoute: Route = {
           id: routeId,
           points: routePoints,
-          fromId: service.id,
+          fromId: actualHospital.id,
           toId: null, // null when destination is user location
           distance: routeData.distance,
           duration: routeData.duration

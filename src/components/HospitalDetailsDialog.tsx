@@ -15,13 +15,15 @@ import { EmergencyService } from '@/types/mapTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Phone, MapPin, Navigation } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface HospitalDetailsDialogProps {
   service: EmergencyService;
+  availableHospitals?: EmergencyService[];
 }
 
-const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }) => {
+const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, availableHospitals = [] }) => {
   console.log('HospitalDetailsDialog rendering for:', service.name);
   console.log('Initial verification data:', service.verification);
 
@@ -32,6 +34,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
   const [comments, setComments] = useState<string>(service.verification?.comments || '');
   const [googleMapsLink, setGoogleMapsLink] = useState<string>(service.googleMapsLink || '');
   const [phone, setPhone] = useState<string>(service.phone || '');
+  const [redirectHospitalId, setRedirectHospitalId] = useState<string | null>(service.redirectHospitalId || null);
   const [isLoading, setIsLoading] = useState(false);
   
   // Update local state when service changes
@@ -41,7 +44,21 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     setComments(service.verification?.comments || '');
     setGoogleMapsLink(service.googleMapsLink || '');
     setPhone(service.phone || '');
+    setRedirectHospitalId(service.redirectHospitalId || null);
   }, [service]);
+  
+  // Get hospitals that have ERs for redirect options
+  const getRedirectOptions = () => {    
+    return availableHospitals
+      .filter(h => 
+        // Has an ER and is not the current hospital
+        h.id !== service.id && 
+        h.verification?.hasEmergencyRoom === true
+      )
+      .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+  };
+
+  const redirectOptions = getRedirectOptions();
   
   const handleVerify = async () => {
     if (hasER === undefined) {
@@ -56,7 +73,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
     
     setIsLoading(true);
     try {
-      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}`);
+      console.log(`Verifying ${service.name}, hasER: ${hasER}, date: ${verifiedDate}, comments: ${comments}, googleMapsLink: ${googleMapsLink}, phone: ${phone}, redirectHospitalId: ${redirectHospitalId}`);
       
       // Update the database with verification status
       const { data, error } = await supabase
@@ -66,7 +83,8 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
           verified_at: verifiedDate.toISOString(),
           comments: comments || null,
           google_maps_link: googleMapsLink || null,
-          phone: phone || null
+          phone: phone || null,
+          redirect_hospital_id: !hasER ? redirectHospitalId : null // Only set redirect if hospital has no ER
         })
         .eq('id', service.id);
       
@@ -85,6 +103,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
       };
       service.googleMapsLink = googleMapsLink;
       service.phone = phone;
+      service.redirectHospitalId = !hasER ? redirectHospitalId : null;
       
       toast.success(`Successfully verified ${service.name}`);
     } catch (error) {
@@ -126,6 +145,35 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service }
             </div>
           </RadioGroup>
         </div>
+        
+        {/* Redirect Hospital Selection - only show if "No ER" is selected */}
+        {hasER === false && redirectOptions.length > 0 && (
+          <div className="space-y-2 border-l-2 border-blue-500 pl-3">
+            <h4 className="font-medium">Redirect to Hospital with ER</h4>
+            <Select
+              value={redirectHospitalId || ''}
+              onValueChange={(value) => setRedirectHospitalId(value || null)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a hospital with ER..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">
+                  <em>No redirection</em>
+                </SelectItem>
+                {redirectOptions.map((hospital) => (
+                  <SelectItem key={hospital.id} value={hospital.id}>
+                    {hospital.name} 
+                    {hospital.distance && ` (${hospital.distance.toFixed(1)} km)`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Select a hospital with an ER to route emergency services to
+            </p>
+          </div>
+        )}
         
         <div className="space-y-2">
           <h4 className="font-medium">Address</h4>
