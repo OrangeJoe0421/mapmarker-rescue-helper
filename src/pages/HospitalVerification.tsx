@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink, Phone } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckCircle, Home, MapPin, Search, XCircle, ExternalLink, Phone, Navigation, Route } from 'lucide-react';
 import { EmergencyService } from '@/types/mapTypes';
 import { useMapStore } from '@/store/useMapStore';
 import { calculateHaversineDistance } from '@/utils/mapUtils';
@@ -43,6 +43,7 @@ const HospitalVerification = () => {
   const [loading, setLoading] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState<EmergencyService | null>(null);
   const userLocation = useMapStore(state => state.userLocation);
+  const { calculateRoute, clearRoutes, selectService } = useMapStore();
   
   // Verification form state
   const [hasER, setHasER] = useState<boolean | undefined>(undefined);
@@ -250,6 +251,54 @@ const HospitalVerification = () => {
         (h.address && h.address.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     : hospitals;
+
+  // New function to view hospital on map
+  const handleViewOnMap = () => {
+    if (!selectedHospital) return;
+    
+    // Select this hospital and go to map
+    selectService(selectedHospital);
+    navigate('/');
+    toast.success(`${selectedHospital.name} selected on map`);
+  };
+  
+  // New function to route to project
+  const handleRouteToProject = () => {
+    if (!selectedHospital) return;
+    
+    // Clear existing routes
+    clearRoutes();
+    
+    // Calculate route from hospital to project
+    calculateRoute(selectedHospital.id, true);
+    
+    // Navigate to map
+    navigate('/');
+    toast.success(`Route calculated from ${selectedHospital.name} to project`);
+  };
+  
+  // New function to test redirect
+  const handleTestRedirection = () => {
+    if (!selectedHospital || 
+        selectedHospital.verification?.hasEmergencyRoom !== false || 
+        !selectedHospital.redirectHospitalId) {
+      toast.error("This hospital doesn't have a redirection set up");
+      return;
+    }
+    
+    // Clear existing routes
+    clearRoutes();
+    
+    // Calculate route which should trigger the redirection
+    calculateRoute(selectedHospital.id, true);
+    
+    // Find redirect hospital
+    const redirectHospital = hospitals.find(h => h.id === selectedHospital.redirectHospitalId);
+    
+    // Navigate to map
+    navigate('/');
+    toast.success(`Testing redirection from ${selectedHospital.name} to ${redirectHospital?.name || 'another hospital'}`);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 p-4">
@@ -502,6 +551,48 @@ const HospitalVerification = () => {
                       className="resize-none"
                       rows={3}
                     />
+                  </div>
+                  
+                  {/* Add map and routing buttons */}
+                  <div className="space-y-2 border rounded-md p-3 bg-slate-50">
+                    <h4 className="font-medium">Map & Routing</h4>
+                    <p className="text-xs text-muted-foreground">
+                      View this hospital on the map or calculate routes
+                    </p>
+                    <div className="flex flex-col space-y-2">
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={handleViewOnMap}
+                        className="gap-2"
+                      >
+                        <MapPin className="h-4 w-4" />
+                        View on Map
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleRouteToProject}
+                        className="gap-2"
+                      >
+                        <Navigation className="h-4 w-4" />
+                        Route to Project
+                      </Button>
+                      
+                      {selectedHospital.verification?.hasEmergencyRoom === false && 
+                       selectedHospital.redirectHospitalId && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleTestRedirection}
+                          className="gap-2 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                        >
+                          <Route className="h-4 w-4" />
+                          Test Redirection
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
