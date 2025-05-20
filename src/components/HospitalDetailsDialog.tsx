@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -118,7 +117,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
     }
   };
 
-  // New function to set this hospital as the only one on map and route to project
+  // Function to set this hospital as the only one on map and route to project
   const handleSetAsOnlyHospital = () => {
     // Clear existing routes
     clearRoutes();
@@ -146,6 +145,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
       </DialogHeader>
       
       <div className="grid gap-4 py-4">
+        {/* Emergency Room Status section */}
         <div className="space-y-2">
           <h4 className="font-medium">Emergency Room Status</h4>
           <RadioGroup 
@@ -197,6 +197,7 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
           </div>
         )}
         
+        {/* Other details sections */}
         <div className="space-y-2">
           <h4 className="font-medium">Address</h4>
           <div className="text-sm border rounded-md p-2 bg-muted/30">
@@ -269,11 +270,11 @@ const HospitalDetailsDialog: React.FC<HospitalDetailsDialogProps> = ({ service, 
           />
         </div>
         
-        {/* New section - Set as only hospital button */}
-        <div className="space-y-2 mt-2 pt-2 border-t">
+        {/* Set as only hospital button - Now highlighted with primary color */}
+        <div className="space-y-2 mt-4 pt-4 border-t border-gray-200">
           <Button
-            variant="secondary"
-            className="w-full flex items-center gap-2"
+            variant="primary"
+            className="w-full flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
             onClick={handleSetAsOnlyHospital}
           >
             <Navigation className="h-4 w-4" />
